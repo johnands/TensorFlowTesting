@@ -65,7 +65,7 @@ def model_3HiddenLayersRelu(data, nodesPerLayer, noInputs, noOutputs):
     l3 = tf.add(tf.matmul(l2,hidden_3_layer['weights']), hidden_3_layer['biases'])
     l3 = tf.nn.relu(l3)
 
-    output = tf.matmul(l3, output_layer['weights']) + output_layer['biases']  
+    output = tf.matmul(l3, output_layer['weights']) + output_layer['biases']
 
     return output
     
