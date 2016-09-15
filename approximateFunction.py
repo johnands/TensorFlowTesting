@@ -8,9 +8,13 @@ import matplotlib.pyplot as plt
 from DataGeneration.generateData import functionData
 import neuralNetworkModel as nn
 import neuralNetworkXavier as nnx
+from Tools.inspect_checkpoint import print_tensors_in_checkpoint_file
 
 # number of samples
 N = int(1e6)
+
+# file name to store network
+filename = "SavedNetworks/func2.ckpt"
 
 # function to approximate
 function = lambda s : 1.0/s**12 - 1.0/s**6
@@ -28,45 +32,42 @@ inputs  = 1
 outputs = 1
 
 # number of neurons in each hidden layer
-noNodes = 20
+noNodes = 10
 nodesPerLayer = [noNodes, noNodes, noNodes]
+hiddenLayers = 3
 
-neuralNetwork = lambda data : nn.model_3HiddenLayersSigmoid(data, nodesPerLayer, inputs, outputs)
-#neuralNetwork = lambda data : nnx.model(data, noNodes)
+#neuralNetwork = lambda data : nn.model_1HiddenLayerSigmoid(data, nodesPerLayer, inputs, outputs)
+neuralNetwork = lambda data : nnx.model(data, noNodes, hiddenLayers)
 
 x = tf.placeholder('float', [None, inputs], name="x")
 y = tf.placeholder('float', [None, outputs], name="y")
+
+#print_tensors_in_checkpoint_file("SavedNetworks/func.ckpt", None)
 
   
 def train_neural_network(x, plot=False):
     
     # pass data to network and receive output
-    prediction = neuralNetwork(x)
+    #prediction = neuralNetwork(x)
+    prediction, weights, biases, neurons = neuralNetwork(x)
     
-    # define the cost/loss/error, which is the cross entropy
-    # valid for mutually exclusive classes
-    # prediction must be unscaledlog of probabilites
-    # we do the softmax regression simultaneously for efficiency
-    #cost = tf.reduce_mean( tf.nn.softmax_cross_entropy_with_logits(prediction, y) )
     cost = tf.nn.l2_loss( tf.sub(prediction, y) )
     
-    # choose optimizer to minimize cost
-    # default learning rate: 0.001
-    # tf.train.AdamOptimizer is a class, optimizer is a class object
-    # i.e. it is an operation that updates variables after minimizing
+
     optimizer = tf.train.AdamOptimizer().minimize(cost)
     
     # number of cycles of feed-forward and backpropagation
     hm_epochs = 20
     
     # save state
-    saver = tf.train.Saver()
+    #saver = tf.train.Saver(weights + biases)
     
     # begin session
     with tf.Session() as sess:
         
         # run all the variable ops
         sess.run(tf.initialize_all_variables())
+        #saver.restore(sess, filename)
         
         # loop through epocs
         for epoch in range(hm_epochs):
@@ -91,7 +92,7 @@ def train_neural_network(x, plot=False):
                   (epoch+1, hm_epochs, epoch_loss/N)
     
         
-        saver.save(sess, "SavedNetworks/func.ckpt")
+        #saver.save(sess, filename)
         
         
         # plot prediction and correct function
@@ -115,8 +116,9 @@ def train_neural_network(x, plot=False):
             print "net(x)=", sess.run(prediction, feed_dict={x: batch_x, y: batch_y})
         
 
+    return weights, biases, neurons
         
       
 
 ##### main #####
-train_neural_network(x)
+weights, biases, neurons = train_neural_network(x)
