@@ -1,6 +1,8 @@
 import tensorflow as tf
 import numpy as np
 
+np.random.seed(1)
+
 def init_weights(shape, layer, init_method='normal', xavier_params = (None, None)):
     
     if init_method == 'zeros':

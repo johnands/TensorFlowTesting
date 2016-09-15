@@ -14,7 +14,7 @@ from Tools.inspect_checkpoint import print_tensors_in_checkpoint_file
 N = int(1e6)
 
 # file name to store network
-filename = "SavedNetworks/func2.ckpt"
+filename = "SavedNetworks/func3.ckpt"
 
 # function to approximate
 function = lambda s : 1.0/s**12 - 1.0/s**6
@@ -60,14 +60,14 @@ def train_neural_network(x, plot=False):
     hm_epochs = 20
     
     # save state
-    #saver = tf.train.Saver(weights + biases)
+    saver = tf.train.Saver(weights + biases)
     
     # begin session
     with tf.Session() as sess:
         
         # run all the variable ops
-        sess.run(tf.initialize_all_variables())
-        #saver.restore(sess, filename)
+        #sess.run(tf.initialize_all_variables())
+        saver.restore(sess, filename)
         
         # loop through epocs
         for epoch in range(hm_epochs):

@@ -40,7 +40,7 @@ def functionData(function, N, a=0, b=1):
     Create random numbers as input for neural network
     to approximate any continous function
     """
-    
+    np.random.seed(0)
     x_train = np.random.uniform(a, b, N)
     x_train = x_train.reshape([N,1])
     y_train = function(x_train)
