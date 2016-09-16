@@ -35,18 +35,18 @@ def compareIntegers(N, a=0, b=10):
     return x_train, y_train, x_test, y_test
     
     
-def functionData(function, N, a=0, b=1):
+def functionData(function, trainSize, testSize, a=0.9, b=1.6):
     """
     Create random numbers as input for neural network
     to approximate any continous function
     """
     np.random.seed(0)
-    x_train = np.random.uniform(a, b, N)
-    x_train = x_train.reshape([N,1])
+    x_train = np.random.uniform(a, b, trainSize)
+    x_train = x_train.reshape([trainSize,1])
     y_train = function(x_train)
     
-    x_test  = np.random.uniform(a, b, N)
-    x_test  = x_test.reshape([N,1])
+    x_test  = np.random.uniform(a, b, testSize)
+    x_test  = x_test.reshape([testSize,1])
     y_test  = function(x_test)
     
     return x_train, y_train, x_test, y_test
