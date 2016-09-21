@@ -10,8 +10,7 @@ import os
 import shutil
 import matplotlib.pyplot as plt
 from DataGeneration.generateData import functionData
-import neuralNetworkModel as nn
-import neuralNetworkXavier as nnx
+import neuralNetworkGeneral as nn
 from Tools.inspect_checkpoint import print_tensors_in_checkpoint_file
 from timeit import default_timer as timer
 
@@ -73,16 +72,16 @@ xTrain, yTrain, xTest, yTest = functionData(function, trainSize, testSize, a, b)
 inputs  = 1
 outputs = 1
 
-"""
+
 # number of neurons in each hidden layer
-nNodes = 2
+nNodes = 100
 #nodesPerLayer = [noNodes, noNodes, noNodes]
-hiddenLayers = 4
-"""
+hiddenLayers = 3
+
 
 #neuralNetwork = lambda data : nn.model_1HiddenLayerSigmoid(data, nodesPerLayer, inputs, outputs)
-#neuralNetwork = lambda data : nnx.modelSigmoid(data, nNodes=nNodes, hiddenLayers=hiddenLayers, \
- #                                              wInitMethod='normal', bInitMethod='normal')
+neuralNetwork = lambda data : nn.modelSigmoid(data, nNodes=nNodes, hiddenLayers=hiddenLayers, \
+                                               wInitMethod='normal', bInitMethod='normal')
 
 x = tf.placeholder('float', [None, inputs], name="x")
 y = tf.placeholder('float', [None, outputs], name="y")
@@ -133,12 +132,15 @@ def train_neural_network(x, plot=False):
             # compute test set loss
             _, testCost = sess.run([optimizer, cost], feed_dict={x: xTest, y: yTest})
             
-            #print 'Epoch %5d completed out of %5d loss/N: %15g' % \
-            #       (epoch+1, numberOfEpochs, epochLoss/trainSize)
+            print 'Epoch %5d completed out of %5d loss/N: %15g' % \
+                   (epoch+1, numberOfEpochs, epochLoss/trainSize)
+            
+            """
             if epochLoss/float(trainSize) < 1e-2:
                 print 'Loss: %10g, epoch: %4d' % (epochLoss/float(trainSize), epoch)
                 break 
-                  
+            """
+            
             # If saving is enabled, save the graph variables ('w', 'b') and dump
             # some info about the training so far to SavedModels/<this run>/meta.dat.
             if saveFlag:
@@ -178,20 +180,7 @@ def train_neural_network(x, plot=False):
       
 
 ##### main #####
-"""
-nodes = range(1, 11, 1)
-print nodes
-layers = range(1, 6, 1)
-for i in layers:
-    for j in nodes:
-        start = timer()
-        neuralNetwork = lambda data : nnx.modelReluSigmoid(data, nNodes=j, hiddenLayers=i, \
-                                                           wInitMethod='normal', bInitMethod='normal')
-        weights, biases, neurons = train_neural_network(x, plot=False)
-        end = timer()
-        timeElapsed = end - start
-        print "Layers: %2d, nodes: %2d, time = %10g" % (i, j, timeElapsed)
-"""
+train_neural_network(x)
 
                                                
 

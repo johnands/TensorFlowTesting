@@ -61,11 +61,8 @@ class Regression:
         self.function  = function
         self.inputs    = inputs
         self.outputs   = outputs
-        
-        # make placeholders
-        self.x = tf.placeholder('float', [None, inputs], name="x")
-        self.y = tf.placeholder('float', [None, outputs], name="y")
-        
+
+
     def generateData(self, a, b):
         
         self.xTrain, self.yTrain, self.xTest, self.yTest = \
@@ -74,6 +71,13 @@ class Regression:
         
     def constructNetwork(self, nLayers, nNodes, activation='ReluSigmoid', \
                          wInitMethod='normal', bInitMethod='normal'):
+                             
+        self.nLayers = nLayers
+        self.nNodes  = nNodes
+                      
+        # make placeholders
+        self.x = tf.placeholder('float', [None, self.inputs], name="x")
+        self.y = tf.placeholder('float', [None, self.outputs], name="y")
         
         if activation == 'Sigmoid':
             self.neuralNetwork = lambda data : nn.modelSigmoid(self.x, nNodes=nNodes, hiddenLayers=nLayers, \
@@ -85,7 +89,12 @@ class Regression:
             self.neuralNetwork = lambda data : nn.modelReluSigmoid(self.x, nNodes=nNodes, hiddenLayers=nLayers, \
                                                                    wInitMethod=wInitMethod, \
                                                                    bInitMethod=wInitMethod)
+    
+    
+    def constructNetworkSummaries(self):
+        print 
         
+    
     def train(self, numberOfEpochs, plot=False):    
         
         trainSize = self.trainSize
@@ -96,7 +105,9 @@ class Regression:
         xTest     = self.xTest
         yTest     = self.yTest
         x         = self.x
-        y         = self.y            
+        y         = self.y    
+        nNodes    = self.nNodes
+        nLayers   = self.nLayers        
         
         # begin session
         with tf.Session() as sess: 
@@ -105,6 +116,7 @@ class Regression:
             self.prediction, weights, biases, neurons = self.neuralNetwork(x)
         
             cost = tf.nn.l2_loss( tf.sub(self.prediction, y) )
+            tf.scalar_summary()
         
             optimizer = tf.train.AdamOptimizer().minimize(cost)
             
@@ -135,14 +147,14 @@ class Regression:
                 # compute test set loss
                 _, testCost = sess.run([optimizer, cost], feed_dict={x: xTest, y: yTest})
                 
-                print 'Epoch %5d completed out of %5d loss/N: %15g' % \
-                      (epoch+1, numberOfEpochs, epochLoss/trainSize)
+                #print 'Epoch %5d completed out of %5d loss/N: %15g' % \
+                #      (epoch+1, numberOfEpochs, epochLoss/trainSize)
                 
-                """
-                if epochLoss/float(trainSize) < 1e-2:
+                
+                if epochLoss/float(trainSize) < 1e-3:
                     print 'Loss: %10g, epoch: %4d' % (epochLoss/float(trainSize), epoch)
                     break 
-                """
+                
                       
                 # If saving is enabled, save the graph variables ('w', 'b') and dump
                 # some info about the training so far to SavedModels/<this run>/meta.dat.
@@ -151,7 +163,7 @@ class Regression:
                         saveEpochNumber = 0
                         with open(saveMetaName, 'w') as outFile:
                             outStr = '# epochs: %d train: %d, test: %d, batch: %d, nodes: %d, layers: %d' % \
-                                      (numberOfEpochs, trainSize, testSize, batchSize, nNodes, hiddenLayers)
+                                      (numberOfEpochs, trainSize, testSize, batchSize, nNodes, nLayers)
                             outFile.write(outStr + '\n')
                     else:
                         with open(saveMetaName, 'a') as outFile:
@@ -187,9 +199,32 @@ b = 1.6
 
 regress = Regression(function, int(1e6), int(1e4), int(1e3))
 regress.generateData(a, b)
-regress.constructNetwork(3, 10)
-regress.train(20, plot=True)
 
+# finding optimal value
+maxEpochs = 5000
+maxLayers = 5
+maxNodes  = 10
+counter = 0
+for layers in range(1, maxLayers+1, 1):
+    for nodes in range(layers, maxNodes+1, 1):
+        start = timer()
+        regress.constructNetwork(layers, nodes)
+        regress.train(maxEpochs)
+        end = timer()
+        timeElapsed = end - start
+        print "Layers: %2d, nodes: %2d, time = %10g" % (layers, nodes, timeElapsed)
+        print
+
+        if counter == 0:
+            with open('Tests/timeElapsed', 'w') as outFile:
+                outStr = "Timing analysis"
+                outFile.write(outStr + '\n')
+                
+        with open('Tests/timeElapsed', 'a') as outFile:
+            outStr = "Layers: %2d, nodes: %2d, time = %10g" % (layers, nodes, timeElapsed)
+            outFile.write(outStr + '\n')
+        
+        counter += 1
                                                
 
 
