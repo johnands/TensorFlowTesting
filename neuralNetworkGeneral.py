@@ -3,13 +3,16 @@ import numpy as np
 
 np.random.seed(1)
 
-def init_weights(shape, layer, nameType, initMethod='normal'):
+def init_weights(shape, layer, nameType, initMethod='normal', constantValue=0.1):
     
     if initMethod == 'zeros':
         return tf.Variable(tf.zeros(shape), name=nameType+'%1d' % layer)
         
     elif initMethod == 'normal':
         return tf.Variable(tf.random_normal(shape), name=nameType+'%1d' % layer)
+        
+    elif initMethod == 'constant':
+        return tf.Variable(tf.constant(constantValue, shape=shape), name=nameType+'%1d' % layer)
         
     else: #xavier
         fanIn  = shape[0]
@@ -18,10 +21,11 @@ def init_weights(shape, layer, nameType, initMethod='normal'):
         high = 4*np.sqrt(6.0/(fanIn + fanOut))
         return tf.Variable(tf.random_uniform(shape, minval=low, maxval=high), \
                            name=nameType+'%1d' % layer)
+    
         
 
 def modelSigmoid(data, nNodes=10, hiddenLayers=3, inputs=1, outputs=1, 
-          wInitMethod='normal', bInitMethod='normal'): 
+                 wInitMethod='normal', bInitMethod='normal'): 
     
     weights = []    
     biases  = []
@@ -51,7 +55,7 @@ def modelSigmoid(data, nNodes=10, hiddenLayers=3, inputs=1, outputs=1,
     weights.append(w_o)
     biases.append(b_o)    
     neurons.append(h_o)
-    
+         
     return h_o, weights, biases, neurons
     
     

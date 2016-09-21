@@ -55,5 +55,6 @@ def functionData(function, trainSize, testSize, a=0.9, b=1.6):
 
 if __name__ == '__main__':
     #x_train, y_train, x_test, y_test = compareIntegers(10, 5, 15)
-    x_train, y_train, x_test, y_test = functionData(10)
+    function = lambda s : 1.0/s**12 - 1.0/s**6
+    x_train, y_train, x_test, y_test = functionData(function, 100, 100)
     
