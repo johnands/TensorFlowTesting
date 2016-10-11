@@ -3,12 +3,13 @@ import numpy as np
 
 class neuralNetwork:
     
-    def __init__(self, nNodes, nLayers, inputs=1, outputs=1, 
+    def __init__(self, nNodes, nLayers, activation, inputs=1, outputs=1,
                  weightsInit='trunc_normal', biasesInit='trunc_normal',
                  stdDev=0.1, constantValue=0.1):
         
         self.nNodes         = nNodes
         self.nLayers        = nLayers
+        self.activation     = activation
         self.inputs         = inputs
         self.outputs        = outputs
         self.weightsInit    = weightsInit
@@ -64,7 +65,7 @@ class neuralNetwork:
             tf.histogram_summary(name, var)           
             
     
-    def nn_layer(self, input_tensor, input_dim, output_dim, layer_name, act=tf.nn.relu):
+    def nn_layer(self, input_tensor, input_dim, output_dim, layer_name, activation):
         """Reusable code for making a simple neural net layer.
         It does a matrix multiply, bias add, and then uses relu to nonlinearize.
         It also sets up name scoping so that the resultant graph is easy to read,
@@ -73,7 +74,6 @@ class neuralNetwork:
         
         # Adding a name scope ensures logical grouping of the layers in the graph.
         with tf.name_scope(layer_name):
-            # This Variable will hold the state of the weights for the layer
         
             with tf.name_scope('weights'):
                 weights = self.init_weights([input_dim, output_dim])
@@ -89,16 +89,15 @@ class neuralNetwork:
                 preactivate = tf.matmul(input_tensor, weights) + biases
                 tf.histogram_summary(layer_name + '/pre_activations', preactivate)
                 
-            if not act == None:
-                activations = act(preactivate, 'activation')
+            if not activation == None:
+                activations = activation(preactivate, 'activation')
                 tf.histogram_summary(layer_name + '/activations', activations)
                 return activations
             else:
                 return preactivate
                 
-                
-                
-    def modelSigmoid(self, data): 
+        
+    def model(self, data): 
         
         nNodes  = self.nNodes
         nLayers = self.nLayers
@@ -107,19 +106,28 @@ class neuralNetwork:
         
         activations = []
         
-        hidden1 = self.nn_layer(data, inputs, nNodes, 'layer1', act=tf.nn.sigmoid)
+        hidden1 = self.nn_layer(data, inputs, nNodes, 'layer1', self.activation)
         activations.append(hidden1)
         
         # following layers
         for layer in range(1, nLayers, 1):
             layerName = 'layer%1d' % (layer+1)
-            activation = self.nn_layer(activations[layer-1], nNodes, nNodes, layerName, act=tf.nn.sigmoid)
-            activations.append(activation)
+            
+            # make sure activation between last hidden layer an output is a sigmoid
+            if layer == nLayers-1:
+                if not (self.activation == tf.nn.sigmoid or self.activation == tf.nn.tanh) :
+                    act = self.nn_layer(activations[layer-1], nNodes, nNodes, layerName, tf.nn.sigmoid)
+                else:
+                    act = self.nn_layer(activations[layer-1], nNodes, nNodes, layerName, self.activation)
+            else:       
+                act = self.nn_layer(activations[layer-1], nNodes, nNodes, layerName, self.activation)
+            activations.append(act)
                
-        outputLayer = self.nn_layer(activations[nLayers-1], nNodes, outputs, 'outputLayer', act=None)
+        outputLayer = self.nn_layer(activations[nLayers-1], nNodes, outputs, 'outputLayer', None)
         activations.append(outputLayer)
         
         return outputLayer
+
     
 
     

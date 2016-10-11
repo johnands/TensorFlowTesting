@@ -48,8 +48,7 @@ if len(sys.argv) > 1:
             i += 1
             loadFlag     = True
             loadFileName = sys.argv[i]
-            print loadFileName
-            print type(loadFileName)
+            i += 1
             
         elif sys.argv[i] == '--save':
             i += 1
@@ -93,14 +92,14 @@ class Regression:
             functionData(self.function, self.trainSize, self.testSize, a, b)
         
         
-    def constructNetwork(self, nLayers, nNodes, activation='ReluSigmoid', \
-                         wInitMethod='normal', bInitMethod='normal'):
+    def constructNetwork(self, nLayers, nNodes, activation=tf.nn.relu, \
+                         wInit='normal', bInit='normal'):
                              
         self.nLayers = nLayers
         self.nNodes  = nNodes
         self.activation = activation
-        self.wInitMethod = wInitMethod
-        self.bInitMethod = bInitMethod
+        self.wInit = wInit
+        self.bInit = bInit
                       
         # input placeholders
         with tf.name_scope('input'):
@@ -108,24 +107,21 @@ class Regression:
             self.y = tf.placeholder('float', [None, self.outputs], name='y-input')
 
         
-        self.neuralNetwork = nn.neuralNetwork(nNodes, nLayers, weightsInit=wInitMethod, biasesInit=bInitMethod,
+        self.neuralNetwork = nn.neuralNetwork(nNodes, nLayers, activation,
+                                              weightsInit=wInit, biasesInit=bInit,
                                               stdDev=1.0)
-        self.makeNetwork = lambda data : self.neuralNetwork.modelSigmoid(self.x)
+        self.makeNetwork = lambda data : self.neuralNetwork.model(self.x)
         
         
         """if activation == 'Sigmoid':
-            self.neuralNetwork = lambda data : nn.modelSigmoid(self.x, nNodes=nNodes, hiddenLayers=nLayers, \
-                                                               wInitMethod=wInitMethod, bInitMethod=bInitMethod)
+            self.makeNetwork = lambda data : self.neuralNetwork.modelSigmoid(self.x)
         elif activation == 'Relu':
-            self.neuralNetwork = lambda data : nn.modelRelu(self.x, nNodes=nNodes, hiddenLayers=nLayers, \
-                                                            wInitMethod=wInitMethod, bInitMethod=wInitMethod)
+            self.makeNetwork = lambda data : self.neuralNetwork.modelSigmoid(self.x)
         else:
-            self.neuralNetwork = lambda data : nn.modelReluSigmoid(self.x, nNodes=nNodes, hiddenLayers=nLayers, \
-                                                                   wInitMethod=wInitMethod, \
-                                                                   bInitMethod=wInitMethod)"""
+            self.makeNetwork = lambda data : self.neuralNetwork.modelReluSigmoid(self.x)"""
     
     
-    def train(self, numberOfEpochs, plot=False):    
+    def train(self, numberOfEpochs, plot=False, counter=0):    
         
         trainSize = self.trainSize
         batchSize = self.batchSize
@@ -207,20 +203,45 @@ class Regression:
                 # If saving is enabled, save the graph variables ('w', 'b') and dump
                 # some info about the training so far to SavedModels/<this run>/meta.dat.
                                   
-                if epoch == 0:
-                    if saveFlag or summaryFlag:
+                
+                if saveFlag or summaryFlag:
+                    if epoch == 0:
                         saveEpochNumber = 0
-                        with open(saveMetaName, 'w') as outFile:
+                        with open(saveMetaName + '%1d' % counter, 'w') as outFile:
                             outStr = """# epochs: %d train: %d, test: %d, batch: %d, nodes: %d, layers: %d
                                         a: %1.1f, b: %1.1f, activation: %s, wInit: %s, bInit: %s""" % \
                                       (numberOfEpochs, trainSize, testSize, batchSize, nNodes, nLayers, \
-                                       self.a, self.b, self.activation, self.wInitMethod, self.bInitMethod)
+                                       self.a, self.b, self.activation, self.wInit, self.bInit)
                             outFile.write(outStr + '\n')
-                if saveFlag: 
+                            outStr = '%g %g' % (trainCost/float(batchSize), testCost/float(testSize))
+                            outFile.write(outStr + '\n')
+                    else:
+                        if epoch % 10 == 0:
+                             with open(saveMetaName, 'a') as outFile :
+                                 outStr = '%g %g' % (trainCost/float(batchSize), testCost/float(testSize))
+                                 outFile.write(outStr + '\n')                   
+                    
+                """if saveFlag: 
                     if epoch % 100 == 0:
                         saveFileName = saveDirName + '/' 'ckpt'
                         saver.save(sess, saveFileName, global_step=saveEpochNumber)
-                        saveEpochNumber += 1
+                        saveEpochNumber += 1"""
+       
+            # write weights and biases to file when training is finished
+            with open('saveNetwork.txt', 'w') as outFile:
+                outStr = "nLayers: %1d, nNodes: %1d, activation: %s" % \
+                         (nLayers, nNodes, self.activation.__name__)
+                outFile.write(outStr + '\n')
+                for weightVariable in self.neuralNetwork.allWeights:
+                    weights = sess.run(weightVariable)
+                    for j in range(len(weights)):
+                        for k in range(len(weights[0])):
+                            outFile.write("%g" % weights[j][k])
+                            outFile.write(" ")
+                        outFile.write("\n")
+                    outFile.write("\n")
+                    
+                for 
                       
             if plot:
                 yy = sess.run(prediction, feed_dict={self.x: self.xTest})
@@ -271,19 +292,41 @@ def performanceTest(maxEpochs, maxLayers, maxNodes):
                 outFile.write(outStr + '\n')
             
             counter += 1
+            
+def testActivations(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, a=0.9, b=1.6):
     
-   
+    # function to approximate
+    function = lambda s : 1.0/s**12 - 1.0/s**6
+    
+    # approximate on [a,b]
+    a = 0.9
+    b = 1.6
+
+    regress = Regression(function, int(1e6), int(1e4), int(1e3))
+    regress.generateData(a, b)
+    
+    # test different activations
+    activations = [tf.nn.relu, tf.nn.relu6, tf.nn.elu, tf.nn.sigmoid, tf.nn.tanh]
+    counter = 0
+    for act in activations:    
+        regress.constructNetwork(nLayers, nNodes, activation=act, wInit='trunc_normal', bInit='trunc_normal')
+        regress.train(nEpochs, plot=False, counter=counter)
+        counter += 1
+
+ 
 def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, a=0.9, b=1.6):
     
     function = lambda s : 1.0/s**12 - 1.0/s**6
     regress = Regression(function, trainSize, batchSize, testSize)
     regress.generateData(a, b)
-    regress.constructNetwork(nLayers, nNodes, activation='Sigmoid', wInitMethod='normal', bInitMethod='normal')
+    regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, wInit='normal', bInit='normal')
     regress.train(nEpochs, plot=False)
     
     
-LennardJonesExample(int(1e6), int(1e4), int(1e3), 3, 5, 2000)
+LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 10)
+#testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
 
+    
 
                                                
 
