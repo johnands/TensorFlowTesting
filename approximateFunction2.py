@@ -229,19 +229,32 @@ class Regression:
        
             # write weights and biases to file when training is finished
             with open('saveNetwork.txt', 'w') as outFile:
-                outStr = "nLayers: %1d, nNodes: %1d, activation: %s" % \
-                         (nLayers, nNodes, self.activation.__name__)
+                outStr = "%1d %1d %s" % (nLayers, nNodes, self.activation.__name__)
                 outFile.write(outStr + '\n')
-                for weightVariable in self.neuralNetwork.allWeights:
-                    weights = sess.run(weightVariable)
-                    for j in range(len(weights)):
-                        for k in range(len(weights[0])):
-                            outFile.write("%g" % weights[j][k])
-                            outFile.write(" ")
-                        outFile.write("\n")
-                    outFile.write("\n")
+                size = len(self.neuralNetwork.allWeights)
+                for i in range(size):
+                    weights = sess.run(self.neuralNetwork.allWeights[i])
+                    if i < size-1:
+                        for j in range(len(weights)):
+                            for k in range(len(weights[0])):
+                                outFile.write("%g" % weights[j][k])
+                                outFile.write(" ")
+                            outFile.write("\n")
+                    else:
+                        for j in range(len(weights[0])):
+                            for k in range(len(weights)):
+                                outFile.write("%g" % weights[k][j])
+                                outFile.write(" ")
+                            outFile.write("\n")
+                        
+                outFile.write("\n")
                     
-                for 
+                for biasVariable in self.neuralNetwork.allBiases:
+                    biases = sess.run(biasVariable)
+                    for j in range(len(biases)):
+                        outFile.write("%g" % biases[j])
+                        outFile.write(" ")
+                    outFile.write("\n")
                       
             if plot:
                 yy = sess.run(prediction, feed_dict={self.x: self.xTest})
@@ -323,7 +336,7 @@ def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs
     regress.train(nEpochs, plot=False)
     
     
-LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 10)
+LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 10000)
 #testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
 
     
