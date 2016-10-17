@@ -1,10 +1,14 @@
 #include "neuralnetwork.h"
+#include "activationfunctions.h"
 #include <iostream>
 #include <fstream>
 #include <string>
 
+
 NeuralNetwork::NeuralNetwork() {
 
+    m_outFile.open("test.txt", std::ios::out | std::ios::trunc);
+    m_outFile.close();
 }
 
 void NeuralNetwork::readFromFile(const char *filename) {
@@ -114,28 +118,28 @@ void NeuralNetwork::network(double dataPoint) {
     // send data through network
     // use relu as activation except for output layer
     std::vector<arma::mat> activations(m_nLayers+1);
-    activations[0] = relu(data*m_weights[0] + m_biases[0]);
-    for (int i=0; i < m_nLayers-1; i++) {
-        activations[i+1] = relu(activations[i]*m_weights[i+1] + m_biases[i+1]);
+    activations[0] = ActivationFunctions::relu(data*m_weights[0] + m_biases[0]);
+    for (int i=1; i < m_nLayers; i++) {
+        // relu for all hidden layers except last one
+        if (i < m_nLayers-1)
+            activations[i] = ActivationFunctions::relu(activations[i-1]*m_weights[i] + m_biases[i]);
+
+        // sigmoid on last hidden layer
+        else
+            activations[i] = ActivationFunctions::sigmoid(activations[i-1]*m_weights[i] + m_biases[i]);
     }
-    // no activation function for output layer
+    // no activation function for output layer (i.e. linear or identity activation function)
     activations[m_nLayers] = activations[m_nLayers-1]*m_weights[m_nLayers] + m_biases[m_nLayers];
-    std::cout << "OUTPUT: " << activations[m_nLayers] << std::endl;
+
+    m_outFile.open("test.txt", std::ios::out | std::ios::app);
+    m_outFile << activations[m_nLayers];
+    m_outFile.close();
 
     //return activations[m_nLayers];
 }
 
 
-arma::mat NeuralNetwork::relu(arma::mat matrix) {
 
-    // loop through vector of Wx + b and apply the relu function
-    // i.e. replacing all negative elements with zeros
-    for (int i=0; i < arma::size(matrix)[1]; i++) {
-        if (matrix(0,i) < 0)
-            matrix(0,i) = 0;
-    }
-    return matrix;
-}
 
 
 

@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <armadillo>
+#include <fstream>
 
 class NeuralNetwork {
 
@@ -15,5 +16,6 @@ private:
     int m_nNodes;
     std::vector<arma::mat> m_weights = std::vector<arma::mat>();
     std::vector<arma::mat> m_biases  = std::vector<arma::mat>();
+    std::ofstream m_outFile;
 };
 

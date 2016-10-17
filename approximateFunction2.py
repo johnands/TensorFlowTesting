@@ -20,6 +20,7 @@ saveFlag        = False
 saveDirName     = ''
 summaryFlag     = False
 summaryDir      = ''
+saveGraphFlag   = False
 saveMetaName    = ''
 now             = time.datetime.now().strftime("%d.%m-%H.%M.%S")
 trainingDir     = 'TrainingData' + '/' + now
@@ -28,7 +29,7 @@ trainingDir     = 'TrainingData' + '/' + now
 if len(sys.argv) > 1:
     i = 1
     while i < len(sys.argv):
-        if sys.argv[i] == '--save' or sys.argv[i] == '--summary':
+        if sys.argv[i] == '--save' or sys.argv[i] == '--summary' == or sys.argv[i] == 'savegraph':
             if os.path.exists(trainingDir):
                 print "Attempted to place data in existing directory, %s. Exiting." % trainingDir
                 exit(1)
@@ -69,6 +70,10 @@ if len(sys.argv) > 1:
             # make new directory for summaries
             summaryDir = trainingDir + '/Summaries'
             os.mkdir(summaryDir)
+            
+        elif sys.argv[i] == '--savegraph':
+            i += 1
+            saveGraphFlag = True                    
                     
         else:
             i += 1
@@ -332,11 +337,11 @@ def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs
     function = lambda s : 1.0/s**12 - 1.0/s**6
     regress = Regression(function, trainSize, batchSize, testSize)
     regress.generateData(a, b)
-    regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, wInit='normal', bInit='normal')
+    regress.constructNetwork(nLayers, nNodes, activation=tf.nn.relu, wInit='normal', bInit='normal')
     regress.train(nEpochs, plot=False)
     
     
-LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 10000)
+LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 50000)
 #testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
 
     
