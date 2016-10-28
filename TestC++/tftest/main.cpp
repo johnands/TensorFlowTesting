@@ -70,5 +70,6 @@ int main(int argc, char* argv[]) {
 
   // Free any resources used by the session
   session->Close();
+
   return 0;
 }

@@ -35,7 +35,7 @@ def compareIntegers(N, a=0, b=10):
     return x_train, y_train, x_test, y_test
     
     
-def functionData(function, trainSize, testSize, a=0.9, b=1.6):
+def functionData(function, trainSize, testSize, a=0.8, b=2.5):
     """
     Create random numbers as input for neural network
     to approximate any continous function

@@ -128,6 +128,7 @@ class neuralNetwork:
         
         return outputLayer
 
+
     
 
     

@@ -22,6 +22,7 @@ summaryFlag     = False
 summaryDir      = ''
 saveGraphFlag   = False
 saveMetaName    = ''
+saveGraphName   = ''
 now             = time.datetime.now().strftime("%d.%m-%H.%M.%S")
 trainingDir     = 'TrainingData' + '/' + now
 
@@ -29,13 +30,14 @@ trainingDir     = 'TrainingData' + '/' + now
 if len(sys.argv) > 1:
     i = 1
     while i < len(sys.argv):
-        if sys.argv[i] == '--save' or sys.argv[i] == '--summary' == or sys.argv[i] == 'savegraph':
+        if sys.argv[i] == '--save' or sys.argv[i] == '--summary' or sys.argv[i] == '--savegraph':
             if os.path.exists(trainingDir):
                 print "Attempted to place data in existing directory, %s. Exiting." % trainingDir
                 exit(1)
             else:
                 os.mkdir(trainingDir)
                 saveMetaName = trainingDir + '/' + 'meta.dat'
+                saveGraphName = trainingDir + '/' + 'graph.dat'
                 break
         i += 1
         
@@ -116,14 +118,6 @@ class Regression:
                                               weightsInit=wInit, biasesInit=bInit,
                                               stdDev=1.0)
         self.makeNetwork = lambda data : self.neuralNetwork.model(self.x)
-        
-        
-        """if activation == 'Sigmoid':
-            self.makeNetwork = lambda data : self.neuralNetwork.modelSigmoid(self.x)
-        elif activation == 'Relu':
-            self.makeNetwork = lambda data : self.neuralNetwork.modelSigmoid(self.x)
-        else:
-            self.makeNetwork = lambda data : self.neuralNetwork.modelReluSigmoid(self.x)"""
     
     
     def train(self, numberOfEpochs, plot=False, counter=0):    
@@ -205,10 +199,8 @@ class Regression:
                         summary = sess.run(merged, feed_dict={x: xBatch, y: yBatch})
                         train_writer.add_summary(summary, epoch)
                                                         
-                # If saving is enabled, save the graph variables ('w', 'b') and dump
-                # some info about the training so far to SavedModels/<this run>/meta.dat.
-                                  
-                
+                # if saving is enabled, save the graph variables ('w', 'b') and dump
+                # some info about the training so far to TrainingData/<this run>/meta.dat.            
                 if saveFlag or summaryFlag:
                     if epoch == 0:
                         saveEpochNumber = 0
@@ -226,47 +218,53 @@ class Regression:
                                  outStr = '%g %g' % (trainCost/float(batchSize), testCost/float(testSize))
                                  outFile.write(outStr + '\n')                   
                     
-                """if saveFlag: 
+                if saveFlag: 
                     if epoch % 100 == 0:
                         saveFileName = saveDirName + '/' 'ckpt'
                         saver.save(sess, saveFileName, global_step=saveEpochNumber)
-                        saveEpochNumber += 1"""
+                        saveEpochNumber += 1
+                        
        
             # write weights and biases to file when training is finished
-            with open('saveNetwork.txt', 'w') as outFile:
-                outStr = "%1d %1d %s" % (nLayers, nNodes, self.activation.__name__)
-                outFile.write(outStr + '\n')
-                size = len(self.neuralNetwork.allWeights)
-                for i in range(size):
-                    weights = sess.run(self.neuralNetwork.allWeights[i])
-                    if i < size-1:
-                        for j in range(len(weights)):
-                            for k in range(len(weights[0])):
-                                outFile.write("%g" % weights[j][k])
-                                outFile.write(" ")
-                            outFile.write("\n")
-                    else:
-                        for j in range(len(weights[0])):
-                            for k in range(len(weights)):
-                                outFile.write("%g" % weights[k][j])
-                                outFile.write(" ")
-                            outFile.write("\n")
-                        
-                outFile.write("\n")
-                    
-                for biasVariable in self.neuralNetwork.allBiases:
-                    biases = sess.run(biasVariable)
-                    for j in range(len(biases)):
-                        outFile.write("%g" % biases[j])
-                        outFile.write(" ")
+            if saveGraphFlag:
+                with open(saveGraphName, 'w') as outFile:
+                    outStr = "%1d %1d %s" % (nLayers, nNodes, self.activation.__name__)
+                    outFile.write(outStr + '\n')
+                    size = len(self.neuralNetwork.allWeights)
+                    for i in range(size):
+                        weights = sess.run(self.neuralNetwork.allWeights[i])
+                        if i < size-1:
+                            for j in range(len(weights)):
+                                for k in range(len(weights[0])):
+                                    outFile.write("%g" % weights[j][k])
+                                    outFile.write(" ")
+                                outFile.write("\n")
+                        else:
+                            for j in range(len(weights[0])):
+                                for k in range(len(weights)):
+                                    outFile.write("%g" % weights[k][j])
+                                    outFile.write(" ")
+                                outFile.write("\n")
+                            
                     outFile.write("\n")
-                      
+                        
+                    for biasVariable in self.neuralNetwork.allBiases:
+                        biases = sess.run(biasVariable)
+                        for j in range(len(biases)):
+                            outFile.write("%g" % biases[j])
+                            outFile.write(" ")
+                        outFile.write("\n")
+                          
             if plot:
-                yy = sess.run(prediction, feed_dict={self.x: self.xTest})
-                plt.plot(self.xTest[:,0], yy[:,0], 'b.')
-                plt.hold('on')
-                xx = np.linspace(self.a, self.b, self.testSize)
-                plt.plot(xx, self.function(xx), 'g-')
+                x_test  = np.random.uniform(0.9, 2, self.testSize)
+                x_test  = x_test.reshape([testSize,1])
+                y_test  = self.function(x_test)
+                yy = sess.run(prediction, feed_dict={self.x: x_test})
+                #plt.plot(x_test[:,0], yy[:,0], 'b.')
+                #plt.hold('on')
+                xx = np.linspace(0.9, 2, self.testSize)
+                #plt.plot(xx, self.function(xx), 'g-')
+                plt.plot(x_test, self.function(x_test) - yy[:,0])
                 plt.xlabel('r')
                 plt.ylabel('U(r)')
                 plt.legend(['Approximation', 'L-J'])
@@ -332,16 +330,17 @@ def testActivations(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, a=
         counter += 1
 
  
-def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, a=0.9, b=1.6):
+def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, a=0.8, b=2.5):
     
     function = lambda s : 1.0/s**12 - 1.0/s**6
     regress = Regression(function, trainSize, batchSize, testSize)
     regress.generateData(a, b)
-    regress.constructNetwork(nLayers, nNodes, activation=tf.nn.relu, wInit='normal', bInit='normal')
+    regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
+                             wInit='normal', bInit='normal')
     regress.train(nEpochs, plot=False)
     
     
-LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 50000)
+LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 100000)
 #testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
 
     
