@@ -236,13 +236,13 @@ class Regression:
                         if i < size-1:
                             for j in range(len(weights)):
                                 for k in range(len(weights[0])):
-                                    outFile.write("%g" % weights[j][k])
+                                    outFile.write("%.12g" % weights[j][k])
                                     outFile.write(" ")
                                 outFile.write("\n")
                         else:
                             for j in range(len(weights[0])):
                                 for k in range(len(weights)):
-                                    outFile.write("%g" % weights[k][j])
+                                    outFile.write("%.12g" % weights[k][j])
                                     outFile.write(" ")
                                 outFile.write("\n")
                             
@@ -251,23 +251,22 @@ class Regression:
                     for biasVariable in self.neuralNetwork.allBiases:
                         biases = sess.run(biasVariable)
                         for j in range(len(biases)):
-                            outFile.write("%g" % biases[j])
+                            outFile.write("%.12g" % biases[j])
                             outFile.write(" ")
                         outFile.write("\n")
                           
             if plot:
-                x_test  = np.random.uniform(0.9, 2, self.testSize)
+                x_test  = np.linspace(0.8, 2.5, self.testSize)
                 x_test  = x_test.reshape([testSize,1])
                 y_test  = self.function(x_test)
                 yy = sess.run(prediction, feed_dict={self.x: x_test})
-                #plt.plot(x_test[:,0], yy[:,0], 'b.')
+                plt.plot(x_test[:,0], yy[:,0] - self.function(x_test[:,0]), 'b-')
                 #plt.hold('on')
-                xx = np.linspace(0.9, 2, self.testSize)
-                #plt.plot(xx, self.function(xx), 'g-')
-                plt.plot(x_test, self.function(x_test) - yy[:,0])
+                #plt.plot(x_test[:,0], self.function(x_test[:,0]), 'g-')
                 plt.xlabel('r')
                 plt.ylabel('U(r)')
                 plt.legend(['Approximation', 'L-J'])
+                plt.savefig('test.pdf', format='pdf')
                 plt.show()
                     
         
@@ -332,12 +331,15 @@ def testActivations(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, a=
  
 def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, a=0.8, b=2.5):
     
-    function = lambda s : 1.0/s**12 - 1.0/s**6
+    cutoff = 2.5
+    shiftedPotential = 1.0/cutoff**12 - 1.0/cutoff**6
+    function = lambda s : 4*(1.0/s**12 - 1.0/s**6 - shiftedPotential)
+    #function = lambda s : s
     regress = Regression(function, trainSize, batchSize, testSize)
     regress.generateData(a, b)
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
-    regress.train(nEpochs, plot=False)
+    regress.train(nEpochs, plot=True)
     
     
 LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 100000)
