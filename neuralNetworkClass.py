@@ -75,26 +75,27 @@ class neuralNetwork:
         # Adding a name scope ensures logical grouping of the layers in the graph.
         with tf.name_scope(layer_name):
         
-            with tf.name_scope('weights'):
+            with tf.name_scope("weights"):
                 weights = self.init_weights([input_dim, output_dim])
                 self.allWeights.append(weights)
-                self.variable_summaries(weights, layer_name + '/weights')
+                #self.variable_summaries(weights, layer_name + "/weights")
                 
-            with tf.name_scope('biases'):
+            with tf.name_scope("biases"):
                 biases = self.init_biases([output_dim])
                 self.allBiases.append(biases)
-                self.variable_summaries(biases, layer_name + '/biases')
+                #self.variable_summaries(biases, layer_name + "/biases")
                 
-            with tf.name_scope('Wx_plus_b'):
+            with tf.name_scope("Wx_plus_b"):
                 preactivate = tf.matmul(input_tensor, weights) + biases
-                tf.histogram_summary(layer_name + '/pre_activations', preactivate)
+                #tf.histogram_summary(layer_name + "/pre_activations", preactivate)
                 
             if not activation == None:
-                activations = activation(preactivate, 'activation')
-                tf.histogram_summary(layer_name + '/activations', activations)
+                activations = activation(preactivate, "activation")
+                #tf.histogram_summary(layer_name + "/activations", activations)
                 return activations
             else:
-                return preactivate
+                activations = tf.identity(preactivate, "activation")
+                return activations
                 
         
     def model(self, data): 
@@ -106,12 +107,12 @@ class neuralNetwork:
         
         activations = []
         
-        hidden1 = self.nn_layer(data, inputs, nNodes, 'layer1', self.activation)
+        hidden1 = self.nn_layer(data, inputs, nNodes, "layer1", self.activation)
         activations.append(hidden1)
         
         # following layers
         for layer in range(1, nLayers, 1):
-            layerName = 'layer%1d' % (layer+1)
+            layerName = "layer%1d" % (layer+1)
             
             # make sure activation between last hidden layer an output is a sigmoid
             if layer == nLayers-1:
@@ -123,7 +124,7 @@ class neuralNetwork:
                 act = self.nn_layer(activations[layer-1], nNodes, nNodes, layerName, self.activation)
             activations.append(act)
                
-        outputLayer = self.nn_layer(activations[nLayers-1], nNodes, outputs, 'outputLayer', None)
+        outputLayer = self.nn_layer(activations[nLayers-1], nNodes, outputs, "outputLayer", None)
         activations.append(outputLayer)
         
         return outputLayer

@@ -6,6 +6,13 @@
 using namespace tensorflow;
 
 int main(int argc, char* argv[]) {
+
+
+  // Read in the protobuf graph we exported
+  // (The path seems to be relative to the cwd. Keep this in mind
+  // when using `bazel run` since the cwd isn't where you call
+  // `bazel run` but from inside a temp folder.)
+
   // Initialize a tensorflow session
   Session* session;
   Status status = NewSession(SessionOptions(), &session);
@@ -14,16 +21,14 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  // Read in the protobuf graph we exported
-  // (The path seems to be relative to the cwd. Keep this in mind
-  // when using `bazel run` since the cwd isn't where you call
-  // `bazel run` but from inside a temp folder.)
   GraphDef graph_def;
-  status = ReadBinaryProto(Env::Default(), "models/train.pb", &graph_def);
+  status = ReadBinaryProto(Env::Default(), "models/graph.pb", &graph_def);
   if (!status.ok()) {
     std::cout << status.ToString() << "\n";
     return 1;
   }
+
+
 
   // Add the graph to the session
   status = session->Create(graph_def);

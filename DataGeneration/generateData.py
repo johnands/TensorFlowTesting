@@ -40,7 +40,7 @@ def functionData(function, trainSize, testSize, a=0.8, b=2.5):
     Create random numbers as input for neural network
     to approximate any continous function
     """
-    np.random.seed(0)
+    np.random.seed(1)
     x_train = np.random.uniform(a, b, trainSize)
     x_train = x_train.reshape([trainSize,1])
     y_train = function(x_train)
@@ -50,6 +50,30 @@ def functionData(function, trainSize, testSize, a=0.8, b=2.5):
     y_test  = function(x_test)
     
     return x_train, y_train, x_test, y_test
+    
+    
+def neighbourData(function, trainSize, testSize, a=0.8, b=2.5, inputs=5, outputs=1):
+    """
+    Create random distances [a,b] for five neighbouring atoms
+    and make test set based on these random points
+    The output node is the sum of the energy of all neighbours
+    """
+    np.random.seed(1)
+    
+    # xTrain: shape(trainSize, neighbours)
+    # yTrain: shape(trainSize, outputs)
+    dimension = (trainSize, inputs)
+    xTrain = np.random.uniform(a, b, dimension)
+    yTrain = np.sum(function(xTrain), axis=1)
+    yTrain.reshape([trainSize,outputs])
+    
+    dimension = (testSize, inputs)
+    xTest = np.random.uniform(a, b, dimension)
+    yTest = np.sum(function(xTest), axis=1)
+    yTrain.reshape([testSize,outputs])
+    
+    return xTrain, yTrain, xTest, yTest
+    
     
 
 

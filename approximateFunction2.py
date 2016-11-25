@@ -12,17 +12,21 @@ import matplotlib.pyplot as plt
 from DataGeneration.generateData import functionData
 import neuralNetworkClass as nn
 from Tools.inspect_checkpoint import print_tensors_in_checkpoint_file
+from Tools.freeze_graph import freeze_graph
 from timeit import default_timer as timer
 
-loadFlag        = False
-loadFileName    = ''
-saveFlag        = False
-saveDirName     = ''
-summaryFlag     = False
-summaryDir      = ''
-saveGraphFlag   = False
-saveMetaName    = ''
-saveGraphName   = ''
+loadFlag            = False
+loadFileName        = ''
+saveFlag            = False
+saveDirName         = ''
+summaryFlag         = False
+summaryDir          = ''
+saveGraphFlag       = False
+saveGraphName       = ''
+saveGraphProtoFlag  = False
+saveGraphProtoName  = ''
+saveMetaName        = ''
+
 now             = time.datetime.now().strftime("%d.%m-%H.%M.%S")
 trainingDir     = 'TrainingData' + '/' + now
 
@@ -30,7 +34,7 @@ trainingDir     = 'TrainingData' + '/' + now
 if len(sys.argv) > 1:
     i = 1
     while i < len(sys.argv):
-        if sys.argv[i] == '--save' or sys.argv[i] == '--summary' or sys.argv[i] == '--savegraph':
+        if sys.argv[i] != '--load':
             if os.path.exists(trainingDir):
                 print "Attempted to place data in existing directory, %s. Exiting." % trainingDir
                 exit(1)
@@ -75,7 +79,11 @@ if len(sys.argv) > 1:
             
         elif sys.argv[i] == '--savegraph':
             i += 1
-            saveGraphFlag = True                    
+            saveGraphFlag = True           
+            
+        elif sys.argv[i] == '--savegraphproto':
+            i += 1
+            saveGraphProtoFlag = True
                     
         else:
             i += 1
@@ -92,11 +100,17 @@ class Regression:
         self.outputs   = outputs
 
 
-    def generateData(self, a, b):
+    def generateData(self, a, b, method='functionData'):
         
-        self.a, self.b = a, b        
-        self.xTrain, self.yTrain, self.xTest, self.yTest = \
-            functionData(self.function, self.trainSize, self.testSize, a, b)
+        self.a, self.b = a, b    
+        
+        if method == 'functionData':
+            self.xTrain, self.yTrain, self.xTest, self.yTest = \
+                functionData(self.function, self.trainSize, self.testSize, a, b)
+                
+        else:
+            self.xTrain, self.yTrain, self.xTest, self.yTest = \
+                neighbourData(self.function, self.trainSize, self.testSize, a, b)
         
         
     def constructNetwork(self, nLayers, nNodes, activation=tf.nn.relu, \
@@ -112,6 +126,8 @@ class Regression:
         with tf.name_scope('input'):
             self.x = tf.placeholder('float', [None, self.inputs],  name='x-input')
             self.y = tf.placeholder('float', [None, self.outputs], name='y-input')
+            
+        print self.x.name
 
         
         self.neuralNetwork = nn.neuralNetwork(nNodes, nLayers, activation,
@@ -120,7 +136,7 @@ class Regression:
         self.makeNetwork = lambda data : self.neuralNetwork.model(self.x)
     
     
-    def train(self, numberOfEpochs, plot=False, counter=0):    
+    def train(self, numberOfEpochs, plot=False):    
         
         trainSize = self.trainSize
         batchSize = self.batchSize
@@ -140,17 +156,20 @@ class Regression:
             # pass data to network and receive output
             prediction = self.makeNetwork(x)
             #self.prediction, weights, biases, neurons = self.neuralNetwork(x)
+            print prediction.name
+            print prediction.get_shape()
             
             with tf.name_scope('L2Norm'):
                 cost = tf.nn.l2_loss( tf.sub(prediction, y) )
-                tf.scalar_summary('L2Norm', cost/batchSize)
+                #tf.scalar_summary('L2Norm', cost/batchSize)
 
             with tf.name_scope('train'):
                 trainStep = tf.train.AdamOptimizer().minimize(cost)
             
             # initialize variables or restore from file
-            saver = tf.train.Saver(self.neuralNetwork.allWeights + self.neuralNetwork.allBiases, 
-                                   max_to_keep=None)
+            #saver = tf.train.Saver(self.neuralNetwork.allWeights + self.neuralNetwork.allBiases, 
+            #                       max_to_keep=None)
+            saver = tf.train.Saver()
             sess.run(tf.initialize_all_variables())
             if loadFlag:
                 saver.restore(sess, loadFileName)
@@ -199,29 +218,30 @@ class Regression:
                         summary = sess.run(merged, feed_dict={x: xBatch, y: yBatch})
                         train_writer.add_summary(summary, epoch)
                                                         
-                # if saving is enabled, save the graph variables ('w', 'b') and dump
+                # if an argument is passed, save the graph variables ('w', 'b') and dump
                 # some info about the training so far to TrainingData/<this run>/meta.dat.            
-                if saveFlag or summaryFlag:
+                if len(sys.argv) > 1:
                     if epoch == 0:
                         saveEpochNumber = 0
-                        with open(saveMetaName + '%1d' % counter, 'w') as outFile:
-                            outStr = """# epochs: %d train: %d, test: %d, batch: %d, nodes: %d, layers: %d
-                                        a: %1.1f, b: %1.1f, activation: %s, wInit: %s, bInit: %s""" % \
-                                      (numberOfEpochs, trainSize, testSize, batchSize, nNodes, nLayers, \
-                                       self.a, self.b, self.activation, self.wInit, self.bInit)
+                        with open(saveMetaName, 'w') as outFile:
+                            outStr = '# epochs: %d train: %d, test: %d, batch: %d, nodes: %d, layers: %d \n' \
+                                     % (numberOfEpochs, trainSize, testSize, batchSize, nNodes, nLayers)
+                            outStr += 'a: %1.1f, b: %1.1f, activation: %s, wInit: %s, bInit: %s' % \
+                                       (self.a, self.b, self.activation.__name__, self.wInit, self.bInit)
                             outFile.write(outStr + '\n')
                             outStr = '%g %g' % (trainCost/float(batchSize), testCost/float(testSize))
                             outFile.write(outStr + '\n')
                     else:
-                        if epoch % 10 == 0:
+                        if epoch % 100 == 0:
                              with open(saveMetaName, 'a') as outFile :
                                  outStr = '%g %g' % (trainCost/float(batchSize), testCost/float(testSize))
                                  outFile.write(outStr + '\n')                   
                     
                 if saveFlag: 
-                    if epoch % 100 == 0:
+                    if epoch % 1000 == 0:
                         saveFileName = saveDirName + '/' 'ckpt'
-                        saver.save(sess, saveFileName, global_step=saveEpochNumber)
+                        saver.save(sess, saveFileName, global_step=saveEpochNumber, 
+                                   latest_filename="checkpoint_state")
                         saveEpochNumber += 1
                         
        
@@ -254,7 +274,27 @@ class Regression:
                             outFile.write("%.12g" % biases[j])
                             outFile.write(" ")
                         outFile.write("\n")
-                          
+            
+            # freeze graph
+            if saveGraphProtoFlag:
+                tf.train.write_graph(sess.graph_def, trainingDir, 'graph.pb')
+                
+                input_graph_path = trainingDir + '/graph.pb'
+                input_saver_def_path = ""
+                input_binary = False
+                input_checkpoint_path = saveFileName + '-' + str(saveEpochNumber-1)
+                output_node_names = "outputLayer/activation"
+                restore_op_name = "save/restore_all"
+                filename_tensor_name = "save/Const:0"
+                output_graph_path = trainingDir + '/frozen_graph.pb'
+                clear_devices = False
+
+                freeze_graph(input_graph_path, input_saver_def_path,
+                             input_binary, input_checkpoint_path,
+                             output_node_names, restore_op_name,
+                             filename_tensor_name, output_graph_path,
+                             clear_devices, "")
+              
             if plot:
                 x_test  = np.linspace(0.8, 2.5, self.testSize)
                 x_test  = x_test.reshape([testSize,1])
@@ -339,11 +379,26 @@ def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs
     regress.generateData(a, b)
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
-    regress.train(nEpochs, plot=True)
+    regress.train(nEpochs, plot=False)
+    
+def LennardJonesNeighbours(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
+                           a=0.8, b=2.5, inputs=5, outputs=1):
+                               
+    cutoff = 2.5
+    shiftedPotential = 1.0/cutoff**12 - 1.0/cutoff**6
+    function = lambda s : 4*(1.0/s**12 - 1.0/s**6 - shiftedPotential)
+    regress = Regression(function, trainSize, batchSize, testSize)
+    regress.generateData(a, b, method='neighbourData')
+    regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
+                             wInit='normal', bInit='normal')
+    regress.train(nEpochs, plot=False)
+                               
+                        
     
     
-LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 100000)
+#LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 50000)
 #testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
+LennardJonesNeighbours(int(1e6), int(1e4), int(1e3), 2, 10, 50000)
 
     
 
