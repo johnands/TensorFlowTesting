@@ -217,12 +217,14 @@ class Regression:
                             outStr += 'a: %1.1f, b: %1.1f, activation: %s, wInit: %s, bInit: %s' % \
                                        (self.a, self.b, self.activation.__name__, self.wInit, self.bInit)
                             outFile.write(outStr + '\n')
-                            outStr = '%g %g' % (trainCost/float(batchSize), testCost/float(testSize))
+                            outStr = '%d %g %g' % \
+                                     (epoch, trainCost/float(batchSize), testCost/float(testSize))
                             outFile.write(outStr + '\n')
                     else:
                         if epoch % 1000 == 0:
                              with open(saveMetaName, 'a') as outFile :
-                                 outStr = '%g %g' % (trainCost/float(batchSize), testCost/float(testSize))
+                                 outStr = '%d %g %g' % \
+                                          (epoch, trainCost/float(batchSize), testCost/float(testSize))
                                  outFile.write(outStr + '\n')                   
                     
                 if saveFlag or saveGraphProtoFlag: 
@@ -391,7 +393,7 @@ def LennardJonesNeighbours(trainSize, batchSize, testSize, nLayers, nNodes, nEpo
     
 #LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 100000)
 #testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
-LennardJonesNeighbours(int(1e7), int(1e4), int(1e3), 1, 100, int(2e5))
+LennardJonesNeighbours(int(1e7), int(1e4), int(1e3), 1, 200, int(20e6))
 
     
 
