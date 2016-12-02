@@ -1,7 +1,4 @@
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import matplotlib.pyplot as plt
 
 # load files
@@ -41,77 +38,110 @@ time = np.array(time)
 
 # plot for specific number of nodes
 #plt.figure()
-#nodeNumber = 10
+#nodeNumber = 100
 #indicies = np.where(nodes == nodeNumber)
 #layersN100 = layers[indicies]
 #timePython = time[0][indicies]
 #timeTF = time[1][indicies]
 #timeArma = time[2][indicies]
-#plt.subplot(3,1,1)
+#
+#layerNumber = 30
+#cut = 0
+#indicies2 = np.where(layers == layerNumber)
+#nodesL30 = nodes[indicies2]
+#timePython2 = time[0][indicies2]
+#timeTF2 = time[1][indicies2]
+#timeArma2 = time[2][indicies2]
+#
+#plt.subplot(3,2,1)
 #plt.plot(layersN100, timeTF/timePython)
-#plt.xlabel('Number of layers')
-#plt.ylabel('Time TFC++ / time TFpython')
-#plt.subplot(3,1,2)
+#plt.hold('on')
+#plt.plot(layersN100, np.zeros(len(layersN100)) + 1, 'r-', linewidth=1)
+#plt.ylabel(r'$T_{TFC} / T_{TFP}$', fontsize=15)
+#
+#plt.subplot(3,2,2)
+#plt.plot(nodesL30, timeTF2/timePython2)
+#plt.hold('on')
+#plt.plot(nodesL30, np.zeros(len(nodesL30)) + 1, 'r-', linewidth=1)
+#
+#plt.subplot(3,2,3)
 #plt.plot(layersN100, timeTF/timeArma)
-#plt.xlabel('Number of layers')
-#plt.ylabel('Time TFC++ / time armadillo')
-#plt.subplot(3,1,3)
+#plt.hold('on')
+#plt.plot(layersN100, np.zeros(len(layersN100)) + 1, 'r-', linewidth=1)
+#plt.axis([0, 30, 0, 10])
+#plt.ylabel(r'$T_{TFC} / T_{ARMA}$', fontsize=15)
+#
+#plt.subplot(3,2,4)
+#plt.plot(nodesL30[cut:], timeTF2[cut:]/timeArma2[cut:])
+#plt.hold('on')
+#plt.plot(nodesL30[cut:], np.zeros(len(nodesL30[cut:])) + 1, 'r-', linewidth=1)
+#plt.axis([0, 100, 0, 10])
+#
+#plt.subplot(3,2,5)
 #plt.plot(layersN100, timePython/timeArma)
-#plt.xlabel('Number of layers')
-#plt.ylabel('Time TFpython / time armadillo')
+#plt.hold('on')
+#plt.plot(layersN100, np.zeros(len(layersN100)) + 1, 'r-', linewidth=1)
+#plt.axis([0, 30, 0, 10])
+#plt.xlabel('L', fontsize=15)
+#plt.ylabel(r'$T_{TFP} / T_{ARMA}$', fontsize=15)
+#
+#plt.subplot(3,2,6)
+#plt.plot(nodesL30[cut:], timePython2[cut:]/timeArma2[cut:])
+#plt.hold('on')
+#plt.plot(nodesL30, np.zeros(len(nodesL30)) + 1, 'r-', linewidth=1)
+#plt.axis([0, 100, 0, 10])
+#plt.xlabel('N', fontsize=15)
+#plt.tight_layout()
+#plt.suptitle('N = 100                                           ' + \
+#              '                                                 ' + 
+#              '                                     L = 30', fontsize=15)
+#plt.savefig('Plots/timeComparisonNetwork3.pdf')
 #plt.show()
 
-# plot for specific number of layeres
-#plt.figure()
-#layerNumber = 5
-#cut = 0
-#indicies = np.where(layers == layerNumber)
-#nodesL30 = nodes[indicies]
-#timePython = time[0][indicies]
-#timeTF = time[1][indicies]
-#timeArma = time[2][indicies]
-#plt.subplot(3,1,1)
-#plt.plot(nodesL30, timeTF/timePython)
-#plt.xlabel('Number of nodes')
-#plt.ylabel('Time TFC++ / time TFpython')
-#plt.subplot(3,1,2)
-#plt.plot(nodesL30[cut:], timeTF[cut:]/timeArma[cut:])
-#plt.xlabel('Number of nodes')
-#plt.ylabel('Time TFC++ / time armadillo')
-#plt.subplot(3,1,3)
-#plt.plot(nodesL30[cut:], timePython[cut:]/timeArma[cut:])
-#plt.xlabel('Number of nodes')
-#plt.ylabel('Time TFpython / time armadillo')
-#plt.show()
 
 # scatter plots
+
+# convert to array of arrays
+time = np.array([np.array(ti) for ti in time])
+
 plt.figure()
-plt.subplot(3,1,1)
+plt.subplot(2,2,1)
+print time[0].shape
 plt.scatter(networkSize, time[1]/time[0])
 plt.hold('on')
 plt.plot(networkSize, np.zeros(len(networkSize)) + 1, 'r-', linewidth=1)
-plt.xlabel(r'System size: $L\cdot N$', fontsize=15)
+#plt.xlabel(r'System size: $L\cdot N$', fontsize=15)
 plt.ylabel(r'$T_{TFC} / T_{TFP}$', fontsize=15)
-#plt.axis([0, 3100, 0, 2])
+plt.axis([0, 3100, 0, 2])
 
-plt.subplot(3,1,2)
+plt.subplot(2,2,2)
+plt.scatter(networkSize, time[1]/time[2])
+plt.hold('on')
+plt.plot(networkSize, np.zeros(len(networkSize)) + 1, 'r-', linewidth=1)
+#plt.xlabel(r'System size: $L\cdot N$', fontsize=15)
+plt.ylabel(r'$T_{TFC} / T_{ARMA}$', fontsize=15)
+plt.axis([0, 3100, 0, 10])
+
+plt.subplot(2,2,3)
+plt.scatter(networkSize, time[0]/time[2])
+plt.hold('on')
+plt.plot(networkSize, np.zeros(len(networkSize)) + 1, 'r-', linewidth=1)
+plt.axis([0, 3100, 0, 10])
+plt.xlabel(r'System size: $L\cdot N$', fontsize=15)
+plt.ylabel(r'$T_{TFP} / T_{ARMA}$', fontsize=15)
+#plt.savefig('Plots/timeComparisonNetwork2.pdf')
+#plt.show()
+
+# full scatter plot for TFC++/Arma
+#plt.figure()
+plt.subplot(2,2,4)
 plt.scatter(networkSize, time[1]/time[2])
 plt.hold('on')
 plt.plot(networkSize, np.zeros(len(networkSize)) + 1, 'r-', linewidth=1)
 plt.xlabel(r'System size: $L\cdot N$', fontsize=15)
 plt.ylabel(r'$T_{TFC} / T_{ARMA}$', fontsize=15)
-#plt.axis([0, 3100, 0, 10])
-
-plt.subplot(3,1,3)
-plt.scatter(networkSize, time[0]/time[2])
-plt.hold('on')
-plt.plot(networkSize, np.zeros(len(networkSize)) + 1, 'r-', linewidth=1)
-#plt.axis([0, 3100, 0, 10])
-plt.xlabel(r'System size: $L\cdot N$', fontsize=15)
-plt.ylabel(r'$T_{TFP} / T_{ARMA}$', fontsize=15)
-plt.suptitle('Comparison of time usage for different platforms', fontsize=15)
-plt.savefig('timeComparisonNetwork2.pdf')
-plt.show()
-
-
+plt.axis([0, 3100, 0, np.max(time[1]/time[2])])
+plt.tight_layout()
+plt.savefig('Plots/timeComparisonNetworkTotalScatter.pdf')
+#plt.show()
 

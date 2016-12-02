@@ -78,20 +78,20 @@ class neuralNetwork:
             with tf.name_scope("weights"):
                 weights = self.init_weights([input_dim, output_dim])
                 self.allWeights.append(weights)
-                #self.variable_summaries(weights, layer_name + "/weights")
+                self.variable_summaries(weights, layer_name + "/weights")
                 
             with tf.name_scope("biases"):
                 biases = self.init_biases([output_dim])
                 self.allBiases.append(biases)
-                #self.variable_summaries(biases, layer_name + "/biases")
+                self.variable_summaries(biases, layer_name + "/biases")
                 
             with tf.name_scope("Wx_plus_b"):
                 preactivate = tf.matmul(input_tensor, weights) + biases
-                #tf.histogram_summary(layer_name + "/pre_activations", preactivate)
+                tf.histogram_summary(layer_name + "/pre_activations", preactivate)
                 
             if not activation == None:
                 activations = activation(preactivate, "activation")
-                #tf.histogram_summary(layer_name + "/activations", activations)
+                tf.histogram_summary(layer_name + "/activations", activations)
                 return activations
             else:
                 activations = tf.identity(preactivate, "activation")

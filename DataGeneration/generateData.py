@@ -62,15 +62,18 @@ def neighbourData(function, trainSize, testSize, a=0.8, b=2.5, inputs=5, outputs
     
     # xTrain: shape(trainSize, neighbours)
     # yTrain: shape(trainSize, outputs)
+    
     dimension = (trainSize, inputs)
     xTrain = np.random.uniform(a, b, dimension)
+    xTrain = np.sort(xTrain, axis=1)
     yTrain = np.sum(function(xTrain), axis=1)
-    yTrain.reshape([trainSize,outputs])
+    yTrain = yTrain.reshape([trainSize,outputs])
     
     dimension = (testSize, inputs)
     xTest = np.random.uniform(a, b, dimension)
+    xTest = np.sort(xTest, axis=1)
     yTest = np.sum(function(xTest), axis=1)
-    yTrain.reshape([testSize,outputs])
+    yTest = yTest.reshape([testSize,outputs])
     
     return xTrain, yTrain, xTest, yTest
     

@@ -9,7 +9,7 @@ import datetime as time
 import os
 import shutil
 import matplotlib.pyplot as plt
-from DataGeneration.generateData import functionData
+from DataGeneration.generateData import functionData, neighbourData
 import neuralNetworkClass as nn
 from Tools.inspect_checkpoint import print_tensors_in_checkpoint_file
 from Tools.freeze_graph import freeze_graph
@@ -26,6 +26,7 @@ saveGraphName       = ''
 saveGraphProtoFlag  = False
 saveGraphProtoName  = ''
 saveMetaName        = ''
+plotFlag            = False
 
 now             = time.datetime.now().strftime("%d.%m-%H.%M.%S")
 trainingDir     = 'TrainingData' + '/' + now
@@ -84,6 +85,10 @@ if len(sys.argv) > 1:
         elif sys.argv[i] == '--savegraphproto':
             i += 1
             saveGraphProtoFlag = True
+            
+        elif sys.argv[i] == '--plot':
+            i += 1
+            plotFlag = True
                     
         else:
             i += 1
@@ -106,11 +111,13 @@ class Regression:
         
         if method == 'functionData':
             self.xTrain, self.yTrain, self.xTest, self.yTest = \
-                functionData(self.function, self.trainSize, self.testSize, a, b)
+                functionData(self.function, self.trainSize, self.testSize, a=a, b=b)
                 
         else:
             self.xTrain, self.yTrain, self.xTest, self.yTest = \
-                neighbourData(self.function, self.trainSize, self.testSize, a, b)
+                neighbourData(self.function, self.trainSize, self.testSize, a=a, b=b, \
+                              inputs=self.inputs, outputs=self.outputs)
+            print self.xTrain.shape, self.yTrain.shape, self.xTest.shape, self.yTest.shape
         
         
     def constructNetwork(self, nLayers, nNodes, activation=tf.nn.relu, \
@@ -126,17 +133,14 @@ class Regression:
         with tf.name_scope('input'):
             self.x = tf.placeholder('float', [None, self.inputs],  name='x-input')
             self.y = tf.placeholder('float', [None, self.outputs], name='y-input')
-            
-        print self.x.name
-
-        
+       
         self.neuralNetwork = nn.neuralNetwork(nNodes, nLayers, activation,
                                               weightsInit=wInit, biasesInit=bInit,
-                                              stdDev=1.0)
+                                              stdDev=1.0, inputs=self.inputs, outputs=self.outputs)
         self.makeNetwork = lambda data : self.neuralNetwork.model(self.x)
     
     
-    def train(self, numberOfEpochs, plot=False):    
+    def train(self, numberOfEpochs):    
         
         trainSize = self.trainSize
         batchSize = self.batchSize
@@ -156,12 +160,10 @@ class Regression:
             # pass data to network and receive output
             prediction = self.makeNetwork(x)
             #self.prediction, weights, biases, neurons = self.neuralNetwork(x)
-            print prediction.name
-            print prediction.get_shape()
-            
+
             with tf.name_scope('L2Norm'):
                 cost = tf.nn.l2_loss( tf.sub(prediction, y) )
-                #tf.scalar_summary('L2Norm', cost/batchSize)
+                tf.scalar_summary('L2Norm', cost/batchSize)
 
             with tf.name_scope('train'):
                 trainStep = tf.train.AdamOptimizer().minimize(cost)
@@ -190,31 +192,17 @@ class Regression:
                 yBatch = yTrain[i:i+batchSize]
                            
                 # calculate cost on test set every 10th epoch
-                if epoch % 100 == 0:               
+                if epoch % 1000 == 0:               
                     testCost = sess.run(cost, feed_dict={x: xTest, y: yTest})
                     print 'Cost/N at step %4d: %g' % (epoch, testCost/testSize)
                     if summaryFlag:
                         summary = sess.run(merged, feed_dict={x: xTest, y: yTest})
                         test_writer.add_summary(summary, epoch)
                 
-                """
-                # run and write meta data every 100th step
-                if epoch % 100 == 99:
-                    run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-                    run_metadata = tf.RunMetadata()
-                    summary, _ = sess.run([merged, trainStep],
-                                          feed_dict={x: xBatch, y: yBatch},
-                                          options=run_options,
-                                          run_metadata=run_metadata)
-                    train_writer.add_run_metadata(run_metadata, 'step%4d' % epoch)
-                    train_writer.add_summary(summary, epoch)
-                    print('Adding run metadata for', epoch)    
-                """
-                
                 # train      
                 trainCost, _ = sess.run([cost, trainStep], feed_dict={x: xBatch, y: yBatch})
                 if summaryFlag:
-                    if epoch % 10 == 0:
+                    if epoch % 1000 == 0:
                         summary = sess.run(merged, feed_dict={x: xBatch, y: yBatch})
                         train_writer.add_summary(summary, epoch)
                                                         
@@ -232,12 +220,12 @@ class Regression:
                             outStr = '%g %g' % (trainCost/float(batchSize), testCost/float(testSize))
                             outFile.write(outStr + '\n')
                     else:
-                        if epoch % 100 == 0:
+                        if epoch % 1000 == 0:
                              with open(saveMetaName, 'a') as outFile :
                                  outStr = '%g %g' % (trainCost/float(batchSize), testCost/float(testSize))
                                  outFile.write(outStr + '\n')                   
                     
-                if saveFlag: 
+                if saveFlag or saveGraphProtoFlag: 
                     if epoch % 1000 == 0:
                         saveFileName = saveDirName + '/' 'ckpt'
                         saver.save(sess, saveFileName, global_step=saveEpochNumber, 
@@ -294,20 +282,21 @@ class Regression:
                              output_node_names, restore_op_name,
                              filename_tensor_name, output_graph_path,
                              clear_devices, "")
-              
-            if plot:
-                x_test  = np.linspace(0.8, 2.5, self.testSize)
-                x_test  = x_test.reshape([testSize,1])
+             
+            # plot error
+            if plotFlag:
+                x_test  = np.linspace(self.a, self.b, self.testSize)
+                x_test  = x_test.reshape([testSize,self.inputs])
                 y_test  = self.function(x_test)
                 yy = sess.run(prediction, feed_dict={self.x: x_test})
                 plt.plot(x_test[:,0], yy[:,0] - self.function(x_test[:,0]), 'b-')
                 #plt.hold('on')
                 #plt.plot(x_test[:,0], self.function(x_test[:,0]), 'g-')
-                plt.xlabel('r')
-                plt.ylabel('U(r)')
-                plt.legend(['Approximation', 'L-J'])
-                plt.savefig('test.pdf', format='pdf')
-                plt.show()
+                plt.xlabel('r [MD]', fontsize=15)
+                plt.ylabel('E [MD]', fontsize=15)
+                plt.legend(['NN(r) - LJ(r)'], loc=1)
+                plt.savefig(trainingDir + '/errorLJ.pdf', format='pdf')
+                #plt.show()
                     
         
 
@@ -365,40 +354,44 @@ def testActivations(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, a=
     counter = 0
     for act in activations:    
         regress.constructNetwork(nLayers, nNodes, activation=act, wInit='trunc_normal', bInit='trunc_normal')
-        regress.train(nEpochs, plot=False, counter=counter)
+        regress.train(nEpochs)
         counter += 1
 
  
 def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, a=0.8, b=2.5):
+    """
+    Train to reproduce shifted L-J potential to 
+    verify implementation of network and backpropagation in the MD code
+    """
     
     cutoff = 2.5
     shiftedPotential = 1.0/cutoff**12 - 1.0/cutoff**6
     function = lambda s : 4*(1.0/s**12 - 1.0/s**6 - shiftedPotential)
-    #function = lambda s : s
     regress = Regression(function, trainSize, batchSize, testSize)
     regress.generateData(a, b)
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
-    regress.train(nEpochs, plot=False)
+    regress.train(nEpochs)
+
     
 def LennardJonesNeighbours(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
-                           a=0.8, b=2.5, inputs=5, outputs=1):
+                           a=0.8, b=2.5, inputs=20, outputs=1):
                                
     cutoff = 2.5
     shiftedPotential = 1.0/cutoff**12 - 1.0/cutoff**6
     function = lambda s : 4*(1.0/s**12 - 1.0/s**6 - shiftedPotential)
-    regress = Regression(function, trainSize, batchSize, testSize)
+    regress = Regression(function, trainSize, batchSize, testSize, inputs=inputs, outputs=outputs)
     regress.generateData(a, b, method='neighbourData')
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
-    regress.train(nEpochs, plot=False)
+    regress.train(nEpochs)
                                
                         
     
     
-#LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 50000)
+#LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 100000)
 #testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
-LennardJonesNeighbours(int(1e6), int(1e4), int(1e3), 2, 10, 50000)
+LennardJonesNeighbours(int(1e7), int(1e4), int(1e3), 1, 100, int(2e5))
 
     
 
