@@ -17,9 +17,10 @@ class neuralNetwork:
         self.stdDev         = stdDev
         self.constantValue  = constantValue
         
-        self.allWeights     = []
-        self.allBiases      = []
-        self.allActivations = []
+        self.allWeights         = []
+        self.allBiases          = []
+        self.allPreActivations  = []
+        self.allActivations     = []
         
     def init_weights(self, shape):
       
@@ -87,6 +88,7 @@ class neuralNetwork:
                 
             with tf.name_scope("Wx_plus_b"):
                 preactivate = tf.matmul(input_tensor, weights) + biases
+                self.allPreActivations.append(preactivate)
                 tf.histogram_summary(layer_name + "/pre_activations", preactivate)
                 
             if not activation == None:

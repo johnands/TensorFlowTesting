@@ -13,7 +13,7 @@ from DataGeneration.generateData import functionData, neighbourData
 import neuralNetworkClass as nn
 from Tools.inspect_checkpoint import print_tensors_in_checkpoint_file
 from Tools.freeze_graph import freeze_graph
-from timeit import default_timer as timer
+from time import clock as timer
 
 loadFlag            = False
 loadFileName        = ''
@@ -27,6 +27,7 @@ saveGraphProtoFlag  = False
 saveGraphProtoName  = ''
 saveMetaName        = ''
 plotFlag            = False
+testFlag            = False
 
 now             = time.datetime.now().strftime("%d.%m-%H.%M.%S")
 trainingDir     = 'TrainingData' + '/' + now
@@ -35,7 +36,8 @@ trainingDir     = 'TrainingData' + '/' + now
 if len(sys.argv) > 1:
     i = 1
     while i < len(sys.argv):
-        if sys.argv[i] != '--load':
+        if sys.argv[i] == '--save' or sys.argv[i] == '--savegraph' or sys.argv[i] == '--savegraphproto' \
+           or sys.argv[i] == 'summary':
             if os.path.exists(trainingDir):
                 print "Attempted to place data in existing directory, %s. Exiting." % trainingDir
                 exit(1)
@@ -43,6 +45,7 @@ if len(sys.argv) > 1:
                 os.mkdir(trainingDir)
                 saveMetaName = trainingDir + '/' + 'meta.dat'
                 saveGraphName = trainingDir + '/' + 'graph.dat'
+                print saveMetaName
                 break
         i += 1
         
@@ -89,6 +92,12 @@ if len(sys.argv) > 1:
         elif sys.argv[i] == '--plot':
             i += 1
             plotFlag = True
+            
+        elif sys.argv[i] == '--test':
+            i += 1
+            testFlag = True
+            numberOfNeighbours = sys.argv[i]
+            i += 1
                     
         else:
             i += 1
@@ -117,7 +126,6 @@ class Regression:
             self.xTrain, self.yTrain, self.xTest, self.yTest = \
                 neighbourData(self.function, self.trainSize, self.testSize, a=a, b=b, \
                               inputs=self.inputs, outputs=self.outputs)
-            print self.xTrain.shape, self.yTrain.shape, self.xTest.shape, self.yTest.shape
         
         
     def constructNetwork(self, nLayers, nNodes, activation=tf.nn.relu, \
@@ -176,6 +184,14 @@ class Regression:
             if loadFlag:
                 saver.restore(sess, loadFileName)
                 print 'Model restored'
+            
+            if testFlag:
+                numberOfNeighbours = 20
+                distances = np.linspace(2, 0.8, numberOfNeighbours)
+                distances = distances.reshape([1,numberOfNeighbours])
+                print distances
+                print sess.run(prediction, feed_dict={self.x: distances})
+                numberOfEpochs = 0
                 
             # Merge all the summaries and write them out to /tmp/mnist_logs (by default)
             if summaryFlag:
@@ -184,6 +200,7 @@ class Regression:
                 test_writer = tf.train.SummaryWriter(summaryDir + '/test')
                     
             # train
+            start = timer()
             for epoch in xrange(numberOfEpochs):
                 
                 # pick random batches
@@ -217,6 +234,8 @@ class Regression:
                             outStr += 'a: %1.1f, b: %1.1f, activation: %s, wInit: %s, bInit: %s' % \
                                        (self.a, self.b, self.activation.__name__, self.wInit, self.bInit)
                             outFile.write(outStr + '\n')
+                            outStr = 'Inputs: %d, outputs: %d \n' % (self.inputs, self.outputs)
+                            outFile.write(outStr)
                             outStr = '%d %g %g' % \
                                      (epoch, trainCost/float(batchSize), testCost/float(testSize))
                             outFile.write(outStr + '\n')
@@ -233,12 +252,15 @@ class Regression:
                         saver.save(sess, saveFileName, global_step=saveEpochNumber, 
                                    latest_filename="checkpoint_state")
                         saveEpochNumber += 1
-                        
+                   
+            # elapsed time
+            end = timer();
+            print "Time elapsed: %g" % (end-start)            
        
             # write weights and biases to file when training is finished
             if saveGraphFlag:
                 with open(saveGraphName, 'w') as outFile:
-                    outStr = "%1d %1d %s" % (nLayers, nNodes, self.activation.__name__)
+                    outStr = "%1d %1d %s %d" % (nLayers, nNodes, self.activation.__name__, self.inputs)
                     outFile.write(outStr + '\n')
                     size = len(self.neuralNetwork.allWeights)
                     for i in range(size):
@@ -299,7 +321,7 @@ class Regression:
                 plt.legend(['NN(r) - LJ(r)'], loc=1)
                 plt.savefig(trainingDir + '/errorLJ.pdf', format='pdf')
                 #plt.show()
-                    
+
         
 
 ##### main #####
@@ -393,7 +415,7 @@ def LennardJonesNeighbours(trainSize, batchSize, testSize, nLayers, nNodes, nEpo
     
 #LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 100000)
 #testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
-LennardJonesNeighbours(int(1e7), int(1e4), int(1e3), 1, 200, int(20e6))
+LennardJonesNeighbours(int(1e5), int(1e4), int(1e3), 1, 200, int(10), inputs=20)
 
     
 
