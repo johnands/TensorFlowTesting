@@ -9,7 +9,7 @@ import datetime as time
 import os
 import shutil
 import matplotlib.pyplot as plt
-from DataGeneration.generateData import functionData, neighbourData
+from DataGeneration.generateData import functionData, neighbourData, neighbourEnergyAndForceData
 import neuralNetworkClass as nn
 from Tools.inspect_checkpoint import print_tensors_in_checkpoint_file
 from Tools.freeze_graph import freeze_graph
@@ -96,7 +96,7 @@ if len(sys.argv) > 1:
         elif sys.argv[i] == '--test':
             i += 1
             testFlag = True
-            numberOfNeighbours = sys.argv[i]
+            numberOfNeighbours = int(sys.argv[i])
             i += 1
                     
         else:
@@ -104,7 +104,8 @@ if len(sys.argv) > 1:
             
 class Regression:
     
-    def __init__(self, function, trainSize, batchSize, testSize, inputs=1, outputs=1):
+    def __init__(self, function, trainSize, batchSize, testSize, inputs, outputs,
+                 functionDerivative=None):
         
         self.trainSize = trainSize
         self.batchSize = batchSize
@@ -112,20 +113,32 @@ class Regression:
         self.function  = function
         self.inputs    = inputs
         self.outputs   = outputs
+        self.functionDerivative = functionDerivative
 
 
     def generateData(self, a, b, method='functionData'):
         
-        self.a, self.b = a, b    
+        self.a, self.b = a, b
         
         if method == 'functionData':
             self.xTrain, self.yTrain, self.xTest, self.yTest = \
                 functionData(self.function, self.trainSize, self.testSize, a=a, b=b)
                 
         else:
-            self.xTrain, self.yTrain, self.xTest, self.yTest = \
-                neighbourData(self.function, self.trainSize, self.testSize, a=a, b=b, \
-                              inputs=self.inputs, outputs=self.outputs)
+            if self.functionDerivative:
+                self.xTrain, self.yTrain, self.xTest, self.yTest = \
+                    neighbourEnergyAndForceData(self.function, self.functionDerivative, \
+                                                self.trainSize, self.testSize, \
+                                                self.inputs, self.outputs, a, b)
+                                                
+                # update sizes after deletion of rows   
+                self.trainSize = self.xTrain.shape[0];
+                self.testSize = self.xTest.shape[0]
+                
+            else:        
+                self.xTrain, self.yTrain, self.xTest, self.yTest = \
+                    neighbourData(self.function, self.trainSize, self.testSize, a, b, \
+                                  inputs=self.inputs, outputs=self.outputs)
         
         
     def constructNetwork(self, nLayers, nNodes, activation=tf.nn.relu, \
@@ -141,6 +154,8 @@ class Regression:
         with tf.name_scope('input'):
             self.x = tf.placeholder('float', [None, self.inputs],  name='x-input')
             self.y = tf.placeholder('float', [None, self.outputs], name='y-input')
+            print tf.shape(self.x)
+            print tf.shape(self.y)
        
         self.neuralNetwork = nn.neuralNetwork(nNodes, nLayers, activation,
                                               weightsInit=wInit, biasesInit=bInit,
@@ -167,7 +182,6 @@ class Regression:
             
             # pass data to network and receive output
             prediction = self.makeNetwork(x)
-            #self.prediction, weights, biases, neurons = self.neuralNetwork(x)
 
             with tf.name_scope('L2Norm'):
                 cost = tf.nn.l2_loss( tf.sub(prediction, y) )
@@ -186,8 +200,7 @@ class Regression:
                 print 'Model restored'
             
             if testFlag:
-                numberOfNeighbours = 20
-                distances = np.linspace(2, 0.8, numberOfNeighbours)
+                distances = np.linspace(0.8, 2, numberOfNeighbours)
                 distances = distances.reshape([1,numberOfNeighbours])
                 print distances
                 print sess.run(prediction, feed_dict={self.x: distances})
@@ -260,7 +273,8 @@ class Regression:
             # write weights and biases to file when training is finished
             if saveGraphFlag:
                 with open(saveGraphName, 'w') as outFile:
-                    outStr = "%1d %1d %s %d" % (nLayers, nNodes, self.activation.__name__, self.inputs)
+                    outStr = "%1d %1d %s %d %d" % (nLayers, nNodes, self.activation.__name__, \
+                                                   self.inputs, self.outputs)
                     outFile.write(outStr + '\n')
                     size = len(self.neuralNetwork.allWeights)
                     for i in range(size):
@@ -370,7 +384,7 @@ def testActivations(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, a=
     a = 0.9
     b = 1.6
 
-    regress = Regression(function, int(1e6), int(1e4), int(1e3))
+    regress = Regression(function, int(1e6), int(1e4), int(1e3), 1, 1)
     regress.generateData(a, b)
     
     # test different activations
@@ -391,7 +405,7 @@ def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs
     cutoff = 2.5
     shiftedPotential = 1.0/cutoff**12 - 1.0/cutoff**6
     function = lambda s : 4*(1.0/s**12 - 1.0/s**6 - shiftedPotential)
-    regress = Regression(function, trainSize, batchSize, testSize)
+    regress = Regression(function, trainSize, batchSize, testSize, 1, 1)
     regress.generateData(a, b)
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
@@ -404,18 +418,32 @@ def LennardJonesNeighbours(trainSize, batchSize, testSize, nLayers, nNodes, nEpo
     cutoff = 2.5
     shiftedPotential = 1.0/cutoff**12 - 1.0/cutoff**6
     function = lambda s : 4*(1.0/s**12 - 1.0/s**6 - shiftedPotential)
-    regress = Regression(function, trainSize, batchSize, testSize, inputs=inputs, outputs=outputs)
+    regress = Regression(function, trainSize, batchSize, testSize, inputs, outputs)
     regress.generateData(a, b, method='neighbourData')
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
     regress.train(nEpochs)
                                
-                        
+                               
+def LennardJonesNeighboursForce(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
+                                inputs, outputs=4, a=0.0, b=2.0):
+    
+    cutoff = 2.5
+    shiftedPotential = 1.0/cutoff**12 - 1.0/cutoff**6
+    function = lambda s : 4*(1.0/s**12 - 1.0/s**6 - shiftedPotential)
+    functionDerivative = lambda t : (24*t**6 - 48) / t**13
+    regress = Regression(function, trainSize, batchSize, testSize, inputs, outputs, \
+                         functionDerivative)
+    regress.generateData(a, b, method='neighbourData')
+    regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
+                             wInit='normal', bInit='normal')
+    regress.train(nEpochs)
     
     
 #LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 100000)
 #testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
-LennardJonesNeighbours(int(1e5), int(1e4), int(1e3), 1, 200, int(10), inputs=20)
+#LennardJonesNeighbours(int(1e5), int(1e4), int(1e3), 1, 200, int(10), inputs=20)
+LennardJonesNeighboursForce(int(1e7), int(1e4), int(1e3), 1, 200, int(1e6), 20)
 
     
 

@@ -2,6 +2,7 @@
 # for example training of ANN
 
 import numpy as np
+np.random.seed(1)
 
 def compareIntegers(N, a=0, b=10):
     """
@@ -40,7 +41,7 @@ def functionData(function, trainSize, testSize, a=0.8, b=2.5):
     Create random numbers as input for neural network
     to approximate any continous function
     """
-    np.random.seed(1)
+    
     x_train = np.random.uniform(a, b, trainSize)
     x_train = x_train.reshape([trainSize,1])
     y_train = function(x_train)
@@ -54,34 +55,85 @@ def functionData(function, trainSize, testSize, a=0.8, b=2.5):
     
 def neighbourData(function, trainSize, testSize, a=0.8, b=2.5, inputs=5, outputs=1):
     """
-    Create random distances [a,b] for five neighbouring atoms
-    and make test set based on these random points
+    Create random distances [a,b] for N (inputs) neighbouring atoms
+    and make output set based on these random points
     The output node is the sum of the energy of all neighbours
     """
-    np.random.seed(1)
     
     # xTrain: shape(trainSize, neighbours)
     # yTrain: shape(trainSize, outputs)
     
     dimension = (trainSize, inputs)
     xTrain = np.random.uniform(a, b, dimension)
-    xTrain = np.sort(xTrain, axis=1)
+    #xTrain = np.sort(xTrain, axis=1)
     yTrain = np.sum(function(xTrain), axis=1)
     yTrain = yTrain.reshape([trainSize,outputs])
     
     dimension = (testSize, inputs)
     xTest = np.random.uniform(a, b, dimension)
-    xTest = np.sort(xTest, axis=1)
+    #xTest = np.sort(xTest, axis=1)
     yTest = np.sum(function(xTest), axis=1)
     yTest = yTest.reshape([testSize,outputs])
     
     return xTrain, yTrain, xTest, yTest
     
     
+def neighbourEnergyAndForceData(function, functionDerivative, trainSize, testSize, \
+                                inputs, outputs=4, a=0.8, b=2.5):
+    """
+    Create random coordinates (x,y,z) on [a,b] for N (inputs) neighbouring atoms
+    and make output set which consist of total energy and total force
+    in each direction. The NN will thus yield the total energy and force
+    from N surrounding atoms
+    """
+    
+    def createDataSets(size):
 
+        coordDimension = (size, inputs, 3)
+        
+        # make random coordinates (x,y,z)
+        coordinates = np.random.uniform(0.0, 2.5, coordDimension) * np.random.choice([-1,1], coordDimension)
+        
+        # make training set distances
+        inputData = coordinates[:,:,0]**2 + coordinates[:,:,1]**2 + coordinates[:,:,2]**2
+        inputData = np.sqrt(inputData)
+        
+        # delete all input vectors which have at least one element below 0.8
+        indicies = np.where(inputData < a)[0]
+        indicies = np.unique(indicies)
+        inputData = np.delete(inputData, indicies, axis=0)
+        coordinates = np.delete(coordinates, indicies, axis=0)
+        
+        # adjust dimension of output after deleting rows        
+        outputDimension = (inputData.shape[0], outputs)            
+        outputData = np.zeros(outputDimension)
+        
+        # first element of yTrain is sum of energies of all neighbours
+        outputData[:,0] = np.sum(function(inputData), axis=1)
+        
+        # 2,3,4 components are sum of Fx, Fy, Fz respectively for all neighbours
+        inverseDistances = -1.0/inputData
+        outputData[:,1] = np.sum(functionDerivative(inputData)*coordinates[:,:,0]*inverseDistances, axis=1)
+        outputData[:,2] = np.sum(functionDerivative(inputData)*coordinates[:,:,1]*inverseDistances, axis=1)
+        outputData[:,3] = np.sum(functionDerivative(inputData)*coordinates[:,:,2]*inverseDistances, axis=1)
+        
+        return inputData, outputData
+    
+    xTrain, yTrain  = createDataSets(trainSize)
+    xTest, yTest    = createDataSets(testSize)
+    
+    return xTrain, yTrain, xTest, yTest
+    
 
 if __name__ == '__main__':
     #x_train, y_train, x_test, y_test = compareIntegers(10, 5, 15)
     function = lambda s : 1.0/s**12 - 1.0/s**6
-    x_train, y_train, x_test, y_test = functionData(function, 100, 100)
+    functionDerivative = lambda s : (6*s**6 - 12) / s**13
+    #x_train, y_train, x_test, y_test = functionData(function, 100, 100)
+    xTrain, yTrain, xTest, yTest = neighbourEnergyAndForceData(function, functionDerivative, \
+                                                 1000, 10, 5)
+    print xTrain
+    """print yTrain.shape
+    print xTest.shape
+    print yTest.shape"""
     

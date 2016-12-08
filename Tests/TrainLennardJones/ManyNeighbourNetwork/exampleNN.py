@@ -30,7 +30,7 @@ biases3 = tf.reshape(biases3, [outputs])
 allWeights.append(weights3)
 allBiases.append(biases3)
 
-data = tf.Variable([[0.2], [0.8]])
+data = tf.Variable([[0.0], [0.0]])
 data = tf.reshape(data, [1,neighbours])
 
 preActivate1 = tf.add(tf.matmul(data, weights1), biases1)
@@ -47,7 +47,7 @@ with tf.Session() as sess:
     sess.run(tf.initialize_all_variables())
     print sess.run(activate3)
     
-    with open('exampleManyNeighbourNN.dat', 'w') as outFile:
+    """with open('exampleManyNeighbourNN.dat', 'w') as outFile:
         outStr = "%1d %1d sigmoid %d" % (nLayers, nNodes, neighbours)
         outFile.write(outStr + '\n')
         size = len(allWeights)
@@ -73,7 +73,7 @@ with tf.Session() as sess:
             for j in range(len(biases)):
                 outFile.write("%.12g" % biases[j])
                 outFile.write(" ")
-            outFile.write("\n")
+            outFile.write("\n")"""
             
             
             
