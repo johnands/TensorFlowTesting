@@ -112,7 +112,7 @@ def neighbourEnergyAndForceData(function, functionDerivative, trainSize, testSiz
         outputData[:,0] = np.sum(function(inputData), axis=1)
         
         # 2,3,4 components are sum of Fx, Fy, Fz respectively for all neighbours
-        inverseDistances = -1.0/inputData
+        inverseDistances = 1.0/inputData
         outputData[:,1] = np.sum(functionDerivative(inputData)*coordinates[:,:,0]*inverseDistances, axis=1)
         outputData[:,2] = np.sum(functionDerivative(inputData)*coordinates[:,:,1]*inverseDistances, axis=1)
         outputData[:,3] = np.sum(functionDerivative(inputData)*coordinates[:,:,2]*inverseDistances, axis=1)
@@ -123,6 +123,59 @@ def neighbourEnergyAndForceData(function, functionDerivative, trainSize, testSiz
     xTest, yTest    = createDataSets(testSize)
     
     return xTrain, yTrain, xTest, yTest
+    
+
+def energyAndForeCoordinates(function, functionDerivative, trainSize, testSize, \
+                             neighbours, outputs=4, a=0.8, b=2.5):
+    """
+    Train with both potential and forces
+    Input: (size, 4*neighbours) 
+            [[x1,  y1,  z1,  r1, x2, y2, z2, r2, ....],
+             [x1', y1', z1', r1', x2', ....          ],
+             ...........                              ]
+              
+    Output: (size, 4)
+    [[totalFx, totalFy, totalFz, totalEp],
+     [......                            ]]
+    """
+
+    def inputGenerator(size):
+        nInputs = np.zeros((size,neighbours,4))
+        xyz     = np.zeros((size,3))
+        for i in range(neighbours): # fill cube slice for each neighbor
+            nInputs[:,i,3] = np.random.uniform(0.8, 2.5, size) # this is R
+            r2             = nInputs[:,i,3]**2
+            xyz[:,0]       = np.random.uniform(0, r2, size)
+            xyz[:,1]       = np.random.uniform(0, r2-xyz[:,0], size)
+            xyz[:,2]       = r2 - xyz[:,0] - xyz[:,1]
+            for row in range(size):
+                np.random.shuffle(xyz[row,:]) # this shuffles in-place (so no copying)
+            nInputs[:,i,0] = np.sqrt(xyz[:,0]) * np.random.choice([-1,1],size)
+            nInputs[:,i,1] = np.sqrt(xyz[:,1]) * np.random.choice([-1,1],size)
+            nInputs[:,i,2] = np.sqrt(xyz[:,2]) * np.random.choice([-1,1],size)
+            
+        return nInputs
+
+    def outputGenerator(nInput):
+        size    = nInput.shape[0]
+        nOutput = np.zeros((size, 4)) # 4: Fx, Fy, Fz and Ep
+        r       = nInput[:,:,3]
+        
+        # sum up contribution from all neighbors:
+        nOutput[:,0] = np.sum( (functionDerivative(r) * nInput[:,:,0] / r), axis=1) # Fx
+        nOutput[:,1] = np.sum( (functionDerivative(r) * nInput[:,:,1] / r), axis=1) # Fy
+        nOutput[:,2] = np.sum( (functionDerivative(r) * nInput[:,:,2] / r), axis=1) # Fz
+        nOutput[:,3] = np.sum (function(r), axis=1 ) # Ep_tot
+        return nOutput
+
+    # generate train and test data
+    xTrain  = inputGenerator(trainSize)
+    yTrain  = outputGenerator(xTrain)
+    xTest   = inputGenerator(testSize)
+    yTest   = outputGenerator(xTest)
+    
+    return xTrain.reshape(trainSize, neighbours*4), yTrain, xTest.reshape(testSize, neighbours*4), yTest
+
     
 
 if __name__ == '__main__':

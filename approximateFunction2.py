@@ -9,7 +9,7 @@ import datetime as time
 import os
 import shutil
 import matplotlib.pyplot as plt
-from DataGeneration.generateData import functionData, neighbourData, neighbourEnergyAndForceData
+import DataGeneration.generateData as data
 import neuralNetworkClass as nn
 from Tools.inspect_checkpoint import print_tensors_in_checkpoint_file
 from Tools.freeze_graph import freeze_graph
@@ -26,6 +26,7 @@ saveGraphName       = ''
 saveGraphProtoFlag  = False
 saveGraphProtoName  = ''
 saveMetaName        = ''
+saveMetaFlag        = False
 plotFlag            = False
 testFlag            = False
 
@@ -64,6 +65,7 @@ if len(sys.argv) > 1:
         elif sys.argv[i] == '--save':
             i += 1
             saveFlag = True
+            saveMetaFlag = True            
             
             # make new directory for checkpoints
             saveDirName 	= trainingDir + '/Checkpoints'
@@ -76,6 +78,7 @@ if len(sys.argv) > 1:
         elif sys.argv[i] == '--summary':
             i += 1
             summaryFlag  = True
+            saveMetaFlag = True   
             
             # make new directory for summaries
             summaryDir = trainingDir + '/Summaries'
@@ -83,11 +86,13 @@ if len(sys.argv) > 1:
             
         elif sys.argv[i] == '--savegraph':
             i += 1
-            saveGraphFlag = True           
+            saveGraphFlag = True      
+            saveMetaFlag = True   
             
         elif sys.argv[i] == '--savegraphproto':
             i += 1
             saveGraphProtoFlag = True
+            saveMetaFlag = True   
             
         elif sys.argv[i] == '--plot':
             i += 1
@@ -96,8 +101,8 @@ if len(sys.argv) > 1:
         elif sys.argv[i] == '--test':
             i += 1
             testFlag = True
-            numberOfNeighbours = int(sys.argv[i])
-            i += 1
+            #numberOfNeighbours = int(sys.argv[i])
+            #i += 1
                     
         else:
             i += 1
@@ -122,22 +127,20 @@ class Regression:
         
         if method == 'functionData':
             self.xTrain, self.yTrain, self.xTest, self.yTest = \
-                functionData(self.function, self.trainSize, self.testSize, a=a, b=b)
+                data.functionData(self.function, self.trainSize, self.testSize, a=a, b=b)
                 
         else:
             if self.functionDerivative:
+                neighbours = self.inputs / 4
+                print neighbours
                 self.xTrain, self.yTrain, self.xTest, self.yTest = \
-                    neighbourEnergyAndForceData(self.function, self.functionDerivative, \
-                                                self.trainSize, self.testSize, \
-                                                self.inputs, self.outputs, a, b)
-                                                
-                # update sizes after deletion of rows   
-                self.trainSize = self.xTrain.shape[0];
-                self.testSize = self.xTest.shape[0]
+                    data.energyAndForeCoordinates(self.function, self.functionDerivative, \
+                                                  self.trainSize, self.testSize, \
+                                                  neighbours, self.outputs, a, b)
                 
             else:        
                 self.xTrain, self.yTrain, self.xTest, self.yTest = \
-                    neighbourData(self.function, self.trainSize, self.testSize, a, b, \
+                    data.neighbourData(self.function, self.trainSize, self.testSize, a, b, \
                                   inputs=self.inputs, outputs=self.outputs)
         
         
@@ -154,8 +157,6 @@ class Regression:
         with tf.name_scope('input'):
             self.x = tf.placeholder('float', [None, self.inputs],  name='x-input')
             self.y = tf.placeholder('float', [None, self.outputs], name='y-input')
-            print tf.shape(self.x)
-            print tf.shape(self.y)
        
         self.neuralNetwork = nn.neuralNetwork(nNodes, nLayers, activation,
                                               weightsInit=wInit, biasesInit=bInit,
@@ -184,9 +185,12 @@ class Regression:
             prediction = self.makeNetwork(x)
 
             with tf.name_scope('L2Norm'):
-                cost = tf.nn.l2_loss( tf.sub(prediction, y) )
+                cost = tf.nn.l2_loss( tf.sub(prediction, y) )         
                 tf.scalar_summary('L2Norm', cost/batchSize)
-
+            
+            costEnergy = tf.nn.l2_loss(tf.sub(prediction[:,-1], y[:,-1]))
+            costForce = tf.nn.l2_loss(tf.sub(prediction[:,0:-1], y[:,0:-1]))
+                      
             with tf.name_scope('train'):
                 trainStep = tf.train.AdamOptimizer().minimize(cost)
             
@@ -200,10 +204,80 @@ class Regression:
                 print 'Model restored'
             
             if testFlag:
-                distances = np.linspace(0.8, 2, numberOfNeighbours)
-                distances = distances.reshape([1,numberOfNeighbours])
-                print distances
-                print sess.run(prediction, feed_dict={self.x: distances})
+                
+                # pick an input vector
+                coordinates = xTrain[0]
+                coordinates = coordinates.reshape([1,self.inputs])
+                neighbours = self.inputs/4
+                xNN = np.zeros(neighbours)
+                yNN = np.zeros(neighbours)
+                zNN = np.zeros(neighbours)
+                rNN = np.zeros(neighbours)
+                # extract coordinates and distances
+                for i in range(neighbours):
+                    xNN[i] = coordinates[0,i*4]
+                    yNN[i] = coordinates[0,i*4 + 1]
+                    zNN[i] = coordinates[0,i*4 + 2]
+                    rNN[i] = coordinates[0,i*4 + 3]
+                                
+                # vary coordinates of only one atom and see 
+                # if the resulting potential is similar to LJ
+                N = 500
+                r = np.linspace(0.8, 2.5, N)
+                energyNN = []
+                energyLJ = []
+                forceNN = []
+                forceLJ = []
+                xyz = np.zeros(3)
+                for i in range(N):
+                    r2 = r[i]**2
+                    xyz[0] = np.random.uniform(0, r2)
+                    xyz[1] = np.random.uniform(0, r2-xyz[0])
+                    xyz[2] = r2 - xyz[0] - xyz[1]
+                    #np.random.shuffle(xyz)
+                    x = np.sqrt(xyz[0])# * np.random.choice([-1,1])
+                    y = np.sqrt(xyz[1])# * np.random.choice([-1,1])
+                    z = np.sqrt(xyz[2])# * np.random.choice([-1,1])                      
+                    coordinates[0][0] = x; coordinates[0][1] = y; coordinates[0][2] = z
+                    coordinates[0][3] = r[i]
+                    energyAndForce = sess.run(prediction, feed_dict={self.x: coordinates})
+                    energyNN.append(energyAndForce[0][3]) 
+                    rNN[0] = r[i]
+                    energyLJ.append(np.sum(self.function(rNN)))
+                    forceNN.append(energyAndForce[0][0])
+                    xNN[0] = x
+                    forceLJ.append(np.sum(self.functionDerivative(rNN)*xNN/rNN))
+                
+                # convert to arrays
+                energyNN = np.array(energyNN); energyLJ = np.array(energyLJ)
+                forceNN = np.array(forceNN); forceLJ = np.array(forceLJ)
+                
+                # plot error 
+                plt.plot(r, energyNN - energyLJ)
+                plt.xlabel('r [MD]', fontsize=15)
+                plt.ylabel('E [MD]', fontsize=15)
+                plt.legend(['NN(r) - LJ(r)'], fontsize=15)
+                plt.show()
+                #plt.savefig('Tests/TrainLennardJones/ManyNeighbourNetwork/Plots/manyNeighbourEnergyError.pdf')
+                
+                plt.figure()
+                plt.plot(r, forceNN - forceLJ)
+                plt.xlabel('r [MD]', fontsize=15)
+                plt.ylabel('dE/dr [MD]', fontsize=15)
+                plt.legend([r'$NN^\prime(r) - LJ^\prime(r)$'], fontsize=15)
+                #plt.savefig('Tests/TrainLennardJones/ManyNeighbourNetwork/Plots/manyNeighbourForceError.pdf')
+                plt.show()
+                #print 'Cost: ', (np.sum((energyNN - energyLJ)**2 + (forceNN - forceLJ)**2))/N
+                
+                # see if the energy is zero when all neighbours is at cutoff distance
+                inputz = np.array([1.87, 1.32, 1.006, 2.5]*neighbours).reshape([1,self.inputs])
+                r = np.array([2.5]*neighbours)
+                energyLJ = sum(self.function(r))               
+                ef = sess.run(prediction, feed_dict={self.x: inputz})
+                
+                print 'NN energy at cutoff: ', ef[0,3]
+                print 'LJ energy at cutoff: ', energyLJ
+                
                 numberOfEpochs = 0
                 
             # Merge all the summaries and write them out to /tmp/mnist_logs (by default)
@@ -224,7 +298,10 @@ class Regression:
                 # calculate cost on test set every 10th epoch
                 if epoch % 1000 == 0:               
                     testCost = sess.run(cost, feed_dict={x: xTest, y: yTest})
-                    print 'Cost/N at step %4d: %g' % (epoch, testCost/testSize)
+                    print 'Cost/N at step %4d: %g' % (epoch, testCost/float(testSize))
+                    #testCostEnergy = sess.run(costEnergy, feed_dict={x: xTest, y: yTest})
+                    #testCostForce = sess.run(costForce, feed_dict={x: xTest, y: yTest})
+                    #print 'Cost/N at step %4d: Energy: %g Forces: %g' % (epoch, testCostEnergy/float(testSize), testCostForce/float(testSize))
                     if summaryFlag:
                         summary = sess.run(merged, feed_dict={x: xTest, y: yTest})
                         test_writer.add_summary(summary, epoch)
@@ -238,7 +315,7 @@ class Regression:
                                                         
                 # if an argument is passed, save the graph variables ('w', 'b') and dump
                 # some info about the training so far to TrainingData/<this run>/meta.dat.            
-                if len(sys.argv) > 1:
+                if saveMetaFlag:
                     if epoch == 0:
                         saveEpochNumber = 0
                         with open(saveMetaName, 'w') as outFile:
@@ -426,12 +503,13 @@ def LennardJonesNeighbours(trainSize, batchSize, testSize, nLayers, nNodes, nEpo
                                
                                
 def LennardJonesNeighboursForce(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
-                                inputs, outputs=4, a=0.0, b=2.0):
+                                neighbours, outputs=4, a=0.8, b=2.5):
     
     cutoff = 2.5
     shiftedPotential = 1.0/cutoff**12 - 1.0/cutoff**6
-    function = lambda s : 4*(1.0/s**12 - 1.0/s**6 - shiftedPotential)
-    functionDerivative = lambda t : (24*t**6 - 48) / t**13
+    function = lambda s : 1.0/s**12 - 1.0/s**6 - shiftedPotential
+    functionDerivative = lambda t : 12.0/t**13 - 6.0/t**7
+    inputs = neighbours*4
     regress = Regression(function, trainSize, batchSize, testSize, inputs, outputs, \
                          functionDerivative)
     regress.generateData(a, b, method='neighbourData')
@@ -443,7 +521,7 @@ def LennardJonesNeighboursForce(trainSize, batchSize, testSize, nLayers, nNodes,
 #LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 100000)
 #testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
 #LennardJonesNeighbours(int(1e5), int(1e4), int(1e3), 1, 200, int(10), inputs=20)
-LennardJonesNeighboursForce(int(1e7), int(1e4), int(1e3), 1, 200, int(1e6), 20)
+LennardJonesNeighboursForce(int(1e5), int(1e4), int(1e3), 2, 100, int(2e6), 5)
 
     
 
