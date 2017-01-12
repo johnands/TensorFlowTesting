@@ -121,7 +121,8 @@ class Regression:
         self.functionDerivative = functionDerivative
 
 
-    def generateData(self, a, b, method='functionData'):
+    def generateData(self, a, b, method='functionData', numberOfSymmFunc=10, neighbours=80, \
+                     symmFuncType='1'):
         
         self.a, self.b = a, b
         
@@ -129,19 +130,34 @@ class Regression:
             self.xTrain, self.yTrain, self.xTest, self.yTest = \
                 data.functionData(self.function, self.trainSize, self.testSize, a=a, b=b)
                 
+        elif method == 'symmetryData':
+            self.xTrain, self.yTrain = \
+                data.symmetryFunctionsData(self.function, self.trainSize, \
+                                           neighbours, numberOfSymmFunc, symmFuncType)
+            self.xTest, self.yTest = \
+                data.symmetryFunctionsData(self.function, self.testSize, \
+                                           neighbours, numberOfSymmFunc, symmFuncType)
+                
         else:
             if self.functionDerivative:
                 neighbours = self.inputs / 4
                 print neighbours
-                self.xTrain, self.yTrain, self.xTest, self.yTest = \
+                self.xTrain, self.yTrain = \
                     data.energyAndForeCoordinates(self.function, self.functionDerivative, \
-                                                  self.trainSize, self.testSize, \
+                                                  self.trainSize, \
+                                                  neighbours, self.outputs, a, b)
+                self.xTest, self.yTest = \
+                    data.energyAndForeCoordinates(self.function, self.functionDerivative, \
+                                                  self.testSize, \
                                                   neighbours, self.outputs, a, b)
                 
             else:        
-                self.xTrain, self.yTrain, self.xTest, self.yTest = \
-                    data.neighbourData(self.function, self.trainSize, self.testSize, a, b, \
-                                  inputs=self.inputs, outputs=self.outputs)
+                self.xTrain, self.yTrain = \
+                    data.neighbourData(self.function, self.trainSize, a, b, \
+                                       inputs=self.inputs, outputs=self.outputs)
+                self.xTest, self.yTest = \
+                    data.neighbourData(self.function, self.testSize, a, b, \
+                                       inputs=self.inputs, outputs=self.outputs)
         
         
     def constructNetwork(self, nLayers, nNodes, activation=tf.nn.relu, \
@@ -188,8 +204,8 @@ class Regression:
                 cost = tf.nn.l2_loss( tf.sub(prediction, y) )         
                 tf.scalar_summary('L2Norm', cost/batchSize)
             
-            costEnergy = tf.nn.l2_loss(tf.sub(prediction[:,-1], y[:,-1]))
-            costForce = tf.nn.l2_loss(tf.sub(prediction[:,0:-1], y[:,0:-1]))
+            #costEnergy = tf.nn.l2_loss(tf.sub(prediction[:,-1], y[:,-1]))
+            #costForce = tf.nn.l2_loss(tf.sub(prediction[:,0:-1], y[:,0:-1]))
                       
             with tf.name_scope('train'):
                 trainStep = tf.train.AdamOptimizer().minimize(cost)
@@ -314,7 +330,7 @@ class Regression:
                         train_writer.add_summary(summary, epoch)
                                                         
                 # if an argument is passed, save the graph variables ('w', 'b') and dump
-                # some info about the training so far to TrainingData/<this run>/meta.dat.            
+                # some info about the training so far to TrainingData/<this run>/meta.dat            
                 if saveMetaFlag:
                     if epoch == 0:
                         saveEpochNumber = 0
@@ -477,6 +493,7 @@ def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs
     """
     Train to reproduce shifted L-J potential to 
     verify implementation of network and backpropagation in the MD code
+    This is a 1-dimensional example
     """
     
     cutoff = 2.5
@@ -490,12 +507,12 @@ def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs
 
     
 def LennardJonesNeighbours(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
-                           a=0.8, b=2.5, inputs=20, outputs=1):
+                           neighbours, outputs=1, a=0.8, b=2.5):
                                
     cutoff = 2.5
     shiftedPotential = 1.0/cutoff**12 - 1.0/cutoff**6
     function = lambda s : 4*(1.0/s**12 - 1.0/s**6 - shiftedPotential)
-    regress = Regression(function, trainSize, batchSize, testSize, inputs, outputs)
+    regress = Regression(function, trainSize, batchSize, testSize, neighbours, outputs)
     regress.generateData(a, b, method='neighbourData')
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
@@ -517,11 +534,27 @@ def LennardJonesNeighboursForce(trainSize, batchSize, testSize, nLayers, nNodes,
                              wInit='normal', bInit='normal')
     regress.train(nEpochs)
     
+
+def LennardJonesSymmetryFunctions(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
+                                  neighbours, numberOfSymmFunc, symmFuncType, outputs=1, a=0.8, b=2.5):
     
+    cutoff = 2.5
+    shiftedPotential = 1.0/cutoff**12 - 1.0/cutoff**6
+    function = lambda s : 1.0/s**12 - 1.0/s**6 - shiftedPotential
+    regress = Regression(function, trainSize, batchSize, testSize, numberOfSymmFunc, outputs)
+    regress.generateData(a, b, method='symmetryData', neighbours=neighbours, numberOfSymmFunc=numberOfSymmFunc, 
+                         symmFuncType='2')
+    regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
+                             wInit='normal', bInit='normal')
+    regress.train(nEpochs)
+
+# trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, ...
+
 #LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 100000)
 #testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
-#LennardJonesNeighbours(int(1e5), int(1e4), int(1e3), 1, 200, int(10), inputs=20)
-LennardJonesNeighboursForce(int(1e5), int(1e4), int(1e3), 2, 100, int(2e6), 5)
+#LennardJonesNeighbours(int(1e5), int(1e4), int(1e3), 2, 40, int(1e5), 10)
+#LennardJonesNeighboursForce(int(1e5), int(1e4), int(1e3), 2, 100, int(2e6), 5)
+LennardJonesSymmetryFunctions(int(1e5), int(1e4), int(1e3), 2, 40, int(1e5), 10, 5, '1')
 
     
 

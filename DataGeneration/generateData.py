@@ -53,7 +53,7 @@ def functionData(function, trainSize, testSize, a=0.8, b=2.5):
     return x_train, y_train, x_test, y_test
     
     
-def neighbourData(function, trainSize, testSize, a=0.8, b=2.5, inputs=5, outputs=1):
+def neighbourData(function, size, a=0.8, b=2.5, inputs=5, outputs=1):
     """
     Create random distances [a,b] for N (inputs) neighbouring atoms
     and make output set based on these random points
@@ -63,22 +63,15 @@ def neighbourData(function, trainSize, testSize, a=0.8, b=2.5, inputs=5, outputs
     # xTrain: shape(trainSize, neighbours)
     # yTrain: shape(trainSize, outputs)
     
-    dimension = (trainSize, inputs)
-    xTrain = np.random.uniform(a, b, dimension)
-    #xTrain = np.sort(xTrain, axis=1)
-    yTrain = np.sum(function(xTrain), axis=1)
-    yTrain = yTrain.reshape([trainSize,outputs])
+    dimension = (size, inputs)
+    inputData = np.random.uniform(a, b, dimension)
+    outputData = np.sum(function(inputData), axis=1)
+    outputData = outputData.reshape([size,outputs])
     
-    dimension = (testSize, inputs)
-    xTest = np.random.uniform(a, b, dimension)
-    #xTest = np.sort(xTest, axis=1)
-    yTest = np.sum(function(xTest), axis=1)
-    yTest = yTest.reshape([testSize,outputs])
-    
-    return xTrain, yTrain, xTest, yTest
+    return inputData, outputData
     
     
-def neighbourEnergyAndForceData(function, functionDerivative, trainSize, testSize, \
+def neighbourEnergyAndForceData(function, functionDerivative, size, \
                                 inputs, outputs=4, a=0.8, b=2.5):
     """
     Create random coordinates (x,y,z) on [a,b] for N (inputs) neighbouring atoms
@@ -87,45 +80,39 @@ def neighbourEnergyAndForceData(function, functionDerivative, trainSize, testSiz
     from N surrounding atoms
     """
     
-    def createDataSets(size):
 
-        coordDimension = (size, inputs, 3)
-        
-        # make random coordinates (x,y,z)
-        coordinates = np.random.uniform(0.0, 2.5, coordDimension) * np.random.choice([-1,1], coordDimension)
-        
-        # make training set distances
-        inputData = coordinates[:,:,0]**2 + coordinates[:,:,1]**2 + coordinates[:,:,2]**2
-        inputData = np.sqrt(inputData)
-        
-        # delete all input vectors which have at least one element below 0.8
-        indicies = np.where(inputData < a)[0]
-        indicies = np.unique(indicies)
-        inputData = np.delete(inputData, indicies, axis=0)
-        coordinates = np.delete(coordinates, indicies, axis=0)
-        
-        # adjust dimension of output after deleting rows        
-        outputDimension = (inputData.shape[0], outputs)            
-        outputData = np.zeros(outputDimension)
-        
-        # first element of yTrain is sum of energies of all neighbours
-        outputData[:,0] = np.sum(function(inputData), axis=1)
-        
-        # 2,3,4 components are sum of Fx, Fy, Fz respectively for all neighbours
-        inverseDistances = 1.0/inputData
-        outputData[:,1] = np.sum(functionDerivative(inputData)*coordinates[:,:,0]*inverseDistances, axis=1)
-        outputData[:,2] = np.sum(functionDerivative(inputData)*coordinates[:,:,1]*inverseDistances, axis=1)
-        outputData[:,3] = np.sum(functionDerivative(inputData)*coordinates[:,:,2]*inverseDistances, axis=1)
-        
-        return inputData, outputData
+    coordDimension = (size, inputs, 3)
     
-    xTrain, yTrain  = createDataSets(trainSize)
-    xTest, yTest    = createDataSets(testSize)
+    # make random coordinates (x,y,z)
+    coordinates = np.random.uniform(0.0, 2.5, coordDimension) * np.random.choice([-1,1], coordDimension)
     
-    return xTrain, yTrain, xTest, yTest
+    # make training set distances
+    inputData = coordinates[:,:,0]**2 + coordinates[:,:,1]**2 + coordinates[:,:,2]**2
+    inputData = np.sqrt(inputData)
+    
+    # delete all input vectors which have at least one element below 0.8
+    indicies = np.where(inputData < a)[0]
+    indicies = np.unique(indicies)
+    inputData = np.delete(inputData, indicies, axis=0)
+    coordinates = np.delete(coordinates, indicies, axis=0)
+    
+    # adjust dimension of output after deleting rows        
+    outputDimension = (inputData.shape[0], outputs)            
+    outputData = np.zeros(outputDimension)
+    
+    # first element of yTrain is sum of energies of all neighbours
+    outputData[:,0] = np.sum(function(inputData), axis=1)
+    
+    # 2,3,4 components are sum of Fx, Fy, Fz respectively for all neighbours
+    inverseDistances = 1.0/inputData
+    outputData[:,1] = np.sum(functionDerivative(inputData)*coordinates[:,:,0]*inverseDistances, axis=1)
+    outputData[:,2] = np.sum(functionDerivative(inputData)*coordinates[:,:,1]*inverseDistances, axis=1)
+    outputData[:,3] = np.sum(functionDerivative(inputData)*coordinates[:,:,2]*inverseDistances, axis=1)     
+    
+    return inputData, outputData
     
 
-def energyAndForeCoordinates(function, functionDerivative, trainSize, testSize, \
+def energyAndForeCoordinates(function, functionDerivative, size, \
                              neighbours, outputs=4, a=0.8, b=2.5):
     """
     Train with both potential and forces
@@ -139,44 +126,94 @@ def energyAndForeCoordinates(function, functionDerivative, trainSize, testSize, 
      [......                            ]]
     """
 
-    def inputGenerator(size):
-        nInputs = np.zeros((size,neighbours,4))
-        xyz     = np.zeros((size,3))
-        for i in range(neighbours): # fill cube slice for each neighbor
-            nInputs[:,i,3] = np.random.uniform(0.8, 2.5, size) # this is R
-            r2             = nInputs[:,i,3]**2
-            xyz[:,0]       = np.random.uniform(0, r2, size)
-            xyz[:,1]       = np.random.uniform(0, r2-xyz[:,0], size)
-            xyz[:,2]       = r2 - xyz[:,0] - xyz[:,1]
-            for row in range(size):
-                np.random.shuffle(xyz[row,:]) # this shuffles in-place (so no copying)
-            nInputs[:,i,0] = np.sqrt(xyz[:,0]) * np.random.choice([-1,1],size)
-            nInputs[:,i,1] = np.sqrt(xyz[:,1]) * np.random.choice([-1,1],size)
-            nInputs[:,i,2] = np.sqrt(xyz[:,2]) * np.random.choice([-1,1],size)
-            
-        return nInputs
+    # generate input data
+    inputData = np.zeros((size,neighbours,4))
+    xyz     = np.zeros((size,3))
+    for i in range(neighbours): # fill cube slice for each neighbor
+        inputData[:,i,3] = np.random.uniform(0.8, 2.5, size) # this is R
+        r2             = inputData[:,i,3]**2
+        xyz[:,0]       = np.random.uniform(0, r2, size)
+        xyz[:,1]       = np.random.uniform(0, r2-xyz[:,0], size)
+        xyz[:,2]       = r2 - xyz[:,0] - xyz[:,1]
+        for row in range(size):
+            np.random.shuffle(xyz[row,:]) # this shuffles in-place (so no copying)
+        inputData[:,i,0] = np.sqrt(xyz[:,0]) * np.random.choice([-1,1],size)
+        inputData[:,i,1] = np.sqrt(xyz[:,1]) * np.random.choice([-1,1],size)
+        inputData[:,i,2] = np.sqrt(xyz[:,2]) * np.random.choice([-1,1],size)
+           
+    # generate output data
+    size    = inputData.shape[0]
+    outputData = np.zeros((size, 4)) # 4: Fx, Fy, Fz and Ep
+    r       = inputData[:,:,3]
+      
+    # sum up contribution from all neighbors:
+    outputData[:,0] = np.sum( (functionDerivative(r) * inputData[:,:,0] / r), axis=1) # Fx
+    outputData[:,1] = np.sum( (functionDerivative(r) * inputData[:,:,1] / r), axis=1) # Fy
+    outputData[:,2] = np.sum( (functionDerivative(r) * inputData[:,:,2] / r), axis=1) # Fz
+    outputData[:,3] = np.sum( function(r), axis=1 ) # Ep_tot
+    
+    return inputData.reshape(size, neighbours*4), outputData
 
-    def outputGenerator(nInput):
-        size    = nInput.shape[0]
-        nOutput = np.zeros((size, 4)) # 4: Fx, Fy, Fz and Ep
-        r       = nInput[:,:,3]
+
+def symmetryFunctionsData(function, size, \
+                          neighbours, numberOfSymmFunc, symmFuncType, \
+                          outputs=1, a=0.8, b=2.5):
         
-        # sum up contribution from all neighbors:
-        nOutput[:,0] = np.sum( (functionDerivative(r) * nInput[:,:,0] / r), axis=1) # Fx
-        nOutput[:,1] = np.sum( (functionDerivative(r) * nInput[:,:,1] / r), axis=1) # Fy
-        nOutput[:,2] = np.sum( (functionDerivative(r) * nInput[:,:,2] / r), axis=1) # Fz
-        nOutput[:,3] = np.sum (function(r), axis=1 ) # Ep_tot
-        return nOutput
-
-    # generate train and test data
-    xTrain  = inputGenerator(trainSize)
-    yTrain  = outputGenerator(xTrain)
-    xTest   = inputGenerator(testSize)
-    yTest   = outputGenerator(xTest)
+    # generate train and test distances, which are vectors with dimension (trainSize, inputs)    
+    # the output data is the same as before: a sum of LJ energies for all neighbours 
+    # inputs defined in above function neighbourData is now number of neighbours               
+    inputTemp, outputData = neighbourData(function, size, \
+                                          a=a, b=b, inputs=neighbours, outputs=1)
     
-    return xTrain.reshape(trainSize, neighbours*4), yTrain, xTest.reshape(testSize, neighbours*4), yTest
-
+    # send each distance input vector to a symmetry function which returns a single number
+    # for each vector of distances
+    # number of inputs to NN is now number of symmetry functions
+    inputData = np.zeros((size,numberOfSymmFunc))
     
+    if symmFuncType == '1':
+        cutoff = np.linspace(0.9, 3, numberOfSymmFunc)
+        cutoff = [2.5]
+        for i in xrange(size):
+            # find value of each symmetry function for this r vector
+            for j in xrange(numberOfSymmFunc):
+                # remove distances above cutoff, they contribute zero to sum
+                rVector = inputTemp[i,np.where(inputTemp[i,:] <= cutoff[j])[0]]
+                inputData[i,j] = symmetryFunction1(rVector, cutoff[j])
+                
+    else:  
+        cutoff = 2.5
+        widths = np.linspace(0.9, 2.8, numberOfSymmFunc)
+        center = 0.0
+        for i in xrange(size):
+            # find value of each symmetry function for this r vector
+            for j in xrange(numberOfSymmFunc):
+                # remove distances above cutoff, they contribute zero to sum
+                rVector = inputTemp[i,:]
+                inputData[i,j] = symmetryFunction2(rVector, cutoff, widths[j], center)
+        
+    if not np.all(inputData):
+        print 'zeros are present'
+        
+    print inputData.shape
+    
+    return inputData, outputData
+    
+    
+def cutoffFunction(rVector, cutoff):
+    
+    return 0.5 * (np.cos(np.pi*rVector / cutoff) + 1)
+    
+    
+def symmetryFunction1(rVector, cutoff):
+    
+    return np.sum(cutoffFunction(rVector, cutoff))
+    
+    
+def symmetryFunction2(rVector, cutoff, width, center):
+    
+    return np.sum( np.exp(-width*(rVector - center)**2) * cutoffFunction(rVector, cutoff) )
+    
+
 
 if __name__ == '__main__':
     #x_train, y_train, x_test, y_test = compareIntegers(10, 5, 15)
