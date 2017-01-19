@@ -130,26 +130,34 @@ class Regression:
             self.xTrain, self.yTrain, self.xTest, self.yTest = \
                 data.functionData(self.function, self.trainSize, self.testSize, a=a, b=b)
                 
-        elif method == 'symmetryData':
+        elif method == 'radialSymmetry':
             self.xTrain, self.yTrain = \
-                data.symmetryFunctionsData(self.function, self.trainSize, \
-                                           neighbours, numberOfSymmFunc, symmFuncType)
+                data.radialSymmetryData(self.function, self.trainSize, \
+                                        neighbours, numberOfSymmFunc, symmFuncType)
             self.xTest, self.yTest = \
-                data.symmetryFunctionsData(self.function, self.testSize, \
-                                           neighbours, numberOfSymmFunc, symmFuncType)
+                data.radialSymmetryData(self.function, self.testSize, \
+                                        neighbours, numberOfSymmFunc, symmFuncType)
+                                        
+        elif method == 'angularSymmetry':
+            self.xTrain, self.yTrain = \
+                data.angularSymmetryData(self.function, self.trainSize, \
+                                        neighbours, numberOfSymmFunc, symmFuncType)
+            self.xTest, self.yTest = \
+                data.angularSymmetryData(self.function, self.testSize, \
+                                        neighbours, numberOfSymmFunc, symmFuncType)
                 
         else:
             if self.functionDerivative:
                 neighbours = self.inputs / 4
                 print neighbours
                 self.xTrain, self.yTrain = \
-                    data.energyAndForeCoordinates(self.function, self.functionDerivative, \
-                                                  self.trainSize, \
-                                                  neighbours, self.outputs, a, b)
+                    data.energyAndForceCoordinates(self.function, self.functionDerivative, \
+                                                   self.trainSize, \
+                                                   neighbours, self.outputs, a, b)
                 self.xTest, self.yTest = \
-                    data.energyAndForeCoordinates(self.function, self.functionDerivative, \
-                                                  self.testSize, \
-                                                  neighbours, self.outputs, a, b)
+                    data.energyAndForceCoordinates(self.function, self.functionDerivative, \
+                                                   self.testSize, \
+                                                   neighbours, self.outputs, a, b)
                 
             else:        
                 self.xTrain, self.yTrain = \
@@ -542,11 +550,46 @@ def LennardJonesSymmetryFunctions(trainSize, batchSize, testSize, nLayers, nNode
     shiftedPotential = 1.0/cutoff**12 - 1.0/cutoff**6
     function = lambda s : 1.0/s**12 - 1.0/s**6 - shiftedPotential
     regress = Regression(function, trainSize, batchSize, testSize, numberOfSymmFunc, outputs)
-    regress.generateData(a, b, method='symmetryData', neighbours=neighbours, numberOfSymmFunc=numberOfSymmFunc, 
-                         symmFuncType='2')
+    regress.generateData(a, b, method='radialSymmetry', neighbours=neighbours, numberOfSymmFunc=numberOfSymmFunc, 
+                         symmFuncType='G2')
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
     regress.train(nEpochs)
+    
+    
+def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
+                            neighbours, numberOfSymmFunc, symmFunctype, outputs=1, a=0.8, b=2.5):
+    """
+    Train neural network to simulate tetrahedral Si atoms
+    """
+
+    # parameters                            
+    A = 7.049556277
+    B = 0.6022245584
+    p = 4.0
+    q = 0.0
+    a = 1.80
+    Lambda = 21.0
+    gamma = 1.20
+    cosC = -1.0/3
+    epsilon = 1.0
+    sigma = 1.0
+    
+    # Stillinger-Weber
+    function = lambda Rij, Rik, theta: epsilon*A*(B/Rij**p - 1.0/Rij**q) * \
+                                       ( 1.0 / np.exp(Rij - a) ) + \
+                                       epsilon*Lambda*(np.cos(theta) - cosC)**2 * \
+                                       np.exp(gamma/(Rij-a)) * np.exp(gamma/(Rik-a))
+            
+    # train                           
+    regress = Regression(function, trainSize, batchSize, testSize, numberOfSymmFunc, outputs)
+    regress.generateData(a, b, method='symmetryData', neighbours=neighbours, numberOfSymmFunc=numberOfSymmFunc, 
+                         symmFuncType='G3')
+    regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
+                             wInit='normal', bInit='normal')
+    regress.train(nEpochs)
+               
+    
 
 # trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, ...
 
@@ -554,7 +597,8 @@ def LennardJonesSymmetryFunctions(trainSize, batchSize, testSize, nLayers, nNode
 #testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
 #LennardJonesNeighbours(int(1e5), int(1e4), int(1e3), 2, 40, int(1e5), 10)
 #LennardJonesNeighboursForce(int(1e5), int(1e4), int(1e3), 2, 100, int(2e6), 5)
-LennardJonesSymmetryFunctions(int(1e5), int(1e4), int(1e3), 2, 40, int(1e5), 10, 5, '1')
+print 'yes'
+LennardJonesSymmetryFunctions(int(1e5), int(1e4), int(1e3), 2, 30, int(1e6), 5, 5, '1')
 
     
 

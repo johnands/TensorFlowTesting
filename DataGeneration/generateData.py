@@ -60,9 +60,6 @@ def neighbourData(function, size, a=0.8, b=2.5, inputs=5, outputs=1):
     The output node is the sum of the energy of all neighbours
     """
     
-    # xTrain: shape(trainSize, neighbours)
-    # yTrain: shape(trainSize, outputs)
-    
     dimension = (size, inputs)
     inputData = np.random.uniform(a, b, dimension)
     outputData = np.sum(function(inputData), axis=1)
@@ -80,7 +77,6 @@ def neighbourEnergyAndForceData(function, functionDerivative, size, \
     from N surrounding atoms
     """
     
-
     coordDimension = (size, inputs, 3)
     
     # make random coordinates (x,y,z)
@@ -112,7 +108,7 @@ def neighbourEnergyAndForceData(function, functionDerivative, size, \
     return inputData, outputData
     
 
-def energyAndForeCoordinates(function, functionDerivative, size, \
+def energyAndForceCoordinates(function, functionDerivative, size, \
                              neighbours, outputs=4, a=0.8, b=2.5):
     """
     Train with both potential and forces
@@ -155,9 +151,9 @@ def energyAndForeCoordinates(function, functionDerivative, size, \
     return inputData.reshape(size, neighbours*4), outputData
 
 
-def symmetryFunctionsData(function, size, \
-                          neighbours, numberOfSymmFunc, symmFuncType, \
-                          outputs=1, a=0.8, b=2.5):
+def radialSymmetryData(function, size, \
+                       neighbours, numberOfSymmFunc, symmFuncType, \
+                       outputs=1, a=0.8, b=2.5):
         
     # generate train and test distances, which are vectors with dimension (trainSize, inputs)    
     # the output data is the same as before: a sum of LJ energies for all neighbours 
@@ -170,9 +166,9 @@ def symmetryFunctionsData(function, size, \
     # number of inputs to NN is now number of symmetry functions
     inputData = np.zeros((size,numberOfSymmFunc))
     
-    if symmFuncType == '1':
+    if symmFuncType == 'G1':
         cutoff = np.linspace(0.9, 3, numberOfSymmFunc)
-        cutoff = [2.5]
+        #cutoff = [2.5]
         for i in xrange(size):
             # find value of each symmetry function for this r vector
             for j in xrange(numberOfSymmFunc):
@@ -199,6 +195,36 @@ def symmetryFunctionsData(function, size, \
     return inputData, outputData
     
     
+def angularSymmetryData(function, size, \
+                        neighbours, numberOfSymmFunc, symmFuncType, \
+                        outputs=1, a=0.8, b=2.5):
+
+    # generate input data
+    inputTemp = np.zeros((size,neighbours+1,4))
+    xyz     = np.zeros((size,3))
+    for i in range(neighbours+1): # fill cube slice for each neighbor
+        inputTemp[:,i,3] = np.random.uniform(0.8, 2.5, size) # this is R
+        r2             = inputTemp[:,i,3]**2
+        xyz[:,0]       = np.random.uniform(0, r2, size)
+        xyz[:,1]       = np.random.uniform(0, r2-xyz[:,0], size)
+        xyz[:,2]       = r2 - xyz[:,0] - xyz[:,1]
+        for row in range(size):
+            np.random.shuffle(xyz[row,:]) # this shuffles in-place (so no copying)
+        inputTemp[:,i,0] = np.sqrt(xyz[:,0]) * np.random.choice([-1,1],size)
+        inputTemp[:,i,1] = np.sqrt(xyz[:,1]) * np.random.choice([-1,1],size)
+        inputTemp[:,i,2] = np.sqrt(xyz[:,2]) * np.random.choice([-1,1],size)
+    
+    xij = inputTemp[:,:-1,0]; xik = inputTemp[:,1:,0]
+    yij = inputTemp[:,:-1,1]; yik = inputTemp[:,1:,1]
+    zij = inputTemp[:,:-1,2]; zik = inputTemp[:,1:,2]
+    rij = inputTemp[:,:-1,3]; rik = inputTemp[:,1:,3]
+    
+    theta = np.arccos( (xij*xik + yij*yik + zij*zik) / (rij*rik) )
+    
+    outputData = np.sum(function(rij, rik, theta), axis=1)
+    
+    
+    
 def cutoffFunction(rVector, cutoff):
     
     return 0.5 * (np.cos(np.pi*rVector / cutoff) + 1)
@@ -212,6 +238,13 @@ def symmetryFunction1(rVector, cutoff):
 def symmetryFunction2(rVector, cutoff, width, center):
     
     return np.sum( np.exp(-width*(rVector - center)**2) * cutoffFunction(rVector, cutoff) )
+    
+    
+def symmetryFunction3(Rij, Rik, Rjk, theta, thetaRange, width, Lambda):
+    
+    return 2**(1-thetaRange) * np.sum(1 + Lambda*np.cos(theta))**thetaRange * \
+           np.exp(-width*(Rij**2 + Rik**2 + Rjk**2)) * \
+           cutoffFunction(Rij) * cutoffFunction(Rik) * cutoffFunction(Rjk)
     
 
 
