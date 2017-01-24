@@ -197,13 +197,13 @@ def radialSymmetryData(function, size, \
     
 def angularSymmetryData(function, size, \
                         neighbours, numberOfSymmFunc, symmFuncType, \
-                        outputs=1, a=0.8, b=2.5):
+                        low, high, outputs=1):
 
     # generate input data
     inputTemp = np.zeros((size,neighbours+1,4))
     xyz     = np.zeros((size,3))
     for i in range(neighbours+1): # fill cube slice for each neighbor
-        inputTemp[:,i,3] = np.random.uniform(0.8, 2.5, size) # this is R
+        inputTemp[:,i,3] = np.random.uniform(low, high, size) # this is R
         r2             = inputTemp[:,i,3]**2
         xyz[:,0]       = np.random.uniform(0, r2, size)
         xyz[:,1]       = np.random.uniform(0, r2-xyz[:,0], size)
@@ -214,21 +214,68 @@ def angularSymmetryData(function, size, \
         inputTemp[:,i,1] = np.sqrt(xyz[:,1]) * np.random.choice([-1,1],size)
         inputTemp[:,i,2] = np.sqrt(xyz[:,2]) * np.random.choice([-1,1],size)
     
+    # pick out pairs of coordinates and distances
     xij = inputTemp[:,:-1,0]; xik = inputTemp[:,1:,0]
     yij = inputTemp[:,:-1,1]; yik = inputTemp[:,1:,1]
     zij = inputTemp[:,:-1,2]; zik = inputTemp[:,1:,2]
-    rij = inputTemp[:,:-1,3]; rik = inputTemp[:,1:,3]
+    rij = inputTemp[:,:-1,3]; rik = inputTemp[:,1:,3]    
     
+    # calculate angles for each triplet (i, j, k)
     theta = np.arccos( (xij*xik + yij*yik + zij*zik) / (rij*rik) )
     
+    # distance between atom j and k
+    # this will generate very small values that maybe shouldnt be included?
+    # the values that are above cutoff is fixed by the cutoff function below
+    rjk = np.sqrt( rij**2 + rik**2 - 2*rij*rik*np.cos(theta) )
+    
+    
+    """print np.min(xij)
+    print np.max(xij)
+    print np.min(rij)
+    print np.max(rij)
+    print np.min(rik)
+    print np.min(rjk)
+    print np.max(rjk)
+    print np.min(theta)
+    print np.max(theta)"""
+    
+    # function gives approximate energy for each triplet
+    # Stillinger-Weber
     outputData = np.sum(function(rij, rik, theta), axis=1)
+    outputData = outputData.reshape([size, outputs])
+    
+    # generate symmetry function input data
+    inputData = np.zeros((size,numberOfSymmFunc))
+    thetaRange = np.linspace(1, 10, numberOfSymmFunc)   # values..?
+    cutoff = high
+    width = 1.5
+    inversion = 1.0
+    counter = 0
+    for i in xrange(size):
+        if np.size( np.where(rjk[i,:] > cutoff)[0] ) == neighbours:
+            counter += 1
+        # find value of each symmetry function for this r vector
+        for j in xrange(numberOfSymmFunc):
+            # remove distances above cutoff, they contribute zero to sum
+            inputData[i,j] = symmetryFunction3(rij[i,:], rik[i,:], rjk[i,:], theta[i,:], \
+                                               thetaRange[j], width, cutoff, inversion)
+    
+    # check if any input data is zero, should prevent this
+    if not np.all(inputData):
+        print 'zeros are present'
+    print counter / float(size)
+    
+    return inputData, outputData
     
     
+def cutoffFunction(rVector, cutoff):   
     
-def cutoffFunction(rVector, cutoff):
+    value = 0.5 * (np.cos(np.pi*rVector / cutoff) + 1)
     
-    return 0.5 * (np.cos(np.pi*rVector / cutoff) + 1)
-    
+    # set elements above cutoff to zero so they dont contribute to sum
+    value[np.where(rVector > cutoff)[0]] = 0
+    return value
+ 
     
 def symmetryFunction1(rVector, cutoff):
     
@@ -240,11 +287,11 @@ def symmetryFunction2(rVector, cutoff, width, center):
     return np.sum( np.exp(-width*(rVector - center)**2) * cutoffFunction(rVector, cutoff) )
     
     
-def symmetryFunction3(Rij, Rik, Rjk, theta, thetaRange, width, Lambda):
+def symmetryFunction3(Rij, Rik, Rjk, theta, thetaRange, width, cutoff, inversion):
     
-    return 2**(1-thetaRange) * np.sum(1 + Lambda*np.cos(theta))**thetaRange * \
+    return 2**(1-thetaRange) * np.sum( (1 + inversion*np.cos(theta))**thetaRange * \
            np.exp(-width*(Rij**2 + Rik**2 + Rjk**2)) * \
-           cutoffFunction(Rij) * cutoffFunction(Rik) * cutoffFunction(Rjk)
+           cutoffFunction(Rij, cutoff) * cutoffFunction(Rik, cutoff) * cutoffFunction(Rjk, cutoff) )
     
 
 

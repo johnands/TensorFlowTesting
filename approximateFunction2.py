@@ -141,10 +141,10 @@ class Regression:
         elif method == 'angularSymmetry':
             self.xTrain, self.yTrain = \
                 data.angularSymmetryData(self.function, self.trainSize, \
-                                        neighbours, numberOfSymmFunc, symmFuncType)
+                                        neighbours, numberOfSymmFunc, symmFuncType, a, b)
             self.xTest, self.yTest = \
                 data.angularSymmetryData(self.function, self.testSize, \
-                                        neighbours, numberOfSymmFunc, symmFuncType)
+                                        neighbours, numberOfSymmFunc, symmFuncType, a, b)
                 
         else:
             if self.functionDerivative:
@@ -323,6 +323,7 @@ class Regression:
                 if epoch % 1000 == 0:               
                     testCost = sess.run(cost, feed_dict={x: xTest, y: yTest})
                     print 'Cost/N at step %4d: %g' % (epoch, testCost/float(testSize))
+                    sys.stdout.flush()
                     #testCostEnergy = sess.run(costEnergy, feed_dict={x: xTest, y: yTest})
                     #testCostForce = sess.run(costForce, feed_dict={x: xTest, y: yTest})
                     #print 'Cost/N at step %4d: Energy: %g Forces: %g' % (epoch, testCostEnergy/float(testSize), testCostForce/float(testSize))
@@ -558,7 +559,7 @@ def LennardJonesSymmetryFunctions(trainSize, batchSize, testSize, nLayers, nNode
     
     
 def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
-                            neighbours, numberOfSymmFunc, symmFunctype, outputs=1, a=0.8, b=2.5):
+                            neighbours, numberOfSymmFunc, symmFunctype, outputs=1):
     """
     Train neural network to simulate tetrahedral Si atoms
     """
@@ -573,17 +574,24 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     gamma = 1.20
     cosC = -1.0/3
     epsilon = 1.0
-    sigma = 1.0
+    sigma = 2.0951
+    
+    # set limits for input training data
+    low = 1.9           # checked with lammps silicon simulation
+    # cutoff according to http://lammps.sandia.gov/doc/pair_sw.html
+    # multiply with 0.9 to prevent division by zero
+    high = sigma*a*0.9      
     
     # Stillinger-Weber
-    function = lambda Rij, Rik, theta: epsilon*A*(B/Rij**p - 1.0/Rij**q) * \
-                                       ( 1.0 / np.exp(Rij - a) ) + \
+    function = lambda Rij, Rik, theta: epsilon*A*(B*(sigma/Rij)**p - (sigma/Rij)**q) * \
+                                       np.exp(sigma / (Rij - a*sigma)) + \
                                        epsilon*Lambda*(np.cos(theta) - cosC)**2 * \
-                                       np.exp(gamma/(Rij-a)) * np.exp(gamma/(Rik-a))
+                                       np.exp( (gamma*sigma) / (Rij - a*sigma) ) * \
+                                       np.exp( (gamma*sigma) / (Rik - a*sigma) )
             
     # train                           
     regress = Regression(function, trainSize, batchSize, testSize, numberOfSymmFunc, outputs)
-    regress.generateData(a, b, method='symmetryData', neighbours=neighbours, numberOfSymmFunc=numberOfSymmFunc, 
+    regress.generateData(low, high, method='angularSymmetry', neighbours=neighbours, numberOfSymmFunc=numberOfSymmFunc, 
                          symmFuncType='G3')
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
@@ -597,8 +605,8 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
 #testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
 #LennardJonesNeighbours(int(1e5), int(1e4), int(1e3), 2, 40, int(1e5), 10)
 #LennardJonesNeighboursForce(int(1e5), int(1e4), int(1e3), 2, 100, int(2e6), 5)
-print 'yes'
-LennardJonesSymmetryFunctions(int(1e5), int(1e4), int(1e3), 2, 30, int(1e6), 5, 5, '1')
+#LennardJonesSymmetryFunctions(int(1e5), int(1e4), int(1e3), 2, 30, int(1e6), 5, 5, '1')
+StillingerWeberSymmetry(int(1e5), int(1e4), int(1e3), 2, 30, int(1e6), 10, 5, 'G3')
 
     
 
