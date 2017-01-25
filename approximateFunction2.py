@@ -323,7 +323,7 @@ class Regression:
                 if epoch % 1000 == 0:               
                     testCost = sess.run(cost, feed_dict={x: xTest, y: yTest})
                     print 'Cost/N at step %4d: %g' % (epoch, testCost/float(testSize))
-                    sys.stdout.flush()
+                    #sys.stdout.flush()
                     #testCostEnergy = sess.run(costEnergy, feed_dict={x: xTest, y: yTest})
                     #testCostForce = sess.run(costForce, feed_dict={x: xTest, y: yTest})
                     #print 'Cost/N at step %4d: Energy: %g Forces: %g' % (epoch, testCostEnergy/float(testSize), testCostForce/float(testSize))
@@ -577,18 +577,18 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     sigma = 2.0951
     
     # set limits for input training data
-    low = 1.9           # checked with lammps silicon simulation
-    # cutoff according to http://lammps.sandia.gov/doc/pair_sw.html
+    low = 1.9           # checked with lammps Si simulation
+    # cutoff = sigma*a according to http://lammps.sandia.gov/doc/pair_sw.html
     # multiply with 0.9 to prevent division by zero
     high = sigma*a*0.9      
     
-    # Stillinger-Weber
-    function = lambda Rij, Rik, theta: epsilon*A*(B*(sigma/Rij)**p - (sigma/Rij)**q) * \
-                                       np.exp(sigma / (Rij - a*sigma)) + \
-                                       epsilon*Lambda*(np.cos(theta) - cosC)**2 * \
-                                       np.exp( (gamma*sigma) / (Rij - a*sigma) ) * \
-                                       np.exp( (gamma*sigma) / (Rik - a*sigma) )
-            
+    # Stillinger-Weber            
+    function = lambda Rij, Rik, theta:  epsilon*A*(B*(sigma/Rij)**p - (sigma/Rij)**q) * \
+                                        np.exp(sigma / (Rij - a*sigma)) + \
+                                        epsilon*Lambda*(np.cos(theta) - cosC)**2 * \
+                                        np.exp( (gamma*sigma) / (Rij - a*sigma) ) * \
+                                        np.exp( (gamma*sigma) / (Rik - a*sigma) )
+    
     # train                           
     regress = Regression(function, trainSize, batchSize, testSize, numberOfSymmFunc, outputs)
     regress.generateData(low, high, method='angularSymmetry', neighbours=neighbours, numberOfSymmFunc=numberOfSymmFunc, 
@@ -606,7 +606,7 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
 #LennardJonesNeighbours(int(1e5), int(1e4), int(1e3), 2, 40, int(1e5), 10)
 #LennardJonesNeighboursForce(int(1e5), int(1e4), int(1e3), 2, 100, int(2e6), 5)
 #LennardJonesSymmetryFunctions(int(1e5), int(1e4), int(1e3), 2, 30, int(1e6), 5, 5, '1')
-StillingerWeberSymmetry(int(1e5), int(1e4), int(1e3), 2, 30, int(1e6), 10, 5, 'G3')
+StillingerWeberSymmetry(int(3e3), int(1e3), int(1e2), 2, 30, int(1e6), 10, 30, 'G3')
 
     
 

@@ -2,6 +2,7 @@
 # for example training of ANN
 
 import numpy as np
+import readLammpsData
 np.random.seed(1)
 
 def compareIntegers(N, a=0, b=10):
@@ -199,10 +200,10 @@ def angularSymmetryData(function, size, \
                         neighbours, numberOfSymmFunc, symmFuncType, \
                         low, high, outputs=1):
 
-    # generate input data
-    inputTemp = np.zeros((size,neighbours+1,4))
+    """# generate input data
+    inputTemp = np.zeros((size,neighbours,4))
     xyz     = np.zeros((size,3))
-    for i in range(neighbours+1): # fill cube slice for each neighbor
+    for i in range(neighbours): # fill cube slice for each neighbor
         inputTemp[:,i,3] = np.random.uniform(low, high, size) # this is R
         r2             = inputTemp[:,i,3]**2
         xyz[:,0]       = np.random.uniform(0, r2, size)
@@ -214,66 +215,108 @@ def angularSymmetryData(function, size, \
         inputTemp[:,i,1] = np.sqrt(xyz[:,1]) * np.random.choice([-1,1],size)
         inputTemp[:,i,2] = np.sqrt(xyz[:,2]) * np.random.choice([-1,1],size)
     
-    # pick out pairs of coordinates and distances
-    xij = inputTemp[:,:-1,0]; xik = inputTemp[:,1:,0]
-    yij = inputTemp[:,:-1,1]; yik = inputTemp[:,1:,1]
-    zij = inputTemp[:,:-1,2]; zik = inputTemp[:,1:,2]
-    rij = inputTemp[:,:-1,3]; rik = inputTemp[:,1:,3]    
-    
-    # calculate angles for each triplet (i, j, k)
-    theta = np.arccos( (xij*xik + yij*yik + zij*zik) / (rij*rik) )
-    
-    # distance between atom j and k
-    # this will generate very small values that maybe shouldnt be included?
-    # the values that are above cutoff is fixed by the cutoff function below
-    rjk = np.sqrt( rij**2 + rik**2 - 2*rij*rik*np.cos(theta) )
-    
-    
-    """print np.min(xij)
-    print np.max(xij)
-    print np.min(rij)
-    print np.max(rij)
-    print np.min(rik)
-    print np.min(rjk)
-    print np.max(rjk)
-    print np.min(theta)
-    print np.max(theta)"""
-    
-    # function gives approximate energy for each triplet
-    # Stillinger-Weber
-    outputData = np.sum(function(rij, rik, theta), axis=1)
-    outputData = outputData.reshape([size, outputs])
+    # pick out slices
+    x = inputTemp[:,:,0]
+    y = inputTemp[:,:,1]
+    z = inputTemp[:,:,2]
+    r = inputTemp[:,:,3]"""
+        
+    x, y, z, r = readLammpsData.readXYZ("../LAMMPS_test/Silicon/Data/Si1000.xyz")
+    size = len(x)
+
+    outputData = np.zeros((size, outputs))
     
     # generate symmetry function input data
     inputData = np.zeros((size,numberOfSymmFunc))
-    thetaRange = np.linspace(1, 10, numberOfSymmFunc)   # values..?
+    thetaRange = [1, 2, 4]   # values..?
     cutoff = high
-    width = 1.5
-    inversion = 1.0
-    counter = 0
+    widths = [0.1, 0.21, 0.32, 0.425, 0.526]
+    inversions = [-1.0, 1.0]
+    #counter = 0
+    # loop through each r vector, i.e. each atomic environment
     for i in xrange(size):
-        if np.size( np.where(rjk[i,:] > cutoff)[0] ) == neighbours:
-            counter += 1
-        # find value of each symmetry function for this r vector
-        for j in xrange(numberOfSymmFunc):
-            # remove distances above cutoff, they contribute zero to sum
-            inputData[i,j] = symmetryFunction3(rij[i,:], rik[i,:], rjk[i,:], theta[i,:], \
-                                               thetaRange[j], width, cutoff, inversion)
+        """if np.size( np.where(rjk[i,:] > cutoff)[0] ) == neighbours:
+            counter += 1"""       
+        # nested sum over all neighbours k for each neighbour j
+        # this loop takes care of both 2-body and 3-body configs
+        for j in xrange(neighbours):
+            xi = np.array(x[i][:])
+            yi = np.array(y[i][:])
+            zi = np.array(z[i][:])
+            ri = np.array(r[i][:])
+            
+            # pick coordinates and r of neighbour j
+            """rij = r[i,j]
+            xij = x[i,j]; yij = y[i,j]; zij = z[i,j]"""
+            rij = ri[j]
+            xij = xi[j]; yij = yi[j]; zij = zi[j]
+            
+            # pick all neighbours k 
+            """indicies = np.arange(len(r[i,:])) != j
+            rik = r[i,indicies] 
+            xik = x[i,indicies]; yik = y[i,indicies]; zik = z[i,indicies]"""
+            indicies = np.arange(len(ri[:])) != j
+            rik = ri[indicies] 
+            xik = xi[indicies]; yik = yi[indicies]; zik = zi[indicies]
+            
+            # compute angle and rjk
+            theta = np.arccos( (xij*xik + yij*yik + zij*zik) / (rij*rik) )
+            rjk = np.sqrt( rij**2 + rik**2 - 2*rij*rik*np.cos(theta) )
+            
+            # find value of each symmetry function for this triplet
+            symmFuncNumber = 0
+            for angle in thetaRange:
+                for width in widths:
+                    for inversion in inversions:
+                        # find symmetry function value for triplets (i,j,k) for all k
+                        inputData[i,symmFuncNumber] += symmetryFunction3(rij, rik, rjk, theta, \
+                                                                         angle, width, cutoff, inversion)
+                        symmFuncNumber += 1
+                                           
+            # 3-body, rik and theta are vectors
+            outputData[i,0] += np.sum(function(rij, rik, theta))
     
     # check if any input data is zero, should prevent this
     if not np.all(inputData):
         print 'zeros are present'
-    print counter / float(size)
+    maxValue = np.max(inputData)
+    minValue = np.min(inputData)
+    print maxValue
+    print minValue
+    print np.mean(inputData)
+    
+    # normalize to [-1,1]
+    inputData = 2 * (inputData - minValue) / (maxValue - minValue) - 1 
+    print "New max: ", np.max(inputData)
+    print "New min: ", np.min(inputData)
+    print "New ave: ", np.mean(inputData)   
+    
+    print "Ouput data:"
+    print np.max(outputData)
+    print np.min(outputData)
+    print np.mean(outputData)
+    
+    # normalize output data
+    maxOutput = np.max(outputData)
+    minOutput = np.min(outputData)
+    outputData = 2 * (outputData - minOutput) / (maxOutput - minOutput) - 1 
+    
+    print "New output:"
+    print np.max(outputData)
+    print np.min(outputData)
+    print np.mean(outputData)
     
     return inputData, outputData
     
     
-def cutoffFunction(rVector, cutoff):   
+def cutoffFunction(rVector, cutoff, cut=False):   
     
     value = 0.5 * (np.cos(np.pi*rVector / cutoff) + 1)
     
     # set elements above cutoff to zero so they dont contribute to sum
-    value[np.where(rVector > cutoff)[0]] = 0
+    if cut:
+        value[np.where(rVector > cutoff)[0]] = 0
+        
     return value
  
     
@@ -291,7 +334,7 @@ def symmetryFunction3(Rij, Rik, Rjk, theta, thetaRange, width, cutoff, inversion
     
     return 2**(1-thetaRange) * np.sum( (1 + inversion*np.cos(theta))**thetaRange * \
            np.exp(-width*(Rij**2 + Rik**2 + Rjk**2)) * \
-           cutoffFunction(Rij, cutoff) * cutoffFunction(Rik, cutoff) * cutoffFunction(Rjk, cutoff) )
+           cutoffFunction(Rij, cutoff) * cutoffFunction(Rik, cutoff) * cutoffFunction(Rjk, cutoff, cut=True) )
     
 
 
