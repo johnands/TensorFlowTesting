@@ -2,7 +2,7 @@
 # for example training of ANN
 
 import numpy as np
-import readLammpsData
+import symmetryFunctions
 np.random.seed(1)
 
 def compareIntegers(N, a=0, b=10):
@@ -175,7 +175,7 @@ def radialSymmetryData(function, size, \
             for j in xrange(numberOfSymmFunc):
                 # remove distances above cutoff, they contribute zero to sum
                 rVector = inputTemp[i,np.where(inputTemp[i,:] <= cutoff[j])[0]]
-                inputData[i,j] = symmetryFunction1(rVector, cutoff[j])
+                inputData[i,j] = symmetryFunctions.G1(rVector, cutoff[j])
                 
     else:  
         cutoff = 2.5
@@ -186,7 +186,7 @@ def radialSymmetryData(function, size, \
             for j in xrange(numberOfSymmFunc):
                 # remove distances above cutoff, they contribute zero to sum
                 rVector = inputTemp[i,:]
-                inputData[i,j] = symmetryFunction2(rVector, cutoff, widths[j], center)
+                inputData[i,j] = symmetryFunctions.G2(rVector, cutoff, widths[j], center)
         
     if not np.all(inputData):
         print 'zeros are present'
@@ -200,7 +200,7 @@ def angularSymmetryData(function, size, \
                         neighbours, numberOfSymmFunc, symmFuncType, \
                         low, high, outputs=1):
 
-    """# generate input data
+    # generate input data
     inputTemp = np.zeros((size,neighbours,4))
     xyz     = np.zeros((size,3))
     for i in range(neighbours): # fill cube slice for each neighbor
@@ -219,10 +219,7 @@ def angularSymmetryData(function, size, \
     x = inputTemp[:,:,0]
     y = inputTemp[:,:,1]
     z = inputTemp[:,:,2]
-    r = inputTemp[:,:,3]"""
-        
-    x, y, z, r = readLammpsData.readXYZ("../LAMMPS_test/Silicon/Data/Si1000.xyz")
-    size = len(x)
+    r = inputTemp[:,:,3]
 
     outputData = np.zeros((size, outputs))
     
@@ -240,24 +237,15 @@ def angularSymmetryData(function, size, \
         # nested sum over all neighbours k for each neighbour j
         # this loop takes care of both 2-body and 3-body configs
         for j in xrange(neighbours):
-            xi = np.array(x[i][:])
-            yi = np.array(y[i][:])
-            zi = np.array(z[i][:])
-            ri = np.array(r[i][:])
-            
+
             # pick coordinates and r of neighbour j
-            """rij = r[i,j]
-            xij = x[i,j]; yij = y[i,j]; zij = z[i,j]"""
-            rij = ri[j]
-            xij = xi[j]; yij = yi[j]; zij = zi[j]
+            rij = r[i,j]
+            xij = x[i,j]; yij = y[i,j]; zij = z[i,j]
             
             # pick all neighbours k 
-            """indicies = np.arange(len(r[i,:])) != j
+            indicies = np.arange(len(r[i,:])) != j
             rik = r[i,indicies] 
-            xik = x[i,indicies]; yik = y[i,indicies]; zik = z[i,indicies]"""
-            indicies = np.arange(len(ri[:])) != j
-            rik = ri[indicies] 
-            xik = xi[indicies]; yik = yi[indicies]; zik = zi[indicies]
+            xik = x[i,indicies]; yik = y[i,indicies]; zik = z[i,indicies]
             
             # compute angle and rjk
             theta = np.arccos( (xij*xik + yij*yik + zij*zik) / (rij*rik) )
@@ -269,8 +257,8 @@ def angularSymmetryData(function, size, \
                 for width in widths:
                     for inversion in inversions:
                         # find symmetry function value for triplets (i,j,k) for all k
-                        inputData[i,symmFuncNumber] += symmetryFunction3(rij, rik, rjk, theta, \
-                                                                         angle, width, cutoff, inversion)
+                        inputData[i,symmFuncNumber] += symmetryFunctions.G3(rij, rik, rjk, theta, \
+                                                                            angle, width, cutoff, inversion)
                         symmFuncNumber += 1
                                            
             # 3-body, rik and theta are vectors
@@ -279,6 +267,7 @@ def angularSymmetryData(function, size, \
     # check if any input data is zero, should prevent this
     if not np.all(inputData):
         print 'zeros are present'
+        
     maxValue = np.max(inputData)
     minValue = np.min(inputData)
     print maxValue
@@ -308,33 +297,6 @@ def angularSymmetryData(function, size, \
     
     return inputData, outputData
     
-    
-def cutoffFunction(rVector, cutoff, cut=False):   
-    
-    value = 0.5 * (np.cos(np.pi*rVector / cutoff) + 1)
-    
-    # set elements above cutoff to zero so they dont contribute to sum
-    if cut:
-        value[np.where(rVector > cutoff)[0]] = 0
-        
-    return value
- 
-    
-def symmetryFunction1(rVector, cutoff):
-    
-    return np.sum(cutoffFunction(rVector, cutoff))
-    
-    
-def symmetryFunction2(rVector, cutoff, width, center):
-    
-    return np.sum( np.exp(-width*(rVector - center)**2) * cutoffFunction(rVector, cutoff) )
-    
-    
-def symmetryFunction3(Rij, Rik, Rjk, theta, thetaRange, width, cutoff, inversion):
-    
-    return 2**(1-thetaRange) * np.sum( (1 + inversion*np.cos(theta))**thetaRange * \
-           np.exp(-width*(Rij**2 + Rik**2 + Rjk**2)) * \
-           cutoffFunction(Rij, cutoff) * cutoffFunction(Rik, cutoff) * cutoffFunction(Rjk, cutoff, cut=True) )
     
 
 
