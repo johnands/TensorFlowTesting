@@ -11,18 +11,30 @@ def cutoffFunction(rVector, cutoff, cut=False):
     return value
  
     
-def G1(rVector, cutoff):
+def G1(Rij, cutoff):
     
-    return np.sum(cutoffFunction(rVector, cutoff))
-    
-    
-def G2(rVector, cutoff, width, center):
-    
-    return np.sum( np.exp(-width*(rVector - center)**2) * cutoffFunction(rVector, cutoff) )
+    return np.sum(cutoffFunction(Rij, cutoff))
     
     
-def G3(Rij, Rik, Rjk, theta, thetaRange, width, cutoff, inversion):
+def G2(Rij, cutoff, width, center):
+    
+    return np.sum( np.exp(-width*(Rij - center)**2) * cutoffFunction(Rij, cutoff) )
+    
+    
+def G3(Rij, kappa, cutoff):
+    
+    return np.sum( np.cos(kappa*Rij) * cutoffFunction(Rij, cutoff))
+    
+    
+def G4(Rij, Rik, Rjk, theta, thetaRange, width, cutoff, inversion):
     
     return 2**(1-thetaRange) * np.sum( (1 + inversion*np.cos(theta))**thetaRange * \
-           np.exp(-width*(Rij**2 + Rik**2 + Rjk**2)) * \
+           np.exp( -width*(Rij**2 + Rik**2 + Rjk**2) ) * \
            cutoffFunction(Rij, cutoff) * cutoffFunction(Rik, cutoff) * cutoffFunction(Rjk, cutoff, cut=True) )
+           
+           
+def G5(Rij, Rik, theta, thetaRange, width, cutoff, inversion):
+    
+    return 2**(1-thetaRange) * np.sum( (1 + inversion*np.cos(theta))**thetaRange * \
+           np.exp( -width*(Rij**2 + Rik**2) ) * \
+           cutoffFunction(Rij, cutoff) * cutoffFunction(Rik, cutoff) )

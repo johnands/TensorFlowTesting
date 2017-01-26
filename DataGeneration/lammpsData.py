@@ -92,7 +92,7 @@ def SiTrainingData(function, filename, neighbours, symmFuncType, \
     # generate symmetry function input data
     thetaRange = [1, 2, 4]   # values..?
     cutoff = [6.0]
-    widths = [0.001, 0.0025, 0.005, 0.007, 0.01]
+    widths = [0.01, 0.025, 0.05, 0.07, 0.1]
     inversions = [-1.0, 1.0]
     
     numberOfSymmFunc = len(thetaRange)*len(cutoff)*len(widths)*len(inversions)    
@@ -103,6 +103,7 @@ def SiTrainingData(function, filename, neighbours, symmFuncType, \
     thetaMin = 100.0
     fractionOfNonZeros = 0.0
     fractionOfInputVectorsOnlyZeros = 0.0
+    meanNeighbours = 0.0;
     for i in xrange(size):      
     
         # neighbour coordinates for atom i
@@ -111,6 +112,9 @@ def SiTrainingData(function, filename, neighbours, symmFuncType, \
         zi = np.array(z[i][:])
         ri = np.array(r[i][:])
         numberOfNeighbours = len(xi)
+        
+        # count mean number of neighbours
+        meanNeighbours += numberOfNeighbours
         
         # sum over all neighbours k for each neighbour j
         # this loop takes care of both 2-body and 3-body configs   
@@ -143,7 +147,7 @@ def SiTrainingData(function, filename, neighbours, symmFuncType, \
                 for width in widths:
                     for inversion in inversions:
                         # find symmetry function value for triplets (i,j,k) for all k
-                        inputData[i,symmFuncNumber] += symmetryFunctions.G3(rij, rik, rjk, theta, \
+                        inputData[i,symmFuncNumber] += symmetryFunctions.G4(rij, rik, rjk, theta, \
                                                                             angle, width, cutoff, inversion)
                         symmFuncNumber += 1
                                            
@@ -172,6 +176,11 @@ def SiTrainingData(function, filename, neighbours, symmFuncType, \
     fractionOfInputVectorsOnlyZeros /= float(size)
     print "Fraction of zeros: ", fractionOfZeros
     print "Fraction of input vectors with only zeros: ", fractionOfInputVectorsOnlyZeros
+    print
+    
+    meanNeighbours /= float(size)
+    print "Mean number of neighbours: ", meanNeighbours
+    print
     
     print "Output data:"
     maxInput = np.max(inputData)
