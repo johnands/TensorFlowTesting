@@ -183,7 +183,7 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
 
 """Stillinger Weber med angulære symmetrifunksjoner og lammps-data"""
 #StillingerWeberSymmetry(int(3e3), int(1e3), int(1e2), 2, 30, int(1e6), 10, 30, 'G4', \
-#                        "../LAMMPS_test/Silicon/Data/SiL101000.xyz")
+#                        "../LAMMPS_test/Silicon/Data/Si1000.xyz")
                         
                         
                         
