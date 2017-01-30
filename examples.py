@@ -159,26 +159,29 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     regress.train(nEpochs)
                
     
-
-# trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, ...
-
 #testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
 #LennardJonesNeighboursForce(int(1e5), int(1e4), int(1e3), 2, 100, int(2e6), 5)
 
-# LJ med en input og en output
+
+
+
+
+""" trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, """
+
+"""LJ med en input og en output"""
 #LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 100000)
 
-# Lj med flere naboer
-LennardJonesNeighbours(int(1e5), int(1e4), int(1e3), 2, 40, int(1e5), 10)
+"""Lj med flere naboer"""
+#LennardJonesNeighbours(int(1e5), int(1e4), int(1e3), 2, 40, int(1e5), 10)
 
 
 
-# trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, nNeighbours, nSymmfuncs, symmFuncType (G1 or G2)
+"""trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, nNeighbours, nSymmfuncs, symmFuncType (G1 or G2)"""
 
-# LJ med radielle symmetrifunksjoner
+"""LJ med radielle symmetrifunksjoner"""
 #LennardJonesSymmetryFunctions(int(1e5), int(1e4), int(1e3), 2, 30, int(1e6), 5, 5, 'G2')
 
-# Stillinger Weber med angulære symmetrifunksjoner og lammps-data
+"""Stillinger Weber med angulære symmetrifunksjoner og lammps-data"""
 #StillingerWeberSymmetry(int(3e3), int(1e3), int(1e2), 2, 30, int(1e6), 10, 30, 'G4', \
 #                        "../LAMMPS_test/Silicon/Data/SiL101000.xyz")
                         
