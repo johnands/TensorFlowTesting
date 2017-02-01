@@ -1,7 +1,37 @@
 """
 Train a neural network to approximate a continous function
-"""
+Generate/get training data methods:
 
+size = number of training vectors
+LJ: Lennard-Jones
+SW: Stillinger-Weber
+
+functionData:       random 1-dim input and output data: 
+                    input: r = [size,1], output: E = [size,1] (LJ)
+neighbourData:      random N-dim input data (N neighbours)
+                    and random 1-dim output data
+                    output is total energy of N neighbours
+                    input: r = [size,N], output: E = [size,1] (LJ)
+                    
+                    if functionDerivative is specified (not None):
+                    random 4N-dim input data (N neighoburs)
+                    and random 4-dimloutput data
+                    (x, y, z, r) of each neighbour is supplied
+                    output is total energy and force (LJ)
+                    input: r = [size,4N], output: [size,4] : (Fx, Fy ,Fz, E)
+radialSymmetry:     random M-dim input data and random 1-dim output data
+                    use radial symmetry functions to transform radial/coordinates to
+                    input: [size, M] where M is number of symmetry functions
+                    output: [size, 1] (total energy)
+angularSymmetry:    same as for radialSymmetry, but using angular symmetry functions
+                    to transform random data. SW potential is used to produce
+                    output data
+lammps:             (x, y, z, r)  of each neighbour and total E is sampled from lammps
+                    input data is transformed with angular symmetry functions
+                    same sizes of input and output as for radialSymmetry
+                    and angularSymmetry
+"""
+                    
 import tensorflow as tf
 import numpy as np
 import sys
@@ -39,7 +69,7 @@ if len(sys.argv) > 1:
     i = 1
     while i < len(sys.argv):
         if sys.argv[i] == '--save' or sys.argv[i] == '--savegraph' or sys.argv[i] == '--savegraphproto' \
-           or sys.argv[i] == 'summary':
+                          or sys.argv[i] == '--summary':
             if os.path.exists(trainingDir):
                 print "Attempted to place data in existing directory, %s. Exiting." % trainingDir
                 exit(1)
@@ -123,39 +153,15 @@ class Regression:
 
 
     def generateData(self, a, b, method='functionData', numberOfSymmFunc=10, neighbours=80, \
-                     symmFuncType='1', filename=''):
+                     symmFuncType='G4', filename=''):
 
         self.a, self.b = a, b
 
         if method == 'functionData':
             self.xTrain, self.yTrain, self.xTest, self.yTest = \
                 data.functionData(self.function, self.trainSize, self.testSize, a=a, b=b)
-
-        elif method == 'radialSymmetry':
-            self.xTrain, self.yTrain = \
-                data.radialSymmetryData(self.function, self.trainSize, \
-                                        neighbours, numberOfSymmFunc, symmFuncType)
-            self.xTest, self.yTest = \
-                data.radialSymmetryData(self.function, self.testSize, \
-                                        neighbours, numberOfSymmFunc, symmFuncType)
-
-        elif method == 'angularSymmetry':
-            self.xTrain, self.yTrain = \
-                data.angularSymmetryData(self.function, self.trainSize, \
-                                        neighbours, numberOfSymmFunc, symmFuncType, a, b)
-            self.xTest, self.yTest = \
-                data.angularSymmetryData(self.function, self.testSize, \
-                                        neighbours, numberOfSymmFunc, symmFuncType, a, b)
-
-        elif method == 'lammps':
-            self.xTrain, self.yTrain, self.xTest, self.yTest = \
-                lammps.SiTrainingData(self.function, filename, \
-                                      neighbours, symmFuncType, a, b)
-            self.trainSize = self.xTrain.shape[0]
-            self.testSize  = self.xTest.shape[0]
-            self.batchSize = int(0.3*self.trainSize)
-
-        else:
+                
+        elif method == 'neighbourData:':
             if self.functionDerivative:
                 neighbours = self.inputs / 4
                 print neighbours
@@ -176,8 +182,39 @@ class Regression:
                     data.neighbourData(self.function, self.testSize, a, b, \
                                        inputs=self.inputs, outputs=self.outputs)
 
+        elif method == 'radialSymmetry':
+            self.xTrain, self.yTrain = \
+                data.radialSymmetryData(self.function, self.trainSize, \
+                                        neighbours, numberOfSymmFunc, symmFuncType)
+            self.xTest, self.yTest = \
+                data.radialSymmetryData(self.function, self.testSize, \
+                                        neighbours, numberOfSymmFunc, symmFuncType)
 
-    def constructNetwork(self, nLayers, nNodes, activation=tf.nn.relu, \
+        elif method == 'angularSymmetry':
+            self.xTrain, self.yTrain = \
+                data.angularSymmetryData(self.function, self.trainSize, \
+                                        neighbours, numberOfSymmFunc, symmFuncType, a, b)
+            self.xTest, self.yTest = \
+                data.angularSymmetryData(self.function, self.testSize, \
+                                        neighbours, numberOfSymmFunc, symmFuncType, a, b)
+
+        elif method == 'lammps':
+            self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs = \
+                lammps.SiTrainingData(filename, symmFuncType)
+            
+            # set different sizes based on lammps data
+            self.trainSize = self.xTrain.shape[0]
+            self.testSize  = self.xTest.shape[0]
+            self.batchSize = int(0.8*self.trainSize)
+            print "trainSize: ", self.trainSize
+            print "testSize: ", self.testSize
+            print "batchSize: ", self.batchSize
+            print "inputs: ", self.inputs
+            print "outputs: ", self.outputs
+            
+
+
+    def constructNetwork(self, nLayers, nNodes, activation=tf.nn.sigmoid, \
                          wInit='normal', bInit='normal'):
 
         self.nLayers = nLayers
@@ -236,83 +273,6 @@ class Regression:
                 saver.restore(sess, loadFileName)
                 print 'Model restored'
 
-            if testFlag:
-
-                # pick an input vector
-                coordinates = xTrain[0]
-                coordinates = coordinates.reshape([1,self.inputs])
-                neighbours = self.inputs/4
-                xNN = np.zeros(neighbours)
-                yNN = np.zeros(neighbours)
-                zNN = np.zeros(neighbours)
-                rNN = np.zeros(neighbours)
-                # extract coordinates and distances
-                for i in range(neighbours):
-                    xNN[i] = coordinates[0,i*4]
-                    yNN[i] = coordinates[0,i*4 + 1]
-                    zNN[i] = coordinates[0,i*4 + 2]
-                    rNN[i] = coordinates[0,i*4 + 3]
-
-                # vary coordinates of only one atom and see
-                # if the resulting potential is similar to LJ
-                N = 500
-                r = np.linspace(0.8, 2.5, N)
-                energyNN = []
-                energyLJ = []
-                forceNN = []
-                forceLJ = []
-                xyz = np.zeros(3)
-                for i in range(N):
-                    r2 = r[i]**2
-                    xyz[0] = np.random.uniform(0, r2)
-                    xyz[1] = np.random.uniform(0, r2-xyz[0])
-                    xyz[2] = r2 - xyz[0] - xyz[1]
-                    #np.random.shuffle(xyz)
-                    x = np.sqrt(xyz[0])# * np.random.choice([-1,1])
-                    y = np.sqrt(xyz[1])# * np.random.choice([-1,1])
-                    z = np.sqrt(xyz[2])# * np.random.choice([-1,1])
-                    coordinates[0][0] = x; coordinates[0][1] = y; coordinates[0][2] = z
-                    coordinates[0][3] = r[i]
-                    energyAndForce = sess.run(prediction, feed_dict={self.x: coordinates})
-                    energyNN.append(energyAndForce[0][3])
-                    rNN[0] = r[i]
-                    energyLJ.append(np.sum(self.function(rNN)))
-                    forceNN.append(energyAndForce[0][0])
-                    xNN[0] = x
-                    forceLJ.append(np.sum(self.functionDerivative(rNN)*xNN/rNN))
-
-                # convert to arrays
-                energyNN = np.array(energyNN); energyLJ = np.array(energyLJ)
-                forceNN = np.array(forceNN); forceLJ = np.array(forceLJ)
-
-                # plot error
-                plt.plot(r, energyNN - energyLJ)
-                plt.xlabel('r [MD]', fontsize=15)
-                plt.ylabel('E [MD]', fontsize=15)
-                plt.legend(['NN(r) - LJ(r)'], fontsize=15)
-                plt.show()
-                #plt.savefig('Tests/TrainLennardJones/ManyNeighbourNetwork/Plots/manyNeighbourEnergyError.pdf')
-
-                plt.figure()
-                plt.plot(r, forceNN - forceLJ)
-                plt.xlabel('r [MD]', fontsize=15)
-                plt.ylabel('dE/dr [MD]', fontsize=15)
-                plt.legend([r'$NN^\prime(r) - LJ^\prime(r)$'], fontsize=15)
-                #plt.savefig('Tests/TrainLennardJones/ManyNeighbourNetwork/Plots/manyNeighbourForceError.pdf')
-                plt.show()
-                #print 'Cost: ', (np.sum((energyNN - energyLJ)**2 + (forceNN - forceLJ)**2))/N
-
-                # see if the energy is zero when all neighbours is at cutoff distance
-                inputz = np.array([1.87, 1.32, 1.006, 2.5]*neighbours).reshape([1,self.inputs])
-                r = np.array([2.5]*neighbours)
-                energyLJ = sum(self.function(r))
-                ef = sess.run(prediction, feed_dict={self.x: inputz})
-
-                print 'NN energy at cutoff: ', ef[0,3]
-                print 'LJ energy at cutoff: ', energyLJ
-
-                numberOfEpochs = 0
-
             # Merge all the summaries and write them out to /tmp/mnist_logs (by default)
             if summaryFlag:
                 merged = tf.merge_all_summaries()
@@ -330,6 +290,7 @@ class Regression:
 
                 # train
                 trainCost, _ = sess.run([cost, trainStep], feed_dict={x: xBatch, y: yBatch})
+                
                 if summaryFlag:
                     if epoch % 1000 == 0:
                         summary = sess.run(merged, feed_dict={x: xBatch, y: yBatch})
@@ -438,7 +399,6 @@ class Regression:
             if plotFlag:
                 x_test  = np.linspace(self.a, self.b, self.testSize)
                 x_test  = x_test.reshape([testSize,self.inputs])
-                y_test  = self.function(x_test)
                 yy = sess.run(prediction, feed_dict={self.x: x_test})
                 plt.plot(x_test[:,0], yy[:,0] - self.function(x_test[:,0]), 'b-')
                 #plt.hold('on')

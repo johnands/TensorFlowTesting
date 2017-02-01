@@ -122,6 +122,8 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
                             neighbours, numberOfSymmFunc, symmFunctype, filename, outputs=1):
     """
     Train neural network to simulate tetrahedral Si atoms
+    methodGenerate random input training data or use xyz-data from lammps
+    Output training data is calculated with sw-potential
     """
 
     # parameters                            
@@ -157,6 +159,26 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
     regress.train(nEpochs)
+    
+    
+def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1):
+    """
+    Use neighbour data and energies from lammps with sw-potential 
+    as input and output training data respectively
+    """
+               
+    # get energies from sw lammps
+    function = None    
+    
+    # these are sampled from lammps
+    trainSize = batchSize = testSize = inputs = low = high = 0
+                       
+    regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
+    regress.generateData(low, high, method='lammps', symmFuncType='G4', filename=filename)
+    regress.constructNetwork(nLayers, nNodes, activation=tf.nn.tanh, \
+                             wInit='trunc_normal', bInit='trunc_normal')
+    regress.train(nEpochs)
+    
                
     
 #testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
@@ -181,9 +203,13 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
 """LJ med radielle symmetrifunksjoner"""
 #LennardJonesSymmetryFunctions(int(1e5), int(1e4), int(1e3), 2, 30, int(1e6), 5, 5, 'G2')
 
-"""Stillinger Weber med angulære symmetrifunksjoner og lammps-data"""
+"""Stillinger Weber med angular symmetrifunksjoner og lammps-data"""
 #StillingerWeberSymmetry(int(3e3), int(1e3), int(1e2), 2, 30, int(1e6), 10, 30, 'G4', \
 #                        "../LAMMPS_test/Silicon/Data/Si1000.xyz")
+
+"""Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
+lammpsTrainingSi(2, 100, int(1e6), 'G4', \
+                 "../LAMMPS_test/Silicon/Data/01.02-17.24.22/neighbours0.txt")
                         
                         
                         
