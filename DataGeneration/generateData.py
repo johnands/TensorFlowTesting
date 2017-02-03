@@ -257,7 +257,7 @@ def angularSymmetryData(function, size, \
                 for width in widths:
                     for inversion in inversions:
                         # find symmetry function value for triplets (i,j,k) for all k
-                        inputData[i,symmFuncNumber] += symmetryFunctions.G3(rij, rik, rjk, theta, \
+                        inputData[i,symmFuncNumber] += symmetryFunctions.G4(rij, rik, rjk, theta, \
                                                                             angle, width, cutoff, inversion)
                         symmFuncNumber += 1
                                            

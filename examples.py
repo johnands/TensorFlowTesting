@@ -123,7 +123,10 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     """
     Train neural network to simulate tetrahedral Si atoms
     methodGenerate random input training data or use xyz-data from lammps
-    Output training data is calculated with sw-potential
+    Output training data is calculated with my sw-potential, i.e.
+    energies not from lammps
+    method=angularSymmetry: random configs
+    method=lammps: configs from lammps, but not energies
     """
 
     # parameters                            
@@ -131,7 +134,7 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     B = 0.6022245584
     p = 4.0
     q = 0.0
-    a = 1.80
+    a = 1.90
     Lambda = 21.0
     gamma = 1.20
     cosC = -1.0/3
@@ -155,13 +158,13 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     # train                           
     regress = regression.Regression(function, trainSize, batchSize, testSize, numberOfSymmFunc, outputs)
     regress.generateData(low, high, method='lammps', neighbours=neighbours, numberOfSymmFunc=numberOfSymmFunc, 
-                         symmFuncType='G3', filename=filename)
+                         symmFuncType='G4', filename=filename)
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
     regress.train(nEpochs)
     
     
-def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1):
+def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1, activation=tf.nn.sigmoid):
     """
     Use neighbour data and energies from lammps with sw-potential 
     as input and output training data respectively
@@ -176,7 +179,7 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
     regress.generateData(low, high, method='lammps', symmFuncType='G4', filename=filename)
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.tanh, \
-                             wInit='trunc_normal', bInit='trunc_normal')
+                             wInit='xavier', bInit='constant', stdDev=0.3)
     regress.train(nEpochs)
     
                
@@ -205,11 +208,12 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
 
 """Stillinger Weber med angular symmetrifunksjoner og lammps-data"""
 #StillingerWeberSymmetry(int(3e3), int(1e3), int(1e2), 2, 30, int(1e6), 10, 30, 'G4', \
-#                        "../LAMMPS_test/Silicon/Data/Si1000.xyz")
+#                        "../LAMMPS_test/Silicon/Data/03.02-13.44.39/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-lammpsTrainingSi(2, 100, int(1e6), 'G4', \
-                 "../LAMMPS_test/Silicon/Data/01.02-17.24.22/neighbours0.txt")
+lammpsTrainingSi(2, 40, int(1e6), 'G4', \
+                 "../LAMMPS_test/Silicon/Data/03.02-13.44.39/neighbours.txt", \
+                 activation=tf.nn.tanh)
                         
                         
                         

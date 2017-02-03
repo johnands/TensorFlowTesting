@@ -106,7 +106,7 @@ def readNeighbourData(filename):
     return x, y, z, r, E
 
 
-def SiTrainingData(filename, symmFuncType):
+def SiTrainingData(filename, symmFuncType, function=None):
     """ 
     Coordinates and energies of neighbours is sampled from lammps
     Angular symmtry funcitons are used to transform input data  
@@ -116,27 +116,31 @@ def SiTrainingData(filename, symmFuncType):
     x, y, z, r, E = readNeighbourData(filename)
     print "File is read..."
     
-    # output data are energies for each neighbour list
-    outputData = np.array(E)
-    outputs = outputData.shape[1]
-    
     # number of training vectors / neighbours lists
     size = len(x)
+    
+    # output data are energies for each neighbour list or SW
+    if function == None:    
+        outputData = np.array(E)
+    else:
+        outputData = np.zeros((size, 1))
+        
+    outputs = outputData.shape[1]
 
     # parameters G2
-    widthsG2 = [0.04, 0.07, 0.11]
-    centersG2 = [2.2, 2.8, 3.4]
-    cutoffG2 = [6.0]
+    widthG2 = [25, 50]
+    centerG2 = [2.25, 2.45, 3.6, 3.75]
+    cutoffG2 = [3.77]
 
     # parameters G4
-    thetaRangeG4 = [1, 4, 8]   # values..?
-    cutoffG4 = [6.0]
-    widthG4 = [0.04, 0.07, 0.1]
+    thetaRangeG4 = [1, 4]   # values..?
+    cutoffG4 = [3.77]
+    widthG4 = [0.004, 0.007, 0.01]
     inversionG4 = [-1.0, 1.0]
     
-    #numberOfSymmFunc = len(widthsG2)*len(centersG2)*len(cutoffG2) *\
-    #                   len(thetaRangeG4)*len(cutoffG4)*len(widthG4)*len(inversionG4) 
-    numberOfSymmFunc = len(thetaRangeG4)*len(cutoffG4)*len(widthG4)*len(inversionG4) 
+    numberOfSymmFunc = len(widthG2)*len(centerG2)*len(cutoffG2) + \
+                       len(thetaRangeG4)*len(cutoffG4)*len(widthG4)*len(inversionG4) 
+    #numberOfSymmFunc = len(thetaRangeG4)*len(cutoffG4)*len(widthG4)*len(inversionG4) 
     inputData = np.zeros((size,numberOfSymmFunc))
 
     # loop through each data vector, i.e. each atomic environment
@@ -160,7 +164,7 @@ def SiTrainingData(filename, symmFuncType):
         
         # sum over all neighbours k for each neighbour j
         # this loop takes care of both 2-body and 3-body configs   
-        for j in xrange(numberOfNeighbours-1):
+        for j in xrange(numberOfNeighbours):
                       
             # atom j
             rij = ri[j]
@@ -198,6 +202,24 @@ def SiTrainingData(filename, symmFuncType):
             # find value of each symmetry function for this triplet
             symmFuncNumber = 0
             
+            if i == 0:
+                print numberOfNeighbours
+                print "(xij, yij, zij)", xij, yij, zij
+                print "rij:", rij
+                print "xik:", xik
+                print "yik:", yik
+                print "zik:", zik
+                print "rik:", rik
+                print "rjk:", rjk
+                print "theta:", theta
+
+            # G2
+            for width in widthG2:
+                for center in centerG2:
+                    for cutoff in cutoffG2:
+                        inputData[i,symmFuncNumber] += symmetryFunctions.G2(rij, cutoff, width, center)
+                        symmFuncNumber += 1
+                        
             # G4
             for zeta in thetaRangeG4:
                 for cutoff in cutoffG4:
@@ -207,30 +229,16 @@ def SiTrainingData(filename, symmFuncType):
                             inputData[i,symmFuncNumber] += symmetryFunctions.G4(rij, rik, rjk, theta, \
                                                                                 zeta, width, cutoff, inversion)
                             symmFuncNumber += 1
+        
+        # calculate energy with my S-W-potential, not use lammps energy
+        if function != None:
+            outputData[i,0] += np.sum( function(rij, rik, theta) )
             
-            # G2
-            """for width in widthsG2:
-                for center in centersG2:
-                    for cutoff in cutoffG2:
-                        inputData[i,symmFuncNumber] += symmetryFunctions.G2(rij, cutoff, width, center)
-                        symmFuncNumber += 1
-
-                            
-            # G2 x G4
-            for width2 in widthsG2:
-                for center2 in centersG2:
-                    for cutoff2 in cutoffG2:
-                        for zeta4 in thetaRangeG4:
-                            for cutoff4 in cutoffG4:
-                                for width4 in widthG4:
-                                    for inversion4 in inversionG4:
-                                        # find symmetry function value for triplets (i,j,k) for all k
-                                        inputData[i,symmFuncNumber] += symmetryFunctions.G4(rij, rik, rjk, theta, \
-                                                                                            zeta4, width4, cutoff4, inversion4) * \
-                                                                       symmetryFunctions.G2(rij, cutoff2, width2, center2) 
-                                        symmFuncNumber += 1"""
- 
-
+        if i==0:
+            print inputData[i,:]
+            
+        # shuffle input vector
+        #np.random.shuffle(inputData[i,:])
         
         # count zeros
         fractionOfNonZeros += np.count_nonzero(inputData[i,:]) / float(numberOfSymmFunc)
@@ -275,19 +283,19 @@ def SiTrainingData(filename, symmFuncType):
     inputData = inputData - np.mean(inputData)
     
     # scale the covariance
-    C = np.sum(inputData**2, axis=0) / float(size)
+    """C = np.sum(inputData**2, axis=0) / float(size)
     print C
-    inputData = inputData + (1 - np.sqrt(C))/float(numberOfSymmFunc)
+    inputData = (inputData - C) / 2
     C = np.sum(inputData**2, axis=0) / float(size)
     print C
     #inputData = inputData + (1 - )
-    exit(1)
+    exit(1)"""
     
     # normalize to [-1,1]
     #inputData = 2 * (inputData - minInput) / (maxInput - minInput) - 1 
     
         
-    print "Normalized input data:"
+    print "New input data:"
     maxInput = np.max(inputData)
     minInput = np.min(inputData)
     print "Max: ", maxInput
@@ -302,7 +310,10 @@ def SiTrainingData(filename, symmFuncType):
     print "Mean: ", np.mean(outputData)
     
     # normalize output data
-    outputData = 2 * (outputData - minOutput) / (maxOutput - minOutput) - 1
+    #outputData = 2 * (outputData - minOutput) / (maxOutput - minOutput) - 1
+    
+    # shift outputs so that average is zero
+    outputData = outputData - np.mean(outputData)
     
     print "Normalized output data:"
     maxOutput = np.max(outputData)
@@ -312,9 +323,7 @@ def SiTrainingData(filename, symmFuncType):
     print "Mean: ", np.mean(outputData)
     
     return inputTraining, outputTraining, inputTest, outputTest, numberOfSymmFunc, outputs      
-
-
-
+   
 
         
 if __name__ == '__main__':

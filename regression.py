@@ -200,7 +200,7 @@ class Regression:
 
         elif method == 'lammps':
             self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs = \
-                lammps.SiTrainingData(filename, symmFuncType)
+                lammps.SiTrainingData(filename, symmFuncType, function=self.function)
             
             # set different sizes based on lammps data
             self.trainSize = self.xTrain.shape[0]
@@ -215,7 +215,7 @@ class Regression:
 
 
     def constructNetwork(self, nLayers, nNodes, activation=tf.nn.sigmoid, \
-                         wInit='normal', bInit='normal'):
+                         wInit='normal', bInit='normal', stdDev=1.0):
 
         self.nLayers = nLayers
         self.nNodes  = nNodes
@@ -230,7 +230,7 @@ class Regression:
 
         self.neuralNetwork = nn.neuralNetwork(nNodes, nLayers, activation,
                                               weightsInit=wInit, biasesInit=bInit,
-                                              stdDev=1.0, inputs=self.inputs, outputs=self.outputs)
+                                              stdDev=stdDev, inputs=self.inputs, outputs=self.outputs)
         self.makeNetwork = lambda data : self.neuralNetwork.model(self.x)
 
 
@@ -262,7 +262,7 @@ class Regression:
             #costForce = tf.nn.l2_loss(tf.sub(prediction[:,0:-1], y[:,0:-1]))
 
             with tf.name_scope('train'):
-                trainStep = tf.train.AdamOptimizer().minimize(cost)
+                trainStep = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
 
             # initialize variables or restore from file
             #saver = tf.train.Saver(self.neuralNetwork.allWeights + self.neuralNetwork.allBiases,

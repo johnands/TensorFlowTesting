@@ -33,8 +33,8 @@ class neuralNetwork:
         else: #xavier
             fanIn  = shape[0]
             fanOut = shape[1]
-            low = -4*np.sqrt(6.0/(fanIn + fanOut)) # {sigmoid:4, tanh:1} 
-            high = 4*np.sqrt(6.0/(fanIn + fanOut))
+            low = -np.sqrt(6.0/(fanIn + fanOut)) # {sigmoid:4, tanh:1} 
+            high = np.sqrt(6.0/(fanIn + fanOut))
             return tf.Variable( tf.random_uniform(shape, minval=low, maxval=high) )
             
             
