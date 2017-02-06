@@ -58,18 +58,36 @@ def testActivations(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, a=
         counter += 1
 
  
-def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, a=0.8, b=2.5):
+def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, 
+                        units='metal'):
     """
     Train to reproduce shifted L-J potential to 
     verify implementation of network and backpropagation in the MD code
     This is a 1-dimensional example
     """
     
-    cutoff = 2.5
-    shiftedPotential = 1.0/cutoff**12 - 1.0/cutoff**6
-    function = lambda s : 4*(1.0/s**12 - 1.0/s**6 - shiftedPotential)
+    ### metal units ###
+    if units == 'metal':
+        a = 3.2
+        cutoff = 8.5125
+        epsilon = 1.0
+        sigma = 3.405
+        
+    ### LJ units ###
+    else:
+        a = 0.8
+        cutoff = 2.5
+        epsilon = 1.0
+        sigma = 1.0
+        
+    shiftedPotential = sigma**12/cutoff**12 - sigma**6/cutoff**6
+    shiftedPotential = 0
+    function = lambda s : 4*epsilon*(sigma**12/s**12 - sigma**6/s**6 - shiftedPotential)
+
+    
+    
     regress = regression.Regression(function, trainSize, batchSize, testSize, 1, 1)
-    regress.generateData(a, b)
+    regress.generateData(a, cutoff)
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
     regress.train(nEpochs)
@@ -194,7 +212,7 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
 """ trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, """
 
 """LJ med en input og en output"""
-#LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 100000)
+LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 300000)
 
 """Lj med flere naboer"""
 #LennardJonesNeighbours(int(1e5), int(1e4), int(1e3), 2, 40, int(1e5), 10)
@@ -211,9 +229,9 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
 #                        "../LAMMPS_test/Silicon/Data/03.02-13.44.39/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-lammpsTrainingSi(2, 40, int(1e6), 'G4', \
-                 "../LAMMPS_test/Silicon/Data/03.02-13.44.39/neighbours.txt", \
-                 activation=tf.nn.tanh)
+#lammpsTrainingSi(2, 40, int(1e6), 'G4', \
+#                 "../LAMMPS_test/Silicon/Data/03.02-13.44.39/neighbours.txt", \
+#                 activation=tf.nn.tanh)
                         
                         
                         
