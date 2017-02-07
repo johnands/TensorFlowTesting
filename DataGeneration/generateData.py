@@ -192,6 +192,9 @@ def radialSymmetryData(function, size, \
         print 'zeros are present'
         
     print inputData.shape
+    C = np.sum(inputData**2, axis=0) / float(size)
+    print C
+    exit(1)
     
     return inputData, outputData
     

@@ -197,7 +197,7 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
     regress.generateData(low, high, method='lammps', symmFuncType='G4', filename=filename)
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.tanh, \
-                             wInit='xavier', bInit='constant', stdDev=0.3)
+                             wInit='xavier', bInit='zeros')
     regress.train(nEpochs)
     
                
@@ -212,7 +212,7 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
 """ trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, """
 
 """LJ med en input og en output"""
-LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 300000)
+#LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 300000)
 
 """Lj med flere naboer"""
 #LennardJonesNeighbours(int(1e5), int(1e4), int(1e3), 2, 40, int(1e5), 10)
@@ -222,16 +222,16 @@ LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 300000)
 """trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, nNeighbours, nSymmfuncs, symmFuncType (G1 or G2)"""
 
 """LJ med radielle symmetrifunksjoner"""
-#LennardJonesSymmetryFunctions(int(1e5), int(1e4), int(1e3), 2, 30, int(1e6), 5, 5, 'G2')
+#LennardJonesSymmetryFunctions(int(3e4), int(1e4), int(1e3), 2, 30, int(1e6), 10, 10, 'G2')
 
 """Stillinger Weber med angular symmetrifunksjoner og lammps-data"""
 #StillingerWeberSymmetry(int(3e3), int(1e3), int(1e2), 2, 30, int(1e6), 10, 30, 'G4', \
 #                        "../LAMMPS_test/Silicon/Data/03.02-13.44.39/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-#lammpsTrainingSi(2, 40, int(1e6), 'G4', \
-#                 "../LAMMPS_test/Silicon/Data/03.02-13.44.39/neighbours.txt", \
-#                 activation=tf.nn.tanh)
+lammpsTrainingSi(2, 40, int(1e6), 'G4', \
+                 "../LAMMPS_test/Silicon/Data/07.02-15.09.33/neighbours.txt", \
+                 activation=tf.nn.tanh)
                         
                         
                         

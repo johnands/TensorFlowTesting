@@ -141,7 +141,7 @@ if len(sys.argv) > 1:
 class Regression:
 
     def __init__(self, function, trainSize, batchSize, testSize, inputs, outputs,
-                 functionDerivative=None):
+                 functionDerivative=False):
 
         self.trainSize = trainSize
         self.batchSize = batchSize
@@ -161,7 +161,7 @@ class Regression:
             self.xTrain, self.yTrain, self.xTest, self.yTest = \
                 data.functionData(self.function, self.trainSize, self.testSize, a=a, b=b)
                 
-        elif method == 'neighbourData:':
+        elif method == 'neighbourData':
             if self.functionDerivative:
                 neighbours = self.inputs / 4
                 print neighbours
@@ -175,6 +175,7 @@ class Regression:
                                                    neighbours, self.outputs, a, b)
 
             else:
+                print "yes"
                 self.xTrain, self.yTrain = \
                     data.neighbourData(self.function, self.trainSize, a, b, \
                                        inputs=self.inputs, outputs=self.outputs)
@@ -205,7 +206,7 @@ class Regression:
             # set different sizes based on lammps data
             self.trainSize = self.xTrain.shape[0]
             self.testSize  = self.xTest.shape[0]
-            self.batchSize = int(0.8*self.trainSize)
+            self.batchSize = int(0.7*self.trainSize)
             print "trainSize: ", self.trainSize
             print "testSize: ", self.testSize
             print "batchSize: ", self.batchSize
@@ -284,9 +285,13 @@ class Regression:
             for epoch in xrange(numberOfEpochs):
 
                 # pick random batches
-                i = np.random.randint(trainSize-batchSize)
+                """i = np.random.randint(trainSize-batchSize)
                 xBatch = xTrain[i:i+batchSize]
-                yBatch = yTrain[i:i+batchSize]
+                yBatch = yTrain[i:i+batchSize]"""
+                
+                indicies = np.random.choice(np.arange(batchSize), 5)
+                xBatch = xTrain[indicies]
+                yBatch = yTrain[indicies]
 
                 # train
                 trainCost, _ = sess.run([cost, trainStep], feed_dict={x: xBatch, y: yBatch})
@@ -302,10 +307,7 @@ class Regression:
                     print 'Cost/N train test at step %4d: %g %g' % (epoch, trainCost/float(batchSize), \
                                                                     testCost/float(testSize))
                     #sys.stdout.flush()
-                    #testCostEnergy = sess.run(costEnergy, feed_dict={x: xTest, y: yTest})
-                    #testCostForce = sess.run(costForce, feed_dict={x: xTest, y: yTest})
-                    #print 'Cost/N at step %4d: Energy: %g Forces: %g' % \
-                    #       (epoch, testCostEnergy/float(testSize), testCostForce/float(testSize))
+
                     if summaryFlag:
                         summary = sess.run(merged, feed_dict={x: xTest, y: yTest})
                         test_writer.add_summary(summary, epoch)

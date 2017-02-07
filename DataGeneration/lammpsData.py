@@ -128,15 +128,15 @@ def SiTrainingData(filename, symmFuncType, function=None):
     outputs = outputData.shape[1]
 
     # parameters G2
-    widthG2 = [25, 50]
-    centerG2 = [2.25, 2.45, 3.6, 3.75]
-    cutoffG2 = [3.77]
+    widthG2 = [0.001, 0.004]
+    centerG2 = [0.0]
+    cutoffG2 = [4.0, 5.0, 6.0]
 
     # parameters G4
-    thetaRangeG4 = [1, 4]   # values..?
-    cutoffG4 = [3.77]
-    widthG4 = [0.004, 0.007, 0.01]
-    inversionG4 = [-1.0, 1.0]
+    thetaRangeG4 = [1, 2, 4]   # values..?
+    cutoffG4 = [4.0]
+    widthG4 = [0.001, 0.004]
+    inversionG4 = [1.0, -1.0]
     
     numberOfSymmFunc = len(widthG2)*len(centerG2)*len(cutoffG2) + \
                        len(thetaRangeG4)*len(cutoffG4)*len(widthG4)*len(inversionG4) 
@@ -201,17 +201,6 @@ def SiTrainingData(filename, symmFuncType, function=None):
             
             # find value of each symmetry function for this triplet
             symmFuncNumber = 0
-            
-            if i == 0:
-                print numberOfNeighbours
-                print "(xij, yij, zij)", xij, yij, zij
-                print "rij:", rij
-                print "xik:", xik
-                print "yik:", yik
-                print "zik:", zik
-                print "rik:", rik
-                print "rjk:", rjk
-                print "theta:", theta
 
             # G2
             for width in widthG2:
@@ -234,11 +223,12 @@ def SiTrainingData(filename, symmFuncType, function=None):
         if function != None:
             outputData[i,0] += np.sum( function(rij, rik, theta) )
             
-        if i==0:
+        if not i % 1000:
+            print i
             print inputData[i,:]
             
         # shuffle input vector
-        #np.random.shuffle(inputData[i,:])
+        np.random.shuffle(inputData[i,:])
         
         # count zeros
         fractionOfNonZeros += np.count_nonzero(inputData[i,:]) / float(numberOfSymmFunc)
@@ -249,13 +239,6 @@ def SiTrainingData(filename, symmFuncType, function=None):
         # show progress
         sys.stdout.write("\r%2d %% complete" % ((float(i)/size)*100))
         sys.stdout.flush()
-      
-    # split in training set and test set
-    split = int(0.8*size)    
-    inputTraining  = inputData[:split,:]
-    outputTraining = outputData[:split,:]
-    inputTest      = inputData[split:,:]         
-    outputTest     = outputData[split:,:]
     
     print   
     print "max theta: ", thetaMax
@@ -277,30 +260,8 @@ def SiTrainingData(filename, symmFuncType, function=None):
     minInput = np.min(inputData)
     print "Max: ", maxInput
     print "Min: ", minInput
-    print "Mean: ", np.mean(inputData)
-    
-    # shift inputs so that average is zero
-    inputData = inputData - np.mean(inputData)
-    
-    # scale the covariance
-    """C = np.sum(inputData**2, axis=0) / float(size)
-    print C
-    inputData = (inputData - C) / 2
-    C = np.sum(inputData**2, axis=0) / float(size)
-    print C
-    #inputData = inputData + (1 - )
-    exit(1)"""
-    
-    # normalize to [-1,1]
-    #inputData = 2 * (inputData - minInput) / (maxInput - minInput) - 1 
-    
-        
-    print "New input data:"
-    maxInput = np.max(inputData)
-    minInput = np.min(inputData)
-    print "Max: ", maxInput
-    print "Min: ", minInput
-    print "Mean: ", np.mean(inputData)
+    print "Mean: ", np.mean(inputData,)
+    print 
     
     print "Output data:"
     maxOutput = np.max(outputData)
@@ -308,23 +269,71 @@ def SiTrainingData(filename, symmFuncType, function=None):
     print "Max: ", maxOutput
     print "Min: ", minOutput
     print "Mean: ", np.mean(outputData)
+    print
     
-    # normalize output data
-    #outputData = 2 * (outputData - minOutput) / (maxOutput - minOutput) - 1
+    # normalize to [-1,1]
+    if normalizeFlag:
+        inputData = 2 * (inputData - minInput) / (maxInput - minInput) - 1 
+        outputData = 2 * (outputData - minOutput) / (maxOutput - minOutput) - 1    
     
-    # shift outputs so that average is zero
-    outputData = outputData - np.mean(outputData)
+    if shiftMeanFlag:
+        # shift inputs so that average is zero
+        inputData  -= np.mean(inputData, axis=0)
+        # shift outputs so that average is zero
+        outputData -= np.mean(outputData, axis=0)
     
-    print "Normalized output data:"
+    # scale the covariance
+    if scaleCovarianceFlag:
+        C = np.sum(inputData**2, axis=0) / float(size)
+        print C
+    
+    if decorrelateFlag:     
+        # decorrelate data
+        cov = np.dot(inputData.T, inputData) / inputData.shape[0] # get the data covariance matrix
+        U,S,V = np.linalg.svd(cov)
+        inputData = np.dot(inputData, U) # decorrelate the data
+        C = np.sum(inputData**2, axis=0) / float(size)
+        print C
+          
+    print "New input data:"
+    maxInput = np.max(inputData)
+    minInput = np.min(inputData)
+    print "Max: ", maxInput
+    print "Min: ", minInput
+    print "Mean: ", np.mean(inputData)
+    print
+    
+    print "New output data:"
     maxOutput = np.max(outputData)
     minOutput = np.min(outputData)
     print "Max: ", maxOutput
     print "Min: ", minOutput
     print "Mean: ", np.mean(outputData)
+    print
     
-    return inputTraining, outputTraining, inputTest, outputTest, numberOfSymmFunc, outputs      
-   
+    # split in training set and test set
+    split = int(0.8*size)    
+    inputTraining  = inputData[:split,:]
+    outputTraining = outputData[:split,:]
+    inputTest      = inputData[split:,:]         
+    outputTest     = outputData[split:,:]
+    
+    return inputTraining, outputTraining, inputTest, outputTest, numberOfSymmFunc, outputs    
 
+
+
+normalizeFlag       = False    
+shiftMeanFlag       = False
+scaleCovarianceFlag = False
+decorrelateFlag     = False
+        
+        
         
 if __name__ == '__main__':
     readXYZ("../../LAMMPS_test/Silicon/Data/Si1000.xyz")
+    
+    
+    
+    
+    
+    
