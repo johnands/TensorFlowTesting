@@ -287,7 +287,7 @@ class Regression:
 
             with tf.name_scope('L2Norm'):
                 cost = tf.nn.l2_loss( tf.sub(prediction, y) )
-                tf.scalar_summary('L2Norm', cost/batchSize)
+                tf.summary.scalar('L2Norm', cost/batchSize)
 
             with tf.name_scope('train'):
                 trainStep = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
@@ -296,7 +296,7 @@ class Regression:
             #saver = tf.train.Saver(self.neuralNetwork.allWeights + self.neuralNetwork.allBiases,
             #                       max_to_keep=None)
             saver = tf.train.Saver()
-            sess.run(tf.initialize_all_variables())
+            sess.run(tf.global_variables_initializer())
             if loadFlag:
                 saver.restore(sess, loadFileName)
                 print 'Model restored'

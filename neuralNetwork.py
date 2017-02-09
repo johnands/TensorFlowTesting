@@ -57,13 +57,13 @@ class neuralNetwork:
         """Attach a lot of summaries to a Tensor."""
         with tf.name_scope('summaries'):
             mean = tf.reduce_mean(var)
-            tf.scalar_summary('mean/' + name, mean)
+            tf.summary.scalar('mean/' + name, mean)
             with tf.name_scope('stddev'):
                 stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-            tf.scalar_summary('sttdev/' + name, stddev)
-            tf.scalar_summary('max/' + name, tf.reduce_max(var))
-            tf.scalar_summary('min/' + name, tf.reduce_min(var))
-            tf.histogram_summary(name, var)           
+            tf.summary.scalar('sttdev/' + name, stddev)
+            tf.summary.scalar('max/' + name, tf.reduce_max(var))
+            tf.summary.scalar('min/' + name, tf.reduce_min(var))
+            tf.summary.histogram(name, var)           
             
     
     def nn_layer(self, input_tensor, input_dim, output_dim, layer_name, activation):
@@ -89,11 +89,11 @@ class neuralNetwork:
             with tf.name_scope("Wx_plus_b"):
                 preactivate = tf.matmul(input_tensor, weights) + biases
                 self.allPreActivations.append(preactivate)
-                tf.histogram_summary(layer_name + "/pre_activations", preactivate)
+                tf.summary.histogram(layer_name + "/pre_activations", preactivate)
                 
             if not activation == None:
                 activations = activation(preactivate, "activation")
-                tf.histogram_summary(layer_name + "/activations", activations)
+                tf.summary.histogram(layer_name + "/activations", activations)
                 return activations
             else:
                 activations = tf.identity(preactivate, "activation")

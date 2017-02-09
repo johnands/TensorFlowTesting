@@ -193,10 +193,10 @@ def radialSymmetryData(function, size, \
                     inputData[i,j] = symmetryFunctions.G2(rVector, cutoff, width, center)
                     j += 1
                     
-        # count zeros
-        fractionOfNonZeros += np.count_nonzero(inputData[i,:]) / float(numberOfSymmFunc)
-        if not np.any(inputData[i,:]):
-            fractionOfInputVectorsOnlyZeros += 1
+            # count zeros
+            fractionOfNonZeros += np.count_nonzero(inputData[i,:]) / float(numberOfSymmFunc)
+            if not np.any(inputData[i,:]):
+                fractionOfInputVectorsOnlyZeros += 1
         
     if not np.all(inputData):
         print 'zeros are present'
@@ -205,6 +205,8 @@ def radialSymmetryData(function, size, \
     fractionOfInputVectorsOnlyZeros /= float(size)
     print "Fraction of zeros: ", fractionOfZeros
     print "Fraction of input vectors with only zeros: ", fractionOfInputVectorsOnlyZeros
+    
+    print inputData[:100]
     
     return inputData, outputData
     
