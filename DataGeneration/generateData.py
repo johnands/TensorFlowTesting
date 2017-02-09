@@ -54,7 +54,7 @@ def functionData(function, trainSize, testSize, a=0.8, b=2.5):
     return x_train, y_train, x_test, y_test
     
     
-def neighbourData(function, size, a=0.8, b=2.5, inputs=5, outputs=1):
+def neighbourData(function, size, a, b, inputs, outputs=1):
     """
     Create random distances [a,b] for N (inputs) neighbouring atoms
     and make output set based on these random points
@@ -126,13 +126,13 @@ def energyAndForceCoordinates(function, functionDerivative, size, \
     # generate input data
     inputData = np.zeros((size,neighbours,4))
     xyz     = np.zeros((size,3))
-    for i in range(neighbours): # fill cube slice for each neighbor
+    for i in xrange(neighbours): # fill cube slice for each neighbor
         inputData[:,i,3] = np.random.uniform(0.8, 2.5, size) # this is R
         r2             = inputData[:,i,3]**2
         xyz[:,0]       = np.random.uniform(0, r2, size)
         xyz[:,1]       = np.random.uniform(0, r2-xyz[:,0], size)
         xyz[:,2]       = r2 - xyz[:,0] - xyz[:,1]
-        for row in range(size):
+        for row in xrange(size):
             np.random.shuffle(xyz[row,:]) # this shuffles in-place (so no copying)
         inputData[:,i,0] = np.sqrt(xyz[:,0]) * np.random.choice([-1,1],size)
         inputData[:,i,1] = np.sqrt(xyz[:,1]) * np.random.choice([-1,1],size)
@@ -154,47 +154,57 @@ def energyAndForceCoordinates(function, functionDerivative, size, \
 
 def radialSymmetryData(function, size, \
                        neighbours, numberOfSymmFunc, symmFuncType, \
-                       outputs=1, a=0.8, b=2.5):
+                       a, b, outputs=1):
         
     # generate train and test distances, which are vectors with dimension (trainSize, inputs)    
     # the output data is the same as before: a sum of LJ energies for all neighbours 
     # inputs defined in above function neighbourData is now number of neighbours               
-    inputTemp, outputData = neighbourData(function, size, \
-                                          a=a, b=b, inputs=neighbours, outputs=1)
+    inputTemp, outputData = neighbourData(function, size, a, b, neighbours)
     
     # send each distance input vector to a symmetry function which returns a single number
     # for each vector of distances
     # number of inputs to NN is now number of symmetry functions
     inputData = np.zeros((size,numberOfSymmFunc))
+    print inputData.shape
     
     if symmFuncType == 'G1':
-        cutoff = np.linspace(0.9, 3, numberOfSymmFunc)
-        #cutoff = [2.5]
+        a += 0.2
+        cutoff = np.linspace(a, b, numberOfSymmFunc)
         for i in xrange(size):
             # find value of each symmetry function for this r vector
             for j in xrange(numberOfSymmFunc):
                 # remove distances above cutoff, they contribute zero to sum
                 rVector = inputTemp[i,np.where(inputTemp[i,:] <= cutoff[j])[0]]
                 inputData[i,j] = symmetryFunctions.G1(rVector, cutoff[j])
-                
+            
     else:  
-        cutoff = 2.5
-        widths = np.linspace(0.9, 2.8, numberOfSymmFunc)
-        center = 0.0
+        cutoff = b
+        widths = [0.001, 0.01, 0.02, 0.03, 0.04, 0.05, 0.07, 0.1, 0.3, 0.7]
+        centers = [0.0, 3.4, 4.5, 5.2, 5.9, 6.8, 7.8]
+        fractionOfNonZeros = 0.0
+        fractionOfInputVectorsOnlyZeros = 0.0
         for i in xrange(size):
+            j = 0
             # find value of each symmetry function for this r vector
-            for j in xrange(numberOfSymmFunc):
-                # remove distances above cutoff, they contribute zero to sum
-                rVector = inputTemp[i,:]
-                inputData[i,j] = symmetryFunctions.G2(rVector, cutoff, widths[j], center)
+            for width in widths:
+                for center in centers:
+                    # remove distances above cutoff, they contribute zero to sum
+                    rVector = inputTemp[i,:]
+                    inputData[i,j] = symmetryFunctions.G2(rVector, cutoff, width, center)
+                    j += 1
+                    
+        # count zeros
+        fractionOfNonZeros += np.count_nonzero(inputData[i,:]) / float(numberOfSymmFunc)
+        if not np.any(inputData[i,:]):
+            fractionOfInputVectorsOnlyZeros += 1
         
     if not np.all(inputData):
         print 'zeros are present'
         
-    print inputData.shape
-    C = np.sum(inputData**2, axis=0) / float(size)
-    print C
-    exit(1)
+    fractionOfZeros = 1 - fractionOfNonZeros / float(size)
+    fractionOfInputVectorsOnlyZeros /= float(size)
+    print "Fraction of zeros: ", fractionOfZeros
+    print "Fraction of input vectors with only zeros: ", fractionOfInputVectorsOnlyZeros
     
     return inputData, outputData
     
@@ -206,13 +216,13 @@ def angularSymmetryData(function, size, \
     # generate input data
     inputTemp = np.zeros((size,neighbours,4))
     xyz     = np.zeros((size,3))
-    for i in range(neighbours): # fill cube slice for each neighbor
+    for i in xrange(neighbours): # fill cube slice for each neighbor
         inputTemp[:,i,3] = np.random.uniform(low, high, size) # this is R
         r2             = inputTemp[:,i,3]**2
         xyz[:,0]       = np.random.uniform(0, r2, size)
         xyz[:,1]       = np.random.uniform(0, r2-xyz[:,0], size)
         xyz[:,2]       = r2 - xyz[:,0] - xyz[:,1]
-        for row in range(size):
+        for row in xrange(size):
             np.random.shuffle(xyz[row,:]) # this shuffles in-place (so no copying)
         inputTemp[:,i,0] = np.sqrt(xyz[:,0]) * np.random.choice([-1,1],size)
         inputTemp[:,i,1] = np.sqrt(xyz[:,1]) * np.random.choice([-1,1],size)

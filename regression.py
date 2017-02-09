@@ -77,7 +77,7 @@ if len(sys.argv) > 1:
                 os.mkdir(trainingDir)
                 saveMetaName = trainingDir + '/' + 'meta.dat'
                 saveGraphName = trainingDir + '/' + 'graph.dat'
-                print saveMetaName
+                print "Making data directory: ", saveMetaName
                 break
         i += 1
 
@@ -97,6 +97,7 @@ if len(sys.argv) > 1:
             i += 1
             saveFlag = True
             saveMetaFlag = True
+            print "Checkpoints will be saved"
 
             # make new directory for checkpoints
             saveDirName 	= trainingDir + '/Checkpoints'
@@ -110,6 +111,7 @@ if len(sys.argv) > 1:
             i += 1
             summaryFlag  = True
             saveMetaFlag = True
+            print "Summaries will be saved"
 
             # make new directory for summaries
             summaryDir = trainingDir + '/Summaries'
@@ -119,11 +121,13 @@ if len(sys.argv) > 1:
             i += 1
             saveGraphFlag = True
             saveMetaFlag = True
+            print "Graph.txt will be saved"
 
         elif sys.argv[i] == '--savegraphproto':
             i += 1
             saveGraphProtoFlag = True
             saveMetaFlag = True
+            print "Binary graph will be saved"
 
         elif sys.argv[i] == '--plot':
             i += 1
@@ -132,8 +136,6 @@ if len(sys.argv) > 1:
         elif sys.argv[i] == '--test':
             i += 1
             testFlag = True
-            #numberOfNeighbours = int(sys.argv[i])
-            #i += 1
 
         else:
             i += 1
@@ -153,16 +155,18 @@ class Regression:
 
 
     def generateData(self, a, b, method='functionData', numberOfSymmFunc=10, neighbours=80, \
-                     symmFuncType='G4', filename=''):
+                     symmFuncType='G4', filename='', batch=0.5):
 
         self.a, self.b = a, b
 
         if method == 'functionData':
+            print "method=functionData: Generating random, radial 1-dim data..."
             self.xTrain, self.yTrain, self.xTest, self.yTest = \
                 data.functionData(self.function, self.trainSize, self.testSize, a=a, b=b)
                 
         elif method == 'neighbourData':
             if self.functionDerivative:
+                print "method=neighbourData: Generating random, radial N-dim data including force output..."
                 neighbours = self.inputs / 4
                 print neighbours
                 self.xTrain, self.yTrain = \
@@ -175,7 +179,7 @@ class Regression:
                                                    neighbours, self.outputs, a, b)
 
             else:
-                print "yes"
+                print "method=neighbourData: Generating random, radial N-dim data..."
                 self.xTrain, self.yTrain = \
                     data.neighbourData(self.function, self.trainSize, a, b, \
                                        inputs=self.inputs, outputs=self.outputs)
@@ -184,14 +188,16 @@ class Regression:
                                        inputs=self.inputs, outputs=self.outputs)
 
         elif method == 'radialSymmetry':
+            print "method=radialSymmetry: Generating random, radial N-dim data with symmetry functions..."
             self.xTrain, self.yTrain = \
                 data.radialSymmetryData(self.function, self.trainSize, \
-                                        neighbours, numberOfSymmFunc, symmFuncType)
+                                        neighbours, numberOfSymmFunc, symmFuncType, a, b)
             self.xTest, self.yTest = \
                 data.radialSymmetryData(self.function, self.testSize, \
-                                        neighbours, numberOfSymmFunc, symmFuncType)
+                                        neighbours, numberOfSymmFunc, symmFuncType, a, b)
 
         elif method == 'angularSymmetry':
+            print "method=angularSymmetry: Generating random, radial and angular N-dim data with symmetry functions..."
             self.xTrain, self.yTrain = \
                 data.angularSymmetryData(self.function, self.trainSize, \
                                         neighbours, numberOfSymmFunc, symmFuncType, a, b)
@@ -200,18 +206,29 @@ class Regression:
                                         neighbours, numberOfSymmFunc, symmFuncType, a, b)
 
         elif method == 'lammps':
+            if self.function == None:
+                print "method=lammps: Reading data from lammps simulations, including energies..."
+            else:
+                print "method=lammps: Reading data from lammps simulations, not including energies..."
+                
             self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs = \
                 lammps.SiTrainingData(filename, symmFuncType, function=self.function)
             
             # set different sizes based on lammps data
             self.trainSize = self.xTrain.shape[0]
             self.testSize  = self.xTest.shape[0]
-            self.batchSize = int(0.7*self.trainSize)
-            print "trainSize: ", self.trainSize
-            print "testSize: ", self.testSize
-            print "batchSize: ", self.batchSize
-            print "inputs: ", self.inputs
-            print "outputs: ", self.outputs
+            self.batchSize = int(batch*self.trainSize)
+            
+        else: 
+            print "Invalid data generation method chosen. Exiting..."
+            exit(1)
+            
+        # print out sizes and stuff
+        print 
+        print "##### Training parameters #####"
+        print "Training set size: ", self.trainSize
+        print "Test set size: ", self.testSize
+        print "Batch size: ", self.batchSize
             
 
 
@@ -223,6 +240,18 @@ class Regression:
         self.activation = activation
         self.wInit = wInit
         self.bInit = bInit
+        
+        # print out...
+        print
+        print "##### network parameters #####"
+        print "Inputs: ", self.inputs
+        print "Outputs: ", self.outputs
+        print "Number of layers: ", nLayers
+        print "Number of nodes: ", nNodes
+        print "Activation function: ", activation.__name__
+        print "Weight initialization: ", wInit
+        print "Bias initialization: ", bInit
+        print "Setting up NN..."
 
         # input placeholders
         with tf.name_scope('input'):
@@ -233,6 +262,7 @@ class Regression:
                                               weightsInit=wInit, biasesInit=bInit,
                                               stdDev=stdDev, inputs=self.inputs, outputs=self.outputs)
         self.makeNetwork = lambda data : self.neuralNetwork.model(self.x)
+        
 
 
     def train(self, numberOfEpochs):
@@ -259,9 +289,6 @@ class Regression:
                 cost = tf.nn.l2_loss( tf.sub(prediction, y) )
                 tf.scalar_summary('L2Norm', cost/batchSize)
 
-            #costEnergy = tf.nn.l2_loss(tf.sub(prediction[:,-1], y[:,-1]))
-            #costForce = tf.nn.l2_loss(tf.sub(prediction[:,0:-1], y[:,0:-1]))
-
             with tf.name_scope('train'):
                 trainStep = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
 
@@ -281,15 +308,13 @@ class Regression:
                 test_writer = tf.train.SummaryWriter(summaryDir + '/test')
 
             # train
+            print 
+            print "##### Starting training session #####"
             start = timer()
             for epoch in xrange(numberOfEpochs):
 
-                # pick random batches
-                """i = np.random.randint(trainSize-batchSize)
-                xBatch = xTrain[i:i+batchSize]
-                yBatch = yTrain[i:i+batchSize]"""
-                
-                indicies = np.random.choice(np.arange(batchSize), 5)
+                # pick random batch
+                indicies = np.random.choice(np.arange(trainSize), batchSize)
                 xBatch = xTrain[indicies]
                 yBatch = yTrain[indicies]
 
@@ -304,7 +329,7 @@ class Regression:
                 # calculate cost on test set every 1000th epoch
                 if epoch % 1000 == 0:
                     testCost = sess.run(cost, feed_dict={x: xTest, y: yTest})
-                    print 'Cost/N train test at step %4d: %g %g' % (epoch, trainCost/float(batchSize), \
+                    print 'Cost/N train test at epoch %4d: %g %g' % (epoch, trainCost/float(batchSize), \
                                                                     testCost/float(testSize))
                     #sys.stdout.flush()
 

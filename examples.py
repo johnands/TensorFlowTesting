@@ -56,15 +56,9 @@ def testActivations(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, a=
         regress.constructNetwork(nLayers, nNodes, activation=act, wInit='trunc_normal', bInit='trunc_normal')
         regress.train(nEpochs)
         counter += 1
+        
 
- 
-def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, 
-                        units='metal'):
-    """
-    Train to reproduce shifted L-J potential to 
-    verify implementation of network and backpropagation in the MD code
-    This is a 1-dimensional example
-    """
+def setUpLJPotential(units, shifted=False):
     
     ### metal units ###
     if units == 'metal':
@@ -80,11 +74,26 @@ def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs
         epsilon = 1.0
         sigma = 1.0
         
-    shiftedPotential = sigma**12/cutoff**12 - sigma**6/cutoff**6
-    shiftedPotential = 0
-    function = lambda s : 4*epsilon*(sigma**12/s**12 - sigma**6/s**6 - shiftedPotential)
+    if shifted:
+        shiftedPotential = sigma**12/cutoff**12 - sigma**6/cutoff**6
+        function = lambda s : 4*epsilon*(sigma**12/s**12 - sigma**6/s**6 - shiftedPotential)
+        
+    else:
+        function = lambda s : 4*epsilon*(sigma**12/s**12 - sigma**6/s**6)
+        
+    return function, a, cutoff
+        
 
-    
+ 
+def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, 
+                        units='metal'):
+    """
+    Train to reproduce shifted L-J potential to 
+    verify implementation of network and backpropagation in the MD code
+    This is a 1-dimensional example
+    """
+
+    function, a, cutoff = setUpLJPotential('metal')    
     
     regress = regression.Regression(function, trainSize, batchSize, testSize, 1, 1)
     regress.generateData(a, cutoff)
@@ -94,11 +103,10 @@ def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs
 
     
 def LennardJonesNeighbours(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
-                           neighbours, outputs=1, a=0.8, b=2.5):
+                           neighbours, outputs=1):
                                
-    cutoff = 2.5
-    shiftedPotential = 1.0/cutoff**12 - 1.0/cutoff**6
-    function = lambda s : 4*(1.0/s**12 - 1.0/s**6 - shiftedPotential)
+    function, a, b = setUpLJPotential('LJ')
+
     regress = regression.Regression(function, trainSize, batchSize, testSize, neighbours, outputs)
     regress.generateData(a, b, method='neighbourData')
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
@@ -109,9 +117,7 @@ def LennardJonesNeighbours(trainSize, batchSize, testSize, nLayers, nNodes, nEpo
 def LennardJonesNeighboursForce(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
                                 neighbours, outputs=4, a=0.8, b=2.5):
     
-    cutoff = 2.5
-    shiftedPotential = 1.0/cutoff**12 - 1.0/cutoff**6
-    function = lambda s : 1.0/s**12 - 1.0/s**6 - shiftedPotential
+    function, a, b = setUpLJPotential('LJ', shifted=True)
     functionDerivative = lambda t : 12.0/t**13 - 6.0/t**7
     inputs = neighbours*4
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs, \
@@ -123,11 +129,11 @@ def LennardJonesNeighboursForce(trainSize, batchSize, testSize, nLayers, nNodes,
     
 
 def LennardJonesSymmetryFunctions(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
-                                  neighbours, numberOfSymmFunc, symmFuncType, outputs=1, a=0.8, b=2.5):
+                                  neighbours, numberOfSymmFunc, symmFuncType, outputs=1, \
+                                  units='metal', shifted=False):
+                                      
+    function, a, b = setUpLJPotential('metal')
     
-    cutoff = 2.5
-    shiftedPotential = 1.0/cutoff**12 - 1.0/cutoff**6
-    function = lambda s : 1.0/s**12 - 1.0/s**6 - shiftedPotential
     regress = regression.Regression(function, trainSize, batchSize, testSize, numberOfSymmFunc, outputs)
     regress.generateData(a, b, method='radialSymmetry', neighbours=neighbours, numberOfSymmFunc=numberOfSymmFunc, 
                          symmFuncType='G2')
@@ -222,16 +228,16 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
 """trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, nNeighbours, nSymmfuncs, symmFuncType (G1 or G2)"""
 
 """LJ med radielle symmetrifunksjoner"""
-#LennardJonesSymmetryFunctions(int(3e4), int(1e4), int(1e3), 2, 30, int(1e6), 10, 10, 'G2')
+LennardJonesSymmetryFunctions(int(1e6), int(1e4), int(1e3), 2, 70, int(1e6), 70, 70, 'G2')
 
 """Stillinger Weber med angular symmetrifunksjoner og lammps-data"""
 #StillingerWeberSymmetry(int(3e3), int(1e3), int(1e2), 2, 30, int(1e6), 10, 30, 'G4', \
 #                        "../LAMMPS_test/Silicon/Data/03.02-13.44.39/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-lammpsTrainingSi(2, 40, int(1e6), 'G4', \
-                 "../LAMMPS_test/Silicon/Data/07.02-15.09.33/neighbours.txt", \
-                 activation=tf.nn.tanh)
+#lammpsTrainingSi(2, 40, int(1e6), 'G4', \
+#                 "../LAMMPS_test/Silicon/Data/07.02-15.09.33/neighbours.txt", \
+#                 activation=tf.nn.tanh)
                         
                         
                         
