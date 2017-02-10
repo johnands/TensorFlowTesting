@@ -68,6 +68,23 @@ def neighbourData(function, size, a, b, inputs, outputs=1):
     
     return inputData, outputData
     
+def neighbourDataVarying(function, size, a, b, minNeigh, maxNeigh, outputs=1):
+    """
+    Create random distances [a,b] for varying number of neighbours
+    and make output set based on these random points
+    The output node is the sum of the energy of all neighbours
+    """
+    
+    inputData = []
+    outputData = []
+    numberOfNeighbours = np.random.randint(minNeigh, maxNeigh, size=size)
+    for i in xrange(size):
+        inputData.append(np.random.uniform(a, b, numberOfNeighbours[i]))
+        outputData.append( sum(function(inputData[i])) )
+        
+    return inputData, outputData
+        
+    
     
 def neighbourEnergyAndForceData(function, functionDerivative, size, \
                                 inputs, outputs=4, a=0.8, b=2.5):
@@ -167,31 +184,44 @@ def radialSymmetryData(function, size, \
     inputData = np.zeros((size,numberOfSymmFunc))
     print inputData.shape
     
+    cutoffs = widths = centers = []
     if symmFuncType == 'G1':
         a += 0.2
-        cutoff = np.linspace(a, b, numberOfSymmFunc)
+        cutoffs = np.linspace(a, b, numberOfSymmFunc)
+        parameters = cutoffs
         for i in xrange(size):
             # find value of each symmetry function for this r vector
             for j in xrange(numberOfSymmFunc):
                 # remove distances above cutoff, they contribute zero to sum
-                rVector = inputTemp[i,np.where(inputTemp[i,:] <= cutoff[j])[0]]
-                inputData[i,j] = symmetryFunctions.G1(rVector, cutoff[j])
+                rVector = inputTemp[i,np.where(inputTemp[i,:] <= cutoffs[j])[0]]
+                inputData[i,j] = symmetryFunctions.G1(rVector, cutoffs[j])
             
     else:  
-        cutoff = b
+        
+        # parameters
+        cutoffs = [b]
         widths = [0.001, 0.01, 0.02, 0.03, 0.04, 0.05, 0.07, 0.1, 0.3, 0.7]
         centers = [0.0, 3.1, 3.4, 4.5, 5.2, 5.9, 6.8, 7.8]
+        
+        # collect all parameters in nested list
+        for width in widths:
+            for cutoff in cutoffs:
+                for center in centers:   
+                    parameters.append([width, cutoff, center])
+                    
+        # transform input data
         fractionOfNonZeros = 0.0
         fractionOfInputVectorsOnlyZeros = 0.0
         for i in xrange(size):
             j = 0
             # find value of each symmetry function for this r vector
             for width in widths:
-                for center in centers:
-                    # remove distances above cutoff, they contribute zero to sum
-                    rVector = inputTemp[i,:]
-                    inputData[i,j] = symmetryFunctions.G2(rVector, cutoff, width, center)
-                    j += 1
+                for cutoff in cutoffs:
+                    for center in centers:                    
+                        # remove distances above cutoff, they contribute zero to sum
+                        rVector = inputTemp[i,:]
+                        inputData[i,j] = symmetryFunctions.G2(rVector, cutoff, width, center)
+                        j += 1
                     
             # count zeros
             fractionOfNonZeros += np.count_nonzero(inputData[i,:]) / float(numberOfSymmFunc)
@@ -206,9 +236,7 @@ def radialSymmetryData(function, size, \
     print "Fraction of zeros: ", fractionOfZeros
     print "Fraction of input vectors with only zeros: ", fractionOfInputVectorsOnlyZeros
     
-    print inputData[:100]
-    
-    return inputData, outputData
+    return inputData, outputData, parameters
     
     
 def angularSymmetryData(function, size, \
@@ -240,10 +268,21 @@ def angularSymmetryData(function, size, \
     
     # generate symmetry function input data
     inputData = np.zeros((size,numberOfSymmFunc))
-    thetaRange = [1, 2, 4]   # values..?
-    cutoff = high
-    widths = [0.1, 0.21, 0.32, 0.425, 0.526]
+    
+    # parameters
+    widths = [0.1, 0.21, 0.32, 0.425, 0.526]    
+    cutoffs = [high]
+    thetaRange = [1, 2, 4]
     inversions = [-1.0, 1.0]
+    
+    # collect all parameters in nested list
+    parameters = []
+    for width in widths:
+        for cutoff in cutoffs:
+            for zeta in thetaRange:                                 
+                for inversion in inversions:
+                    parameters.append(width, cutoff, zeta, inversion)
+    
     #counter = 0
     # loop through each r vector, i.e. each atomic environment
     for i in xrange(size):
@@ -268,13 +307,14 @@ def angularSymmetryData(function, size, \
             
             # find value of each symmetry function for this triplet
             symmFuncNumber = 0
-            for angle in thetaRange:
-                for width in widths:
-                    for inversion in inversions:
-                        # find symmetry function value for triplets (i,j,k) for all k
-                        inputData[i,symmFuncNumber] += symmetryFunctions.G4(rij, rik, rjk, theta, \
-                                                                            angle, width, cutoff, inversion)
-                        symmFuncNumber += 1
+            for width in widths:
+                for cutoff in cutoffs:
+                    for zeta in thetaRange:                                 
+                        for inversion in inversions:
+                            # find symmetry function value for triplets (i,j,k) for all k
+                            inputData[i,symmFuncNumber] += symmetryFunctions.G4(rij, rik, rjk, theta, \
+                                                                                zeta, width, cutoff, inversion)
+                            symmFuncNumber += 1
                                            
             # 3-body, rik and theta are vectors
             outputData[i,0] += np.sum(function(rij, rik, theta))
@@ -310,7 +350,7 @@ def angularSymmetryData(function, size, \
     print np.min(outputData)
     print np.mean(outputData)
     
-    return inputData, outputData
+    return inputData, outputData, parameters
     
     
 

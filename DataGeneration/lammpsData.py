@@ -129,14 +129,33 @@ def SiTrainingData(filename, symmFuncType, function=None):
 
     # parameters G2
     widthG2 = [0.001, 0.004]
-    centerG2 = [0.0]
     cutoffG2 = [4.0, 5.0, 6.0]
+    centerG2 = [0.0]
 
     # parameters G4
-    thetaRangeG4 = [1, 2, 4]   # values..?
+    widthG4 = [0.001, 0.004]      
     cutoffG4 = [4.0]
-    widthG4 = [0.001, 0.004]
+    thetaRangeG4 = [1, 2, 4] 
     inversionG4 = [1.0, -1.0]
+    
+    numberOfSymmFunc = len(widthG2)*len(centerG2)*len(cutoffG2) + \
+                       len(thetaRangeG4)*len(cutoffG4)*len(widthG4)*len(inversionG4) 
+    #numberOfSymmFunc = len(thetaRangeG4)*len(cutoffG4)*len(widthG4)*len(inversionG4) 
+    
+    # make nested list of all symetry function parameters
+    parameters = []
+    for width in widthG2:
+        for cutoff in cutoffG2:
+            for center in centerG2:           
+                parameters.append([width, cutoff, center])
+             
+    for width in widthG4:   
+        for cutoff in cutoffG4:
+            for zeta in thetaRangeG4:
+                for inversion in inversionG4:
+                    parameters.append([width, cutoff, zeta, inversion])
+                    
+    print parameters
     
     numberOfSymmFunc = len(widthG2)*len(centerG2)*len(cutoffG2) + \
                        len(thetaRangeG4)*len(cutoffG4)*len(widthG4)*len(inversionG4) 
@@ -228,7 +247,7 @@ def SiTrainingData(filename, symmFuncType, function=None):
             print inputData[i,:]
             
         # shuffle input vector
-        np.random.shuffle(inputData[i,:])
+        #np.random.shuffle(inputData[i,:])
         
         # count zeros
         fractionOfNonZeros += np.count_nonzero(inputData[i,:]) / float(numberOfSymmFunc)
@@ -319,7 +338,7 @@ def SiTrainingData(filename, symmFuncType, function=None):
     inputTest      = inputData[split:,:]         
     outputTest     = outputData[split:,:]
     
-    return inputTraining, outputTraining, inputTest, outputTest, numberOfSymmFunc, outputs    
+    return inputTraining, outputTraining, inputTest, outputTest, numberOfSymmFunc, outputs, parameters  
 
 
 

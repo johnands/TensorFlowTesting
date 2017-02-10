@@ -58,6 +58,7 @@ saveGraphProtoFlag  = False
 saveGraphProtoName  = ''
 saveMetaName        = ''
 saveMetaFlag        = False
+saveParametersFlag  = False
 plotFlag            = False
 testFlag            = False
 
@@ -158,6 +159,7 @@ class Regression:
                      symmFuncType='G4', filename='', batch=0.5):
 
         self.a, self.b = a, b
+        global saveParametersFlag  
 
         if method == 'functionData':
             print "method=functionData: Generating random, radial 1-dim data..."
@@ -186,24 +188,28 @@ class Regression:
                 self.xTest, self.yTest = \
                     data.neighbourData(self.function, self.testSize, a, b, \
                                        inputs=self.inputs, outputs=self.outputs)
-
+                                     
         elif method == 'radialSymmetry':
             print "method=radialSymmetry: Generating random, radial N-dim data with symmetry functions..."
-            self.xTrain, self.yTrain = \
+            self.xTrain, self.yTrain, self.parameters = \
                 data.radialSymmetryData(self.function, self.trainSize, \
                                         neighbours, numberOfSymmFunc, symmFuncType, a, b)
-            self.xTest, self.yTest = \
+            self.xTest, self.yTest, _ = \
                 data.radialSymmetryData(self.function, self.testSize, \
                                         neighbours, numberOfSymmFunc, symmFuncType, a, b)
+            if saveMetaFlag:
+                saveParametersFlag = True
 
         elif method == 'angularSymmetry':
             print "method=angularSymmetry: Generating random, radial and angular N-dim data with symmetry functions..."
-            self.xTrain, self.yTrain = \
+            self.xTrain, self.yTrain, self.parameters = \
                 data.angularSymmetryData(self.function, self.trainSize, \
                                         neighbours, numberOfSymmFunc, symmFuncType, a, b)
-            self.xTest, self.yTest = \
+            self.xTest, self.yTest, _ = \
                 data.angularSymmetryData(self.function, self.testSize, \
                                         neighbours, numberOfSymmFunc, symmFuncType, a, b)
+            if saveMetaFlag:              
+                saveParametersFlag = True
 
         elif method == 'lammps':
             if self.function == None:
@@ -211,13 +217,16 @@ class Regression:
             else:
                 print "method=lammps: Reading data from lammps simulations, not including energies..."
                 
-            self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs = \
+            self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs, self.parameters = \
                 lammps.SiTrainingData(filename, symmFuncType, function=self.function)
             
             # set different sizes based on lammps data
             self.trainSize = self.xTrain.shape[0]
             self.testSize  = self.xTest.shape[0]
             self.batchSize = int(batch*self.trainSize)
+            
+            if saveMetaFlag:
+                saveParametersFlag = True
             
         else: 
             print "Invalid data generation method chosen. Exiting..."
@@ -371,7 +380,7 @@ class Regression:
             end = timer();
             print "Time elapsed: %g" % (end-start)
 
-            # write weights and biases to file when training is finished
+            # write network to file when training is finished
             if saveGraphFlag:
                 with open(saveGraphName, 'w') as outFile:
                     outStr = "%1d %1d %s %d %d" % (nLayers, nNodes, self.activation.__name__, \
@@ -399,6 +408,17 @@ class Regression:
                         biases = sess.run(biasVariable)
                         for j in range(len(biases)):
                             outFile.write("%.12g" % biases[j])
+                            outFile.write(" ")
+                        outFile.write("\n")
+
+            # save parameters to file
+            if saveParametersFlag:
+                parameters = self.parameters
+                saveParametersName = trainingDir + '/' + 'parameters.dat'
+                with open(saveParametersName, 'w') as outFile:
+                    for symmFunc in range(len(parameters)):
+                        for param in parameters[symmFunc]:
+                            outFile.write("%g" % param)
                             outFile.write(" ")
                         outFile.write("\n")
 
