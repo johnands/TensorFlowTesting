@@ -180,7 +180,7 @@ def radialSymmetryData(function, size, \
     else:  
         cutoff = b
         widths = [0.001, 0.01, 0.02, 0.03, 0.04, 0.05, 0.07, 0.1, 0.3, 0.7]
-        centers = [0.0, 3.4, 4.5, 5.2, 5.9, 6.8, 7.8]
+        centers = [0.0, 3.1, 3.4, 4.5, 5.2, 5.9, 6.8, 7.8]
         fractionOfNonZeros = 0.0
         fractionOfInputVectorsOnlyZeros = 0.0
         for i in xrange(size):

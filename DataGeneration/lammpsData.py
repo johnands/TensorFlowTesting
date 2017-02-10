@@ -312,6 +312,7 @@ def SiTrainingData(filename, symmFuncType, function=None):
     print
     
     # split in training set and test set
+    # TODO: split randomly, not sequentially
     split = int(0.8*size)    
     inputTraining  = inputData[:split,:]
     outputTraining = outputData[:split,:]

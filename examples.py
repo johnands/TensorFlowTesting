@@ -228,7 +228,7 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
 """trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, nNeighbours, nSymmfuncs, symmFuncType (G1 or G2)"""
 
 """LJ med radielle symmetrifunksjoner"""
-LennardJonesSymmetryFunctions(int(1e6), int(1e4), int(1e3), 2, 70, int(1e6), 70, 70, 'G2')
+LennardJonesSymmetryFunctions(int(1e6), int(1e4), int(1e3), 2, 80, int(1e6), 70, 80, 'G2')
 
 """Stillinger Weber med angular symmetrifunksjoner og lammps-data"""
 #StillingerWeberSymmetry(int(3e3), int(1e3), int(1e2), 2, 30, int(1e6), 10, 30, 'G4', \
