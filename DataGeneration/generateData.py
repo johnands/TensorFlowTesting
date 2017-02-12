@@ -176,7 +176,9 @@ def radialSymmetryData(function, size, \
     # generate train and test distances, which are vectors with dimension (trainSize, inputs)    
     # the output data is the same as before: a sum of LJ energies for all neighbours 
     # inputs defined in above function neighbourData is now number of neighbours               
-    inputTemp, outputData = neighbourData(function, size, a, b, neighbours)
+    #inputTemp, outputData = neighbourData(function, size, a, b, neighbours)
+    inputTemp, outputData = neighbourDataVarying(function, size, a, b, 30, 70)
+    outputData = np.array(outputData)
     
     # send each distance input vector to a symmetry function which returns a single number
     # for each vector of distances
@@ -184,7 +186,7 @@ def radialSymmetryData(function, size, \
     inputData = np.zeros((size,numberOfSymmFunc))
     print inputData.shape
     
-    cutoffs = widths = centers = []
+    parameters = []
     if symmFuncType == 'G1':
         a += 0.2
         cutoffs = np.linspace(a, b, numberOfSymmFunc)
@@ -193,7 +195,8 @@ def radialSymmetryData(function, size, \
             # find value of each symmetry function for this r vector
             for j in xrange(numberOfSymmFunc):
                 # remove distances above cutoff, they contribute zero to sum
-                rVector = inputTemp[i,np.where(inputTemp[i,:] <= cutoffs[j])[0]]
+                rVector = np.array(inputTemp[i][:])
+                rVector = rVector[i,np.where(rVector <= cutoffs[j])[0]]
                 inputData[i,j] = symmetryFunctions.G1(rVector, cutoffs[j])
             
     else:  
@@ -201,7 +204,7 @@ def radialSymmetryData(function, size, \
         # parameters
         cutoffs = [b]
         widths = [0.001, 0.01, 0.02, 0.03, 0.04, 0.05, 0.07, 0.1, 0.3, 0.7]
-        centers = [0.0, 3.1, 3.4, 4.5, 5.2, 5.9, 6.8, 7.8]
+        centers = [0.0, 3.1, 4.5, 5.2, 5.9, 6.8, 7.8]
         
         # collect all parameters in nested list
         for width in widths:
@@ -219,7 +222,7 @@ def radialSymmetryData(function, size, \
                 for cutoff in cutoffs:
                     for center in centers:                    
                         # remove distances above cutoff, they contribute zero to sum
-                        rVector = inputTemp[i,:]
+                        rVector = np.array(inputTemp[i][:])
                         inputData[i,j] = symmetryFunctions.G2(rVector, cutoff, width, center)
                         j += 1
                     
@@ -235,6 +238,12 @@ def radialSymmetryData(function, size, \
     fractionOfInputVectorsOnlyZeros /= float(size)
     print "Fraction of zeros: ", fractionOfZeros
     print "Fraction of input vectors with only zeros: ", fractionOfInputVectorsOnlyZeros
+    
+    outputData = outputData.resize([size, numberOfSymmFunc])
+    inputData = inputData.resize([size, outputs])
+    
+    print inputData
+    print outputData
     
     return inputData, outputData, parameters
     
