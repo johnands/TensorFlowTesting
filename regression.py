@@ -414,12 +414,17 @@ class Regression:
             # save parameters to file
             if saveParametersFlag:
                 parameters = self.parameters
+                numberOfParameters = len(parameters[0])
                 saveParametersName = trainingDir + '/' + 'parameters.dat'
                 with open(saveParametersName, 'w') as outFile:
+                    # write number of symmfuncs and number of unique parameters
+                    outStr = "%d %d" % (len(parameters), len(parameters[0]))
+                    outFile.write(outStr + '\n')
                     for symmFunc in range(len(parameters)):
                         for param in parameters[symmFunc]:
                             outFile.write("%g" % param)
-                            outFile.write(" ")
+                            if numberOfParameters > 1:
+                                outFile.write(" ")
                         outFile.write("\n")
 
             # freeze graph

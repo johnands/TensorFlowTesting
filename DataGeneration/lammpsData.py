@@ -190,7 +190,7 @@ def SiTrainingData(filename, symmFuncType, function=None):
             xij = xi[j]; yij = yi[j]; zij = zi[j]
             
             # all k != i,j OR I > J ???
-            k = np.arange(len(ri[:])) != j
+            k = np.arange(len(ri[:])) > j
             rik = ri[k] 
             xik = xi[k]; yik = yi[k]; zik = zi[k]
             
@@ -238,9 +238,9 @@ def SiTrainingData(filename, symmFuncType, function=None):
                                                                                 zeta, width, cutoff, inversion)
                             symmFuncNumber += 1
         
-        # calculate energy with my S-W-potential, not use lammps energy
-        if function != None:
-            outputData[i,0] += np.sum( function(rij, rik, theta) )
+            # calculate energy with my S-W-potential, not use lammps energy
+            if function != None:
+                outputData[i,0] += np.sum( function(rij, rik, theta) )
             
         if not i % 1000:
             print i

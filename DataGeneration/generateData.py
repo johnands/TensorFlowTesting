@@ -2,6 +2,7 @@
 # for example training of ANN
 
 import numpy as np
+import random
 import symmetryFunctions
 np.random.seed(1)
 
@@ -68,7 +69,8 @@ def neighbourData(function, size, a, b, inputs, outputs=1):
     
     return inputData, outputData
     
-def neighbourDataVarying(function, size, a, b, minNeigh, maxNeigh, outputs=1):
+    
+def neighbourDataVarying(size, a, b, minNeigh, maxNeigh, outputs=1):
     """
     Create random distances [a,b] for varying number of neighbours
     and make output set based on these random points
@@ -76,13 +78,12 @@ def neighbourDataVarying(function, size, a, b, minNeigh, maxNeigh, outputs=1):
     """
     
     inputData = []
-    outputData = []
     numberOfNeighbours = np.random.randint(minNeigh, maxNeigh, size=size)
     for i in xrange(size):
-        inputData.append(np.random.uniform(a, b, numberOfNeighbours[i]))
-        outputData.append( sum(function(inputData[i])) )
+        numberOfNeighbours = np.random.randint(minNeigh, maxNeigh)
+        inputData.append( [np.random.uniform(a, b) for _ in range(numberOfNeighbours)] )
         
-    return inputData, outputData
+    return inputData
         
     
     
@@ -177,14 +178,13 @@ def radialSymmetryData(function, size, \
     # the output data is the same as before: a sum of LJ energies for all neighbours 
     # inputs defined in above function neighbourData is now number of neighbours               
     #inputTemp, outputData = neighbourData(function, size, a, b, neighbours)
-    inputTemp, outputData = neighbourDataVarying(function, size, a, b, 30, 70)
-    outputData = np.array(outputData)
+    inputTemp = neighbourDataVarying(size, a, b, 30, 70)
     
     # send each distance input vector to a symmetry function which returns a single number
     # for each vector of distances
     # number of inputs to NN is now number of symmetry functions
     inputData = np.zeros((size,numberOfSymmFunc))
-    print inputData.shape
+    outputData = np.zeros((size, 1))
     
     parameters = []
     if symmFuncType == 'G1':
@@ -192,15 +192,20 @@ def radialSymmetryData(function, size, \
         cutoffs = np.linspace(a, b, numberOfSymmFunc)
         parameters = cutoffs
         for i in xrange(size):
-            # find value of each symmetry function for this r vector
-            for j in xrange(numberOfSymmFunc):
-                # remove distances above cutoff, they contribute zero to sum
-                rVector = np.array(inputTemp[i][:])
-                rVector = rVector[i,np.where(rVector <= cutoffs[j])[0]]
-                inputData[i,j] = symmetryFunctions.G1(rVector, cutoffs[j])
             
-    else:  
-        
+            # distance to all neighbours j
+            Rij = np.array(inputTemp[i][:])
+            
+            # find value of each symmetry function for this r vector
+            for symmFunc in xrange(numberOfSymmFunc):
+                # remove distances above cutoff, they contribute zero to sum               
+                Rij = Rij[i,np.where(Rij <= cutoffs[symmFunc])[0]]
+                inputData[i,symmFunc] = symmetryFunctions.G1(Rij, cutoffs[symmFunc])                
+            
+            # calculate SW energy for atom i from all neighbours j
+            outputData[i,0] = np.sum( function(Rij) )
+            
+    else:         
         # parameters
         cutoffs = [b]
         widths = [0.001, 0.01, 0.02, 0.03, 0.04, 0.05, 0.07, 0.1, 0.3, 0.7]
@@ -216,15 +221,20 @@ def radialSymmetryData(function, size, \
         fractionOfNonZeros = 0.0
         fractionOfInputVectorsOnlyZeros = 0.0
         for i in xrange(size):
-            j = 0
-            # find value of each symmetry function for this r vector
+            
+            # atomic environment of atom i
+            Rij = np.array(inputTemp[i][:])    
+            
+            # find value of each symmetry function for this environment
+            symmFunc = 0
             for width in widths:
                 for cutoff in cutoffs:
-                    for center in centers:                    
-                        # remove distances above cutoff, they contribute zero to sum
-                        rVector = np.array(inputTemp[i][:])
-                        inputData[i,j] = symmetryFunctions.G2(rVector, cutoff, width, center)
-                        j += 1
+                    for center in centers:                                           
+                        inputData[i,symmFunc] = symmetryFunctions.G2(Rij, cutoff, width, center)
+                        symmFunc += 1
+                        
+            # find SW-energy for atom i from all neighbours j
+            outputData[i,0] = np.sum( function(Rij) )
                     
             # count zeros
             fractionOfNonZeros += np.count_nonzero(inputData[i,:]) / float(numberOfSymmFunc)
@@ -238,12 +248,6 @@ def radialSymmetryData(function, size, \
     fractionOfInputVectorsOnlyZeros /= float(size)
     print "Fraction of zeros: ", fractionOfZeros
     print "Fraction of input vectors with only zeros: ", fractionOfInputVectorsOnlyZeros
-    
-    outputData = outputData.resize([size, numberOfSymmFunc])
-    inputData = inputData.resize([size, outputs])
-    
-    print inputData
-    print outputData
     
     return inputData, outputData, parameters
     
@@ -292,11 +296,9 @@ def angularSymmetryData(function, size, \
                 for inversion in inversions:
                     parameters.append(width, cutoff, zeta, inversion)
     
-    #counter = 0
     # loop through each r vector, i.e. each atomic environment
     for i in xrange(size):
-        """if np.size( np.where(rjk[i,:] > cutoff)[0] ) == neighbours:
-            counter += 1"""       
+      
         # nested sum over all neighbours k for each neighbour j
         # this loop takes care of both 2-body and 3-body configs
         for j in xrange(neighbours):
