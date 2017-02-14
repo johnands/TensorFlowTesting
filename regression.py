@@ -39,7 +39,7 @@ import datetime as time
 import os
 import shutil
 import matplotlib.pyplot as plt
-import DataGeneration.generateData as data
+import DataGeneration.randomData as data
 import DataGeneration.lammpsData as lammps
 import neuralNetwork as nn
 from Tools.inspect_checkpoint import print_tensors_in_checkpoint_file
@@ -155,33 +155,33 @@ class Regression:
         self.functionDerivative = functionDerivative
 
 
-    def generateData(self, a, b, method='functionData', numberOfSymmFunc=10, neighbours=80, \
+    def generateData(self, a, b, method, numberOfSymmFunc=10, neighbours=80, \
                      symmFuncType='G4', filename='', batch=0.5):
 
         self.a, self.b = a, b
         global saveParametersFlag  
 
-        if method == 'functionData':
-            print "method=functionData: Generating random, radial 1-dim data..."
+        if method == 'twoBody':
+            print "method=twoBody: Generating random, radial 1-neighbour data..."
             self.xTrain, self.yTrain, self.xTest, self.yTest = \
-                data.functionData(self.function, self.trainSize, self.testSize, a=a, b=b)
+                data.twoBodyEnergy(self.function, self.trainSize, self.testSize, a=a, b=b)
                 
-        elif method == 'neighbourData':
+        elif method == 'neighbourTwoBody':
             if self.functionDerivative:
-                print "method=neighbourData: Generating random, radial N-dim data including force output..."
+                print "method=neighbourTwoBody: Generating random, radial N-neighbour data including force output..."
                 neighbours = self.inputs / 4
                 print neighbours
                 self.xTrain, self.yTrain = \
-                    data.energyAndForceCoordinates(self.function, self.functionDerivative, \
-                                                   self.trainSize, \
-                                                   neighbours, self.outputs, a, b)
+                    data.neighbourTwoBodyEnergyAndForce2(self.function, self.functionDerivative, \
+                                                         self.trainSize, \
+                                                         neighbours, self.outputs, a, b)
                 self.xTest, self.yTest = \
-                    data.energyAndForceCoordinates(self.function, self.functionDerivative, \
-                                                   self.testSize, \
-                                                   neighbours, self.outputs, a, b)
+                    data.neighbourTwoBodyEnergyAndForce2(self.function, self.functionDerivative, \
+                                                         self.testSize, \
+                                                         neighbours, self.outputs, a, b)
 
             else:
-                print "method=neighbourData: Generating random, radial N-dim data..."
+                print "method=neighbourTwoBody: Generating random, radial N-neighbour data..."
                 self.xTrain, self.yTrain = \
                     data.neighbourData(self.function, self.trainSize, a, b, \
                                        inputs=self.inputs, outputs=self.outputs)
@@ -189,25 +189,25 @@ class Regression:
                     data.neighbourData(self.function, self.testSize, a, b, \
                                        inputs=self.inputs, outputs=self.outputs)
                                      
-        elif method == 'radialSymmetry':
-            print "method=radialSymmetry: Generating random, radial N-dim data with symmetry functions..."
+        elif method == 'twoBodySymmetry':
+            print "method=twoBodySymmetry: Generating random, two-body N-neighbour data with symmetry functions..."
             self.xTrain, self.yTrain, self.parameters = \
-                data.radialSymmetryData(self.function, self.trainSize, \
-                                        neighbours, numberOfSymmFunc, symmFuncType, a, b)
+                data.neighbourTwoBodySymmetry(self.function, self.trainSize, \
+                                              neighbours, numberOfSymmFunc, symmFuncType, a, b)
             self.xTest, self.yTest, _ = \
-                data.radialSymmetryData(self.function, self.testSize, \
-                                        neighbours, numberOfSymmFunc, symmFuncType, a, b)
+                data.neighbourTwoBodySymmetry(self.function, self.testSize, \
+                                              neighbours, numberOfSymmFunc, symmFuncType, a, b)
             if saveMetaFlag:
                 saveParametersFlag = True
 
-        elif method == 'angularSymmetry':
-            print "method=angularSymmetry: Generating random, radial and angular N-dim data with symmetry functions..."
+        elif method == 'threeBodySymmetry':
+            print "method=threeBodySymmetry: Generating random, three-body N-neighbour data with symmetry functions..."
             self.xTrain, self.yTrain, self.parameters = \
-                data.angularSymmetryData(self.function, self.trainSize, \
-                                        neighbours, numberOfSymmFunc, symmFuncType, a, b)
+                data.neighbourThreeBodySymmetry(self.function, self.trainSize, \
+                                                neighbours, numberOfSymmFunc, symmFuncType, a, b)
             self.xTest, self.yTest, _ = \
-                data.angularSymmetryData(self.function, self.testSize, \
-                                        neighbours, numberOfSymmFunc, symmFuncType, a, b)
+                data.neighbourThreeBodySymmetry(self.function, self.testSize, \
+                                                neighbours, numberOfSymmFunc, symmFuncType, a, b)
             if saveMetaFlag:              
                 saveParametersFlag = True
 
@@ -322,8 +322,8 @@ class Regression:
             start = timer()
             for epoch in xrange(numberOfEpochs):
 
-                # pick random batch
-                indicies = np.random.choice(np.arange(trainSize), batchSize)
+                # pick unique random batch
+                indicies = np.random.choice(trainSize, 10, replace=False)
                 xBatch = xTrain[indicies]
                 yBatch = yTrain[indicies]
 

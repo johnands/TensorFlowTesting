@@ -128,12 +128,12 @@ def SiTrainingData(filename, symmFuncType, function=None):
     outputs = outputData.shape[1]
 
     # parameters G2
-    widthG2 = [0.001, 0.004]
-    cutoffG2 = [4.0, 5.0, 6.0]
+    widthG2 = [0.001, 0.01, 0.1, 1]
+    cutoffG2 = [4.0]
     centerG2 = [0.0]
 
     # parameters G4
-    widthG4 = [0.001, 0.004]      
+    widthG4 = [0.001, 0.01]      
     cutoffG4 = [4.0]
     thetaRangeG4 = [1, 2, 4] 
     inversionG4 = [1.0, -1.0]
@@ -154,17 +154,12 @@ def SiTrainingData(filename, symmFuncType, function=None):
             for zeta in thetaRangeG4:
                 for inversion in inversionG4:
                     parameters.append([width, cutoff, zeta, inversion])
-                    
-    print parameters
-    
-    numberOfSymmFunc = len(widthG2)*len(centerG2)*len(cutoffG2) + \
-                       len(thetaRangeG4)*len(cutoffG4)*len(widthG4)*len(inversionG4) 
-    #numberOfSymmFunc = len(thetaRangeG4)*len(cutoffG4)*len(widthG4)*len(inversionG4) 
+
     inputData = np.zeros((size,numberOfSymmFunc))
 
     # loop through each data vector, i.e. each atomic environment
-    thetaMax = 0.0
-    thetaMin = 100.0
+    #thetaMax = 0.0
+    #thetaMin = 100.0
     fractionOfNonZeros = 0.0
     fractionOfInputVectorsOnlyZeros = 0.0
     meanNeighbours = 0.0;
@@ -190,61 +185,59 @@ def SiTrainingData(filename, symmFuncType, function=None):
             xij = xi[j]; yij = yi[j]; zij = zi[j]
             
             # all k != i,j OR I > J ???
-            k = np.arange(len(ri[:])) > j
+            k = np.arange(len(ri[:])) > j  
             rik = ri[k] 
             xik = xi[k]; yik = yi[k]; zik = zi[k]
             
             # compute angle and rjk
-            argument = (xij*xik + yij*yik + zij*zik) / (rij*rik) 
+            cosTheta = (xij*xik + yij*yik + zij*zik) / (rij*rik) 
             
             # floating-point error can yield an argument outside of arccos range
-            if not (np.abs(argument) <= 1).all():
-                for l, arg in enumerate(argument):
+            if not (np.abs(cosTheta) <= 1).all():
+                for l, arg in enumerate(cosTheta):
                     if arg < -1:
-                        argument[l] = -1
-                        print "Warning: %.14f has been replaced by %d" % (arg, argument[l])
+                        cosTheta[l] = -1
+                        print "Warning: %.14f has been replaced by %d" % (arg, cosTheta[l])
                     if arg > 1:
-                        argument[l] = 1
-                        print "Warning: %.14f has been replaced by %d" % (arg, argument[l])
+                        cosTheta[l] = 1
+                        print "Warning: %.14f has been replaced by %d" % (arg, cosTheta[l])
                         
-            theta = np.arccos(argument)
-            rjk = np.sqrt( rij**2 + rik**2 - 2*rij*rik*np.cos(theta) )
+            #theta = np.arccos(argument)
+            #rjk = np.sqrt( rij**2 + rik**2 - 2*rij*rik*np.cos(theta) )
+            
+            rjk = np.sqrt( rij**2 + rik**2 - 2*rij*rik*cosTheta )
             
             # check max and min
-            Max = np.max(theta)
+            """Max = np.max(theta)
             Min = np.min(theta)
             if Max > thetaMax:
                 thetaMax = Max
             if Min < thetaMin:
-                thetaMin = Min
+                thetaMin = Min"""
             
             # find value of each symmetry function for this triplet
             symmFuncNumber = 0
 
             # G2
             for width in widthG2:
-                for center in centerG2:
-                    for cutoff in cutoffG2:
-                        inputData[i,symmFuncNumber] += symmetryFunctions.G2(rij, cutoff, width, center)
+                for cutoff in cutoffG2:
+                    for center in centerG2:
+                        inputData[i,symmFuncNumber] += symmetryFunctions.G2(rij, width, cutoff, center)
                         symmFuncNumber += 1
                         
             # G4
-            for zeta in thetaRangeG4:
-                for cutoff in cutoffG4:
-                    for width in widthG4:
+            for width in widthG4:
+                for cutoff in cutoffG4:             
+                    for zeta in thetaRangeG4:
                         for inversion in inversionG4:
                             # find symmetry function value for triplets (i,j,k) for all k
-                            inputData[i,symmFuncNumber] += symmetryFunctions.G4(rij, rik, rjk, theta, \
-                                                                                zeta, width, cutoff, inversion)
+                            inputData[i,symmFuncNumber] += symmetryFunctions.G4(rij, rik, rjk, cosTheta, \
+                                                                                width, cutoff, zeta, inversion)
                             symmFuncNumber += 1
         
             # calculate energy with my S-W-potential, not use lammps energy
             if function != None:
-                outputData[i,0] += np.sum( function(rij, rik, theta) )
-            
-        if not i % 1000:
-            print i
-            print inputData[i,:]
+                outputData[i,0] += np.sum( function(rij, rik, cosTheta) )
             
         # shuffle input vector
         #np.random.shuffle(inputData[i,:])
@@ -259,10 +252,10 @@ def SiTrainingData(filename, symmFuncType, function=None):
         sys.stdout.write("\r%2d %% complete" % ((float(i)/size)*100))
         sys.stdout.flush()
     
-    print   
+    """print   
     print "max theta: ", thetaMax
     print "min theta: ", thetaMin
-    print
+    print"""
     
     fractionOfZeros = 1 - fractionOfNonZeros / float(size)
     fractionOfInputVectorsOnlyZeros /= float(size)
@@ -328,16 +321,16 @@ def SiTrainingData(filename, symmFuncType, function=None):
     print "Max: ", maxOutput
     print "Min: ", minOutput
     print "Mean: ", np.mean(outputData)
-    print
+    print  
     
     # split in training set and test set
-    # TODO: split randomly, not sequentially
-    split = int(0.8*size)    
-    inputTraining  = inputData[:split,:]
-    outputTraining = outputData[:split,:]
-    inputTest      = inputData[split:,:]         
-    outputTest     = outputData[split:,:]
-    
+    testSize        = int(0.1*size) 
+    indicies        = np.random.choice(size, testSize, replace=False)
+    inputTest       = inputData[indicies]         
+    outputTest      = outputData[indicies] 
+    inputTraining   = np.delete(inputData, indicies, axis=0)
+    outputTraining  = np.delete(outputData, indicies, axis=0)
+   
     return inputTraining, outputTraining, inputTest, outputTest, numberOfSymmFunc, outputs, parameters  
 
 

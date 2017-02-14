@@ -96,7 +96,7 @@ def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs
     function, a, cutoff = setUpLJPotential('metal')    
     
     regress = regression.Regression(function, trainSize, batchSize, testSize, 1, 1)
-    regress.generateData(a, cutoff)
+    regress.generateData(a, cutoff, 'twoBody')
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
     regress.train(nEpochs)
@@ -108,7 +108,7 @@ def LennardJonesNeighbours(trainSize, batchSize, testSize, nLayers, nNodes, nEpo
     function, a, b = setUpLJPotential('LJ')
 
     regress = regression.Regression(function, trainSize, batchSize, testSize, neighbours, outputs)
-    regress.generateData(a, b, method='neighbourData')
+    regress.generateData(a, b, 'neighbourTwoBody')
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
     regress.train(nEpochs)
@@ -122,7 +122,7 @@ def LennardJonesNeighboursForce(trainSize, batchSize, testSize, nLayers, nNodes,
     inputs = neighbours*4
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs, \
                          functionDerivative)
-    regress.generateData(a, b, method='neighbourData')
+    regress.generateData(a, b, 'neighbourTwoBody')
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
     regress.train(nEpochs)
@@ -135,7 +135,7 @@ def LennardJonesSymmetryFunctions(trainSize, batchSize, testSize, nLayers, nNode
     function, a, b = setUpLJPotential('metal')
     
     regress = regression.Regression(function, trainSize, batchSize, testSize, numberOfSymmFunc, outputs)
-    regress.generateData(a, b, method='radialSymmetry', neighbours=neighbours, numberOfSymmFunc=numberOfSymmFunc, 
+    regress.generateData(a, b, 'twoBodySymmetry', neighbours=neighbours, numberOfSymmFunc=numberOfSymmFunc, 
                          symmFuncType='G2')
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
@@ -166,22 +166,22 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     sigma = 2.0951
     
     # set limits for input training data
-    low = 1.9           # checked with lammps Si simulation
+    low = 2.0           # checked with lammps Si simulation
     
     # cutoff = sigma*a according to http://lammps.sandia.gov/doc/pair_sw.html
     # subtract a small number to prevent division by zero
     high = sigma*a - 0.001      
     
     # Stillinger-Weber            
-    function = lambda Rij, Rik, theta:  epsilon*A*(B*(sigma/Rij)**p - (sigma/Rij)**q) * \
+    function = lambda Rij, Rik, cosTheta:  epsilon*A*(B*(sigma/Rij)**p - (sigma/Rij)**q) * \
                                         np.exp(sigma / (Rij - a*sigma)) + \
-                                        epsilon*Lambda*(np.cos(theta) - cosC)**2 * \
+                                        epsilon*Lambda*(np.cos(cosTheta) - cosC)**2 * \
                                         np.exp( (gamma*sigma) / (Rij - a*sigma) ) * \
                                         np.exp( (gamma*sigma) / (Rik - a*sigma) )
     
     # train                           
     regress = regression.Regression(function, trainSize, batchSize, testSize, numberOfSymmFunc, outputs)
-    regress.generateData(low, high, method='lammps', neighbours=neighbours, numberOfSymmFunc=numberOfSymmFunc, 
+    regress.generateData(low, high, 'threeBodySymmetry', neighbours=neighbours, numberOfSymmFunc=numberOfSymmFunc, 
                          symmFuncType='G4', filename=filename)
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
@@ -201,7 +201,7 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
     trainSize = batchSize = testSize = inputs = low = high = 0
                        
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
-    regress.generateData(low, high, method='lammps', symmFuncType='G4', filename=filename)
+    regress.generateData(low, high, 'lammps', symmFuncType='G4', filename=filename)
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.tanh, \
                              wInit='xavier', bInit='zeros')
     regress.train(nEpochs)
@@ -228,14 +228,14 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
 """trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, nNeighbours, nSymmfuncs, symmFuncType (G1 or G2)"""
 
 """LJ med radielle symmetrifunksjoner"""
-LennardJonesSymmetryFunctions(int(1e4), int(1e3), int(1e2), 2, 70, int(1001), 70, 70, 'G2')
+#LennardJonesSymmetryFunctions(int(1e5), int(1e4), int(1e3), 2, 70, int(1e6), 70, 70, 'G2')
 
 """Stillinger Weber med angular symmetrifunksjoner og lammps-data"""
-#StillingerWeberSymmetry(int(3e3), int(1e3), int(1e2), 2, 30, int(1e6), 10, 30, 'G4', \
-#                        "../LAMMPS_test/Silicon/Data/03.02-13.44.39/neighbours.txt")
+StillingerWeberSymmetry(int(1e4), int(1e3), int(1e2), 2, 30, int(1e6), 10, 30, 'G4', \
+                        "../LAMMPS_test/Silicon/Data/03.02-13.44.39/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-#lammpsTrainingSi(2, 40, int(1000), 'G4', \
+#lammpsTrainingSi(2, 40, int(1e6), 'G4', \
 #                 "../LAMMPS_test/Silicon/Data/07.02-15.09.33/neighbours.txt", \
 #                 activation=tf.nn.tanh)
                         
