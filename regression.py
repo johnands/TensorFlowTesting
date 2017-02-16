@@ -156,7 +156,7 @@ class Regression:
 
 
     def generateData(self, a, b, method, numberOfSymmFunc=10, neighbours=80, \
-                     symmFuncType='G4', filename='', batch=0.5):
+                     symmFuncType='G4', filename='', batch=0.5, varyingNeigh=True):
 
         self.a, self.b = a, b
         global saveParametersFlag  
@@ -193,10 +193,12 @@ class Regression:
             print "method=twoBodySymmetry: Generating random, two-body N-neighbour data with symmetry functions..."
             self.xTrain, self.yTrain, self.parameters = \
                 data.neighbourTwoBodySymmetry(self.function, self.trainSize, \
-                                              neighbours, numberOfSymmFunc, symmFuncType, a, b)
+                                              neighbours, numberOfSymmFunc, symmFuncType, a, b,
+                                              varyingNeigh=varyingNeigh)
             self.xTest, self.yTest, _ = \
                 data.neighbourTwoBodySymmetry(self.function, self.testSize, \
-                                              neighbours, numberOfSymmFunc, symmFuncType, a, b)
+                                              neighbours, numberOfSymmFunc, symmFuncType, a, b,
+                                              varyingNeigh=varyingNeigh)
             if saveMetaFlag:
                 saveParametersFlag = True
 
@@ -204,10 +206,14 @@ class Regression:
             print "method=threeBodySymmetry: Generating random, three-body N-neighbour data with symmetry functions..."
             self.xTrain, self.yTrain, self.parameters = \
                 data.neighbourThreeBodySymmetry(self.function, self.trainSize, \
-                                                neighbours, numberOfSymmFunc, symmFuncType, a, b)
+                                                neighbours, numberOfSymmFunc, symmFuncType, a, b,
+                                                varyingNeigh=varyingNeigh)
             self.xTest, self.yTest, _ = \
                 data.neighbourThreeBodySymmetry(self.function, self.testSize, \
-                                                neighbours, numberOfSymmFunc, symmFuncType, a, b)
+                                                neighbours, numberOfSymmFunc, symmFuncType, a, b,
+                                                varyingNeigh=varyingNeigh)
+            self.inputs = len(self.parameters)
+
             if saveMetaFlag:              
                 saveParametersFlag = True
 
@@ -323,7 +329,7 @@ class Regression:
             for epoch in xrange(numberOfEpochs):
 
                 # pick unique random batch
-                indicies = np.random.choice(trainSize, 10, replace=False)
+                indicies = np.random.choice(trainSize, batchSize, replace=False)
                 xBatch = xTrain[indicies]
                 yBatch = yTrain[indicies]
 
