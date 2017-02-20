@@ -301,7 +301,7 @@ class Regression:
             prediction = self.makeNetwork(x)
 
             with tf.name_scope('L2Norm'):
-                cost = tf.nn.l2_loss( tf.sub(prediction, y) )
+                cost = tf.nn.l2_loss( tf.subtract(prediction, y) )
                 tf.summary.scalar('L2Norm', cost/batchSize)
 
             with tf.name_scope('train'):

@@ -143,8 +143,8 @@ def LennardJonesSymmetryFunctions(trainSize, batchSize, testSize, nLayers, nNode
     
     
 def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
-                            neighbours, numberOfSymmFunc, symmFunctype, filename, outputs=1, 
-                            varyingNeigh=True, method='threeBodySymmetry'):
+                            neighbours, numberOfSymmFunc, symmFunctype, method, 
+                            outputs=1, varyingNeigh=True, filename=''):
     """
     Train neural network to simulate tetrahedral Si atoms
     methodGenerate random input training data or use xyz-data from lammps
@@ -159,12 +159,13 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     B = 0.6022245584
     p = 4.0
     q = 0.0
-    a = 1.90
+    a = 1.80
     Lambda = 21.0
     gamma = 1.20
     cosC = -1.0/3
-    epsilon = 1.0
+    epsilon = 2.1683
     sigma = 2.0951
+    #sigma = 1.0
     
     # set limits for input training data
     low = 2.0           # checked with lammps Si simulation
@@ -176,9 +177,9 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     # Stillinger-Weber            
     function = lambda Rij, Rik, cosTheta:  epsilon*A*(B*(sigma/Rij)**p - (sigma/Rij)**q) * \
                                            np.exp(sigma / (Rij - a*sigma)) + \
-                                           epsilon*Lambda*(np.cos(cosTheta) - cosC)**2 * \
-                                           np.exp( (gamma*sigma) / (Rij - a*sigma) ) * \
-                                           np.exp( (gamma*sigma) / (Rik - a*sigma) )
+                                           np.sum( epsilon*Lambda*(cosTheta - cosC)**2 * \
+                                                   np.exp( (gamma*sigma) / (Rij - a*sigma) ) * \
+                                                   np.exp( (gamma*sigma) / (Rik - a*sigma) ) )
     
     # train                           
     regress = regression.Regression(function, trainSize, batchSize, testSize, numberOfSymmFunc, outputs)
@@ -233,9 +234,9 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
 #                              varyingNeigh=True)
 
 """Stillinger Weber med angular symmetrifunksjoner og lammps-data"""
-StillingerWeberSymmetry(int(1e4), int(2e3), int(1e3), 2, 30, int(1e6), 10, 30, 'G4', \
-                        "../LAMMPS_test/Silicon/Data/03.02-13.44.39/neighbours.txt", 
-                        varyingNeigh=True, method='threeBodySymmetry')
+StillingerWeberSymmetry(int(1e4), int(2e3), int(1e3), 2, 30, int(1e5), 10, 30, 'G4', 'threeBodySymmetry', \
+                        varyingNeigh=True)#, \
+#                        filename="../LAMMPS_test/Silicon/Data/03.02-13.44.39/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
 #lammpsTrainingSi(2, 40, int(1e6), 'G4', \

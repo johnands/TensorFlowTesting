@@ -143,7 +143,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
             k = np.arange(len(ri[:])) > j  
             rik = ri[k] 
             xik = xi[k]; yik = yi[k]; zik = zi[k]
-            
+
             # compute cos(theta_ijk) and rjk
             cosTheta = (xij*xik + yij*yik + zij*zik) / (rij*rik) 
             
@@ -176,13 +176,14 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
                     inputData[i,symmFuncNumber] += G4(rij, rik, rjk, cosTheta, \
                                                       s[0], s[1], s[2], s[3])
                 symmFuncNumber += 1
-        
+
             # calculate energy with supplied 3-body function or with
             if function != None:
-                outputData[i,0] += np.sum( function(rij, rik, cosTheta) )
+                outputData[i,0] += function(rij, rik, cosTheta) 
             
         # shuffle input vector
         #np.random.shuffle(inputData[i,:])
+        #print outputData[i,0]
         
         # count zeros
         fractionOfNonZeros += np.count_nonzero(inputData[i,:]) / float(numberOfSymmFunc)

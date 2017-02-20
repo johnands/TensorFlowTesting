@@ -311,9 +311,6 @@ def neighbourThreeBodySymmetry(function, size, \
             for zeta in thetaRangeG4:
                 for inversion in inversionG4:
                     parameters.append([width, cutoff, zeta, inversion])
-                    
-    print len(parameters)
-    print parameters
     
     # apply symmetry transformation to input data and generate output data
     inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, function=function)
