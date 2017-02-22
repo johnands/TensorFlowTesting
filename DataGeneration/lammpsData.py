@@ -144,7 +144,7 @@ def SiTrainingData(filename, symmFuncType, function=None):
     outputs = 1
                    
     # apply symmetry transformastion
-    inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, function=function, E=E)
+    inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, function=function, E=E)
     
     # split in training set and test set randomly
     totalSize       = len(inputData)

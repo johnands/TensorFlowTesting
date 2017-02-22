@@ -142,17 +142,7 @@ def LennardJonesSymmetryFunctions(trainSize, batchSize, testSize, nLayers, nNode
     regress.train(nEpochs)
     
     
-def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
-                            neighbours, numberOfSymmFunc, symmFunctype, method, 
-                            outputs=1, varyingNeigh=True, filename=''):
-    """
-    Train neural network to simulate tetrahedral Si atoms
-    methodGenerate random input training data or use xyz-data from lammps
-    Output training data is calculated with my sw-potential, i.e.
-    energies not from lammps
-    method=angularSymmetry: random configs
-    method=lammps: configs from lammps, but not energies
-    """
+def getStillingerWeber():
 
     # parameters                            
     A = 7.049556277
@@ -164,15 +154,7 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     gamma = 1.20
     cosC = -1.0/3
     epsilon = 2.1683
-    sigma = 2.0951
-    #sigma = 1.0
-    
-    # set limits for input training data
-    low = 2.0           # checked with lammps Si simulation
-    
-    # cutoff = sigma*a according to http://lammps.sandia.gov/doc/pair_sw.html
-    # subtract a small number to prevent division by zero
-    high = sigma*a - 0.001      
+    sigma = 2.0951  
     
     # Stillinger-Weber            
     function = lambda Rij, Rik, cosTheta:  epsilon*A*(B*(sigma/Rij)**p - (sigma/Rij)**q) * \
@@ -180,6 +162,31 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
                                            np.sum( epsilon*Lambda*(cosTheta - cosC)**2 * \
                                                    np.exp( (gamma*sigma) / (Rij - a*sigma) ) * \
                                                    np.exp( (gamma*sigma) / (Rik - a*sigma) ) )
+                                                   
+    return function, a, sigma
+
+    
+    
+def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
+                            neighbours, numberOfSymmFunc, symmFunctype, method, 
+                            outputs=1, varyingNeigh=True, filename=''):
+    """
+    Train neural network to simulate tetrahedral Si atoms
+    methodGenerate random input training data or use xyz-data from lammps
+    Output training data is calculated with my sw-potential, i.e.
+    energies not from lammps
+    method=angularSymmetry: random configs
+    method=lammps: configs from lammps, but not energies
+    """
+    
+    function, a, sigma = getStillingerWeber()
+    
+    # set limits for input training data
+    low = 2.0           # checked with lammps Si simulation
+    
+    # cutoff = sigma*a according to http://lammps.sandia.gov/doc/pair_sw.html
+    # subtract a small number to prevent division by zero
+    high = sigma*a - 0.001      
     
     # train                           
     regress = regression.Regression(function, trainSize, batchSize, testSize, numberOfSymmFunc, outputs)
@@ -196,8 +203,9 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
     as input and output training data respectively
     """
                
-    # get energies from sw lammps
-    function = None    
+    # get energies from sw lammps              
+    #function = None    
+    function, _, _ = getStillingerWeber()
     
     # these are sampled from lammps
     trainSize = batchSize = testSize = inputs = low = high = 0
@@ -234,14 +242,14 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
 #                              varyingNeigh=True)
 
 """Stillinger Weber med angular symmetrifunksjoner og lammps-data"""
-StillingerWeberSymmetry(int(1e4), int(2e3), int(1e3), 2, 30, int(1e5), 10, 30, 'G4', 'threeBodySymmetry', \
-                        varyingNeigh=True)#, \
+#StillingerWeberSymmetry(int(1e4), int(2e3), int(1e3), 2, 30, int(1e5), 10, 30, 'G4', 'threeBodySymmetry', \
+#                        varyingNeigh=True)#, \
 #                        filename="../LAMMPS_test/Silicon/Data/03.02-13.44.39/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-#lammpsTrainingSi(2, 40, int(1e6), 'G4', \
-#                 "../LAMMPS_test/Silicon/Data/07.02-15.09.33/neighbours.txt", \
-#                 activation=tf.nn.tanh)
+lammpsTrainingSi(2, 40, int(1e6), 'G4', \
+                 "../LAMMPS_test/Silicon/Data/22.02-18.56.13/neighbours.txt", \
+                 activation=tf.nn.tanh)
                         
                         
                         

@@ -143,6 +143,8 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
             k = np.arange(len(ri[:])) > j  
             rik = ri[k] 
             xik = xi[k]; yik = yi[k]; zik = zi[k]
+            print xij
+            print xik
 
             # compute cos(theta_ijk) and rjk
             cosTheta = (xij*xik + yij*yik + zij*zik) / (rij*rik) 
@@ -194,6 +196,14 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
         # show progress
         sys.stdout.write("\r%2d %% complete" % ((float(i)/size)*100))
         sys.stdout.flush()
+        
+    # test where my SW-potential is equivalent with lammps SW-potential
+    print "Lammps:"
+    print E[:5][:]
+    print 
+    print "MySW:"
+    print outputData[:5,:]
+    exit(1)
         
     
     fractionOfZeros = 1 - fractionOfNonZeros / float(size)
