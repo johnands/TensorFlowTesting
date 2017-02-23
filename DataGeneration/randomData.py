@@ -290,14 +290,18 @@ def neighbourThreeBodySymmetry(function, size, \
     
     # parameters G2
     widthG2 = [0.001, 0.01, 0.1]
-    cutoffG2 = [4.0]
-    centerG2 = [0.0, 3.0]
+    cutoffG2 = [6.0]
+    centerG2 = [0.0, 1.0, 2.0, 3.0, 4.0]
 
-    # parameters G4
-    widthG4 = [0.001, 0.01]      
-    cutoffG4 = [4.0]
-    thetaRangeG4 = [1, 2, 4] 
-    inversionG4 = [1.0, -1.0]
+    widthG41 = [0.001, 0.01]      
+    cutoffG41 = [6.0]
+    thetaRangeG41 = [1, 2, 4, 16] 
+    inversionG41 = [1.0]
+    
+    widthG42 = [0.0001, 0.001]      
+    cutoffG42 = [6.0]
+    thetaRangeG42 = [1, 2, 4, 16] 
+    inversionG42 = [-1.0]
     
     # make nested list of all symetry function parameters
     parameters = []
@@ -306,10 +310,16 @@ def neighbourThreeBodySymmetry(function, size, \
             for center in centerG2:           
                 parameters.append([width, cutoff, center])
              
-    for width in widthG4:   
-        for cutoff in cutoffG4:
-            for zeta in thetaRangeG4:
-                for inversion in inversionG4:
+    for width in widthG41:   
+        for cutoff in cutoffG41:
+            for zeta in thetaRangeG41:
+                for inversion in inversionG41:
+                    parameters.append([width, cutoff, zeta, inversion])
+                    
+    for width in widthG42:   
+        for cutoff in cutoffG42:
+            for zeta in thetaRangeG42:
+                for inversion in inversionG42:
                     parameters.append([width, cutoff, zeta, inversion])
     
     # apply symmetry transformation to input data and generate output data

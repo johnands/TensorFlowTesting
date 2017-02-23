@@ -168,7 +168,7 @@ def getStillingerWeber():
     
     
 def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
-                            neighbours, numberOfSymmFunc, symmFunctype, method, 
+                            neighbours, symmFunctype, method, 
                             outputs=1, varyingNeigh=True, filename=''):
     """
     Train neural network to simulate tetrahedral Si atoms
@@ -187,10 +187,11 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     # cutoff = sigma*a according to http://lammps.sandia.gov/doc/pair_sw.html
     # subtract a small number to prevent division by zero
     high = sigma*a - 0.001      
+    inputs = 0
     
     # train                           
-    regress = regression.Regression(function, trainSize, batchSize, testSize, numberOfSymmFunc, outputs)
-    regress.generateData(low, high, method, neighbours=neighbours, numberOfSymmFunc=numberOfSymmFunc, 
+    regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
+    regress.generateData(low, high, method, neighbours=neighbours, 
                          symmFuncType='G4', filename=filename, varyingNeigh=True)
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
@@ -242,14 +243,14 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
 #                              varyingNeigh=True)
 
 """Stillinger Weber med angular symmetrifunksjoner og lammps-data"""
-#StillingerWeberSymmetry(int(1e4), int(2e3), int(1e3), 2, 30, int(1e5), 10, 30, 'G4', 'threeBodySymmetry', \
-#                        varyingNeigh=True)#, \
+StillingerWeberSymmetry(int(1e3), int(3e2), int(1e2), 2, 40, int(5e6), 10, 'G4', 'threeBodySymmetry', \
+                        varyingNeigh=False)#, \
 #                        filename="../LAMMPS_test/Silicon/Data/03.02-13.44.39/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-lammpsTrainingSi(2, 40, int(1e6), 'G4', \
-                 "../LAMMPS_test/Silicon/Data/22.02-18.56.13/neighbours.txt", \
-                 activation=tf.nn.tanh)
+#lammpsTrainingSi(2, 40, int(1e6), 'G4', \
+#                 "../LAMMPS_test/Silicon/Data/22.02-18.56.13/neighbours.txt", \
+#                 activation=tf.nn.tanh)
                         
                         
                         

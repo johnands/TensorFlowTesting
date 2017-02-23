@@ -90,46 +90,81 @@ plt.show()"""
 
 plt.figure()
 
-# G4
-Rij = 2.0
-Rik = 2.0
-theta = np.linspace(0, 2*np.pi, 50)
-Rjk = np.sqrt(Rij**2 + Rik**2 - 2*Rij*Rik*np.cos(theta))
+plotTheta = True
 
-widthG4 = [2]      
-cutoffG4 = [4.0]
-thetaRangeG4 = [1, 2, 4, 60] 
-inversionG4 = [1.0]
+# G4
+if plotTheta:
+    Rij = 3.0
+    Rik = 2.0
+    theta = np.linspace(0, 2*np.pi, 100)
+    
+else:
+    Rij = np.linspace(0, 5, 200)
+    Rik = 2.0 
+    theta = np.pi/2
+
+Rjk = np.sqrt(Rij**2 + Rik**2 - 2*Rij*Rik*np.cos(theta))     
+
+
+widthG41 = [0.01]      
+cutoffG41 = [6.0]
+thetaRangeG41 = [1, 2, 4] 
+inversionG41 = [1.0]
+
+widthG42 = [0.001]      
+cutoffG42 = [6.0]
+thetaRangeG42 = [1, 2, 4] 
+inversionG42 = [-1.0]
 
 # angular part
-legends2 = []
+"""legends2 = []
 for width in widthG4:
     for cutoff in cutoffG4:
         for zeta in thetaRangeG4:   
             for inversion in inversionG4:
                 functionValue = G4angular(theta, zeta, inversion)
-                plt.plot(theta*180/np.pi, functionValue)
+                if plotTheta:
+                    plt.plot(theta*180/np.pi, functionValue)
+                else:
+                    plt.plot(Rij, functionValue)
                 legends2.append(r'$\zeta = %1.1f$' \
                                % zeta )
                 plt.hold('on')
 plt.legend(legends2)    
-plt.show()
+plt.show()"""
 
-"""plt.figure()
+#plt.figure()
 
-# complete function
+# complete function as function of theta
 legends3 = []
-for width in widthG4:
-    for cutoff in cutoffG4:
-        for zeta in thetaRangeG4:   
-            for inversion in inversionG4:
+for width in widthG41:
+    for cutoff in cutoffG41:
+        for zeta in thetaRangeG41:   
+            for inversion in inversionG41:
                 functionValue = G4(Rij, Rik, Rjk, theta, width, cutoff, zeta, inversion)
-                plt.plot(theta*180/np.pi, functionValue)
+                if plotTheta:
+                    plt.plot(theta*180/np.pi, functionValue)
+                else:
+                    plt.plot(Rij, functionValue)
                 legends3.append(r'$\eta = %3.2f, R_c = %1.2f, \zeta = %1.1f, \lambda = %d$' \
                                % (width, cutoff, zeta, inversion) )
                 plt.hold('on')
+                
+for width in widthG42:
+    for cutoff in cutoffG42:
+        for zeta in thetaRangeG42:   
+            for inversion in inversionG42:
+                functionValue = G4(Rij, Rik, Rjk, theta, width, cutoff, zeta, inversion)
+                if plotTheta:
+                    plt.plot(theta*180/np.pi, functionValue)
+                else:
+                    plt.plot(Rij, functionValue)
+                legends3.append(r'$\eta = %3.2f, R_c = %1.2f, \zeta = %1.1f, \lambda = %d$' \
+                               % (width, cutoff, zeta, inversion) )
+                plt.hold('on')
+                
 plt.legend(legends3)    
-plt.show()"""
+plt.show()
 
 
 

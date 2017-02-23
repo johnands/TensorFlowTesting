@@ -344,9 +344,11 @@ class Regression:
                 # calculate cost on test set every 1000th epoch
                 if epoch % 1000 == 0:
                     testCost = sess.run(cost, feed_dict={x: xTest, y: yTest})
-                    print 'Cost/N train test at epoch %4d: %g %g' % (epoch, trainCost/float(batchSize), \
-                                                                    testCost/float(testSize))
-                    sys.stdout.flush()
+                    print 'Cost/N train test at epoch %4d: TF: %g %g, RMSE: %g %g' % \
+                                                    ( epoch, trainCost/float(batchSize), testCost/float(testSize), \
+                                                      np.sqrt(trainCost*2/float(batchSize)), \
+                                                      np.sqrt(testCost*2/float(testSize)) )
+                    #sys.stdout.flush()
 
                     if summaryFlag:
                         summary = sess.run(merged, feed_dict={x: xTest, y: yTest})
