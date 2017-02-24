@@ -97,6 +97,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
     """
     
     size = len(x)
+    print size
     numberOfSymmFunc = len(parameters)
     
     inputData  = np.zeros((size,numberOfSymmFunc)) 
@@ -143,6 +144,10 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
             k = np.arange(len(ri[:])) > j  
             rik = ri[k] 
             xik = xi[k]; yik = yi[k]; zik = zi[k]
+            if rij >= 3.77118 or (rik >= 3.77118).any():
+                print ri
+                print rij
+                print rik
 
             # compute cos(theta_ijk) and rjk
             cosTheta = (xij*xik + yij*yik + zij*zik) / (rij*rik) 

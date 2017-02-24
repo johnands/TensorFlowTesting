@@ -243,9 +243,9 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
 #                              varyingNeigh=True)
 
 """Stillinger Weber med angular symmetrifunksjoner og lammps-data"""
-StillingerWeberSymmetry(int(5e4), int(3e3), int(1e3), 2, 40, int(5e6), 15, 'G4', 'threeBodySymmetry', \
-                        varyingNeigh=False)#, \
-#                        filename="../LAMMPS_test/Silicon/Data/03.02-13.44.39/neighbours.txt")
+StillingerWeberSymmetry(int(1e3), int(3e2), int(1e2), 2, 50, int(5e6), 15, 'G4', 'lammps', \
+                        varyingNeigh=False, \
+                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
 #lammpsTrainingSi(2, 40, int(1e6), 'G4', \
