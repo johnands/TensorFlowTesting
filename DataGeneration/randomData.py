@@ -288,8 +288,7 @@ def neighbourThreeBodySymmetry(function, size, \
     # NOTE: r is now r^2 because I want correspondence with lammps data,
     # where all r's are squared
     
-    # parameters G2
-    widthG2 = [0.001, 0.01, 0.1]
+    """widthG2 = [0.001, 0.01, 0.1]
     cutoffG2 = [6.0]
     centerG2 = [0.0, 1.0, 2.0, 3.0, 4.0]
 
@@ -301,6 +300,20 @@ def neighbourThreeBodySymmetry(function, size, \
     widthG42 = [0.0001, 0.001]      
     cutoffG42 = [6.0]
     thetaRangeG42 = [1, 2, 4, 16] 
+    inversionG42 = [-1.0]"""
+    
+    widthG2 = [0.001, 0.01, 0.1]
+    cutoffG2 = [4.0]
+    centerG2 = [0.0, 3.0]
+
+    widthG41 = [0.001, 0.01]      
+    cutoffG41 = [4.0]
+    thetaRangeG41 = [1.0, 2.0, 4.0] 
+    inversionG41 = [1.0]
+    
+    widthG42 = [0.001, 0.01]      
+    cutoffG42 = [4.0]
+    thetaRangeG42 = [1.0, 2.0, 4.0] 
     inversionG42 = [-1.0]
     
     # make nested list of all symetry function parameters

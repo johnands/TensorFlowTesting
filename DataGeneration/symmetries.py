@@ -97,7 +97,6 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
     """
     
     size = len(x)
-    print size
     numberOfSymmFunc = len(parameters)
     
     inputData  = np.zeros((size,numberOfSymmFunc)) 
@@ -111,7 +110,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
             print "Energy is supplied from lammps"
     else:
         outputData = np.zeros((size, 1))
-        print "Energy is generated with user-supplied function"
+        #print "Energy is generated with user-supplied function"
     
     # loop through each data vector, i.e. each atomic environment
     fractionOfNonZeros = 0.0
@@ -144,10 +143,6 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
             k = np.arange(len(ri[:])) > j  
             rik = ri[k] 
             xik = xi[k]; yik = yi[k]; zik = zi[k]
-            if rij >= 3.77118 or (rik >= 3.77118).any():
-                print ri
-                print rij
-                print rik
 
             # compute cos(theta_ijk) and rjk
             cosTheta = (xij*xik + yij*yik + zij*zik) / (rij*rik) 
@@ -184,7 +179,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
 
             # calculate energy with supplied 3-body function or with
             if function != None:
-                outputData[i,0] += function(rij, rik, cosTheta) 
+                outputData[i,0] += function(rij, rik, cosTheta)                   
             
         # shuffle input vector
         #np.random.shuffle(inputData[i,:])
@@ -210,7 +205,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
     
         
     
-    fractionOfZeros = 1 - fractionOfNonZeros / float(size)
+    """fractionOfZeros = 1 - fractionOfNonZeros / float(size)
     fractionOfInputVectorsOnlyZeros /= float(size)
     print "Fraction of zeros: ", fractionOfZeros
     print "Fraction of input vectors with only zeros: ", fractionOfInputVectorsOnlyZeros
@@ -282,7 +277,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
     print "Max: ", maxOutput
     print "Min: ", minOutput
     print "Mean: ", np.mean(outputData)
-    print  
+    print  """
     
     return inputData, outputData
     

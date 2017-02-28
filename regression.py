@@ -41,10 +41,12 @@ import shutil
 import matplotlib.pyplot as plt
 import DataGeneration.randomData as data
 import DataGeneration.lammpsData as lammps
+import DataGeneration.symmetries as symmetries
 import neuralNetwork as nn
 from Tools.inspect_checkpoint import print_tensors_in_checkpoint_file
 from Tools.freeze_graph import freeze_graph
 from time import clock as timer
+
 
 loadFlag            = False
 loadFileName        = ''
@@ -159,6 +161,7 @@ class Regression:
                      symmFuncType='G4', filename='', batch=0.5, varyingNeigh=True):
 
         self.a, self.b = a, b
+        self.neighbours = neighbours
         global saveParametersFlag  
 
         if method == 'twoBody':
@@ -455,9 +458,75 @@ class Regression:
                              filename_tensor_name, output_graph_path,
                              clear_devices, "")
 
-            # plot error
+            # plot many-body error
             if plotFlag:
-                x_test  = np.linspace(self.a, self.b, self.testSize)
+                
+                neighbours = self.neighbours
+                function = self.function
+                a = self.a; b = self.b
+                
+                # make random coordinates, only one set
+                inputTemp = data.neighbourCoordinatesInput(1, a, b, neighbours)
+                x = inputTemp[:,:,0]
+                y = inputTemp[:,:,1]
+                z = inputTemp[:,:,2]
+                r = inputTemp[:,:,3]
+                
+                inputTemp, outputData = data.neighbourTwoBodyEnergy(function, 1, a, b, neighbours)
+            
+                # 1. vary coordinates of only one atom and plot the error
+                N = 50     
+                atom = neighbours/2
+                Rij = np.linspace(a, b, N)
+                Rik = 3.0
+                theta = 90*np.pi/180.0
+                energyNN = []
+                energyAnalytic = []
+                xyz = np.zeros(3)
+                for i in range(N):
+                    
+                    # generate new coordinates for one atom
+                    Rij2 = Rij[i]**2
+                    xyz[0] = np.random.uniform(0, Rij2)
+                    xyz[1] = np.random.uniform(0, Rij2-xyz[0])
+                    xyz[2] = Rij2 - xyz[0] - xyz[1]
+                    #np.random.shuffle(xyz)
+                    xi = np.sqrt(xyz[0])# * np.random.choice([-1,1])
+                    yi = np.sqrt(xyz[1])# * np.random.choice([-1,1])
+                    zi = np.sqrt(xyz[2])# * np.random.choice([-1,1])
+                    
+                    # set new coordinates for one of the atoms
+                    
+                    # 2-body
+                    inputTemp[0][atom] = Rij[i]
+                    inputData = symmetries.applyTwoBodySymmetry(inputTemp, self.parameters)
+                    energy1 = sess.run(prediction, feed_dict={self.x: inputData})[0][0]
+                    energy2 = np.sum(function(inputTemp[0][:]))
+                    
+                    # 3-body
+                    """x[0][atom] = xi; y[0][atom] = yi; 
+                    z[0][atom] = zi; r[0][atom] = Rij2
+                    inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, self.parameters, function=function)
+                    energy = sess.run(prediction, feed_dict={self.x: inputData})"""
+                    
+                    energyNN.append(energy1)
+                    energyAnalytic.append(energy2)
+            
+                # convert to arrays
+                energyNN = np.array(energyNN)
+                energyAnalytic = np.array(energyAnalytic)
+            
+                # plot error
+                plt.plot(Rij, energyNN - energyAnalytic)
+                plt.xlabel('r [MD]', fontsize=15)
+                plt.ylabel('E [MD]', fontsize=15)
+                plt.legend(['NN(r) - LJ(r)'], fontsize=15)
+                plt.show()
+                #plt.savefig('Tests/TrainLennardJones/ManyNeighbourNetwork/Plots/manyNeighbourEnergyError.pdf')
+                print 'Cost: ', ( np.sum((energyNN - energyAnalytic)**2) ) / N
+                
+                
+                """x_test  = np.linspace(self.a, self.b, self.testSize)
                 x_test  = x_test.reshape([testSize,self.inputs])
                 yy = sess.run(prediction, feed_dict={self.x: x_test})
                 plt.plot(x_test[:,0], yy[:,0] - self.function(x_test[:,0]), 'b-')
@@ -467,7 +536,7 @@ class Regression:
                 plt.ylabel('E [MD]', fontsize=15)
                 plt.legend(['NN(r) - LJ(r)'], loc=1)
                 plt.savefig(trainingDir + '/errorLJ.pdf', format='pdf')
-                #plt.show()
+                #plt.show()"""
 
 
 if __name__ == '__main__':

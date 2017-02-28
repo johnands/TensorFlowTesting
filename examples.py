@@ -175,7 +175,7 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     methodGenerate random input training data or use xyz-data from lammps
     Output training data is calculated with my sw-potential, i.e.
     energies not from lammps
-    method=angularSymmetry: random configs
+    method=threeBodySymmetry: random configs
     method=lammps: configs from lammps, but not energies
     """
     
@@ -192,7 +192,7 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     # train                           
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
     regress.generateData(low, high, method, neighbours=neighbours, 
-                         symmFuncType='G4', filename=filename, varyingNeigh=True)
+                         symmFuncType='G4', filename=filename, varyingNeigh=varyingNeigh)
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
     regress.train(nEpochs)
@@ -239,13 +239,13 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
 """trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, nNeighbours, nSymmfuncs, symmFuncType (G1 or G2)"""
 
 """LJ med radielle symmetrifunksjoner"""
-#LennardJonesSymmetryFunctions(int(3e4), int(5e3), int(1e3), 2, 70, int(1e6), 70, 70, 'G2', 
-#                              varyingNeigh=True)
+#LennardJonesSymmetryFunctions(int(1), int(1), int(1), 2, 70, int(0), 70, 70, 'G2', 
+#                              varyingNeigh=False)
 
 """Stillinger Weber med angular symmetrifunksjoner og lammps-data"""
-StillingerWeberSymmetry(int(1e3), int(3e2), int(1e2), 2, 50, int(5e6), 15, 'G4', 'lammps', \
-                        varyingNeigh=False, \
-                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
+StillingerWeberSymmetry(int(1), int(1), int(1), 2, 30, int(0), 15, 'G4', 'threeBodySymmetry', \
+                        varyingNeigh=False)#, \
+#                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
 #lammpsTrainingSi(2, 40, int(1e6), 'G4', \
