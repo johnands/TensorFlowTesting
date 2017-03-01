@@ -186,7 +186,9 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     
     # cutoff = sigma*a according to http://lammps.sandia.gov/doc/pair_sw.html
     # subtract a small number to prevent division by zero
-    high = sigma*a - 0.001      
+    tol = 1e-14
+    high = sigma*a + sigma/np.log(tol)
+
     inputs = 0
     
     # train                           
@@ -239,11 +241,11 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
 """trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, nNeighbours, nSymmfuncs, symmFuncType (G1 or G2)"""
 
 """LJ med radielle symmetrifunksjoner"""
-#LennardJonesSymmetryFunctions(int(1), int(1), int(1), 2, 70, int(0), 70, 70, 'G2', 
+#LennardJonesSymmetryFunctions(int(5e3), int(1e3), int(5e2), 2, 70, int(1e6), 70, 70, 'G2', 
 #                              varyingNeigh=False)
 
 """Stillinger Weber med angular symmetrifunksjoner og lammps-data"""
-StillingerWeberSymmetry(int(1), int(1), int(1), 2, 30, int(0), 15, 'G4', 'threeBodySymmetry', \
+StillingerWeberSymmetry(int(5e3), int(1e3), int(5e2), 2, 30, int(0), 15, 'G4', 'threeBodySymmetry', \
                         varyingNeigh=False)#, \
 #                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 

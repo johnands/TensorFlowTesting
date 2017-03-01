@@ -306,6 +306,9 @@ class Regression:
             with tf.name_scope('L2Norm'):
                 cost = tf.nn.l2_loss( tf.subtract(prediction, y) )
                 tf.summary.scalar('L2Norm', cost/batchSize)
+                
+            with tf.name_scope('MAD'):
+                MAD = tf.reduce_sum( tf.abs( tf.subtract(prediction, y) ) )
 
             with tf.name_scope('train'):
                 trainStep = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
@@ -347,10 +350,14 @@ class Regression:
                 # calculate cost on test set every 1000th epoch
                 if epoch % 1000 == 0:
                     testCost = sess.run(cost, feed_dict={x: xTest, y: yTest})
-                    print 'Cost/N train test at epoch %4d: TF: %g %g, RMSE: %g %g' % \
+                    absErrorTrain = sess.run(MAD, feed_dict={x: xBatch, y: yBatch})
+                    absErrorTest = sess.run(MAD, feed_dict={x: xTest, y: yTest})
+                    print 'Cost/N train test at epoch %4d: TF: %g %g, RMSE: %g %g, MAD: %g %g' % \
                                                     ( epoch, trainCost/float(batchSize), testCost/float(testSize), \
                                                       np.sqrt(trainCost*2/float(batchSize)), \
-                                                      np.sqrt(testCost*2/float(testSize)) )
+                                                      np.sqrt(testCost*2/float(testSize)) , \
+                                                      absErrorTrain/float(batchSize), \
+                                                      absErrorTest/float(testSize) )
                     #sys.stdout.flush()
 
                     if summaryFlag:
