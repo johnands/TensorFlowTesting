@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+np.random.seed(1)
 
 class neuralNetwork:
     
@@ -93,10 +94,12 @@ class neuralNetwork:
                 
             if not activation == None:
                 activations = activation(preactivate, "activation")
+                self.allActivations.append(activations)
                 tf.summary.histogram(layer_name + "/activations", activations)
                 return activations
             else:
                 activations = tf.identity(preactivate, "activation")
+                self.allActivations.append(activations)
                 return activations
                 
         

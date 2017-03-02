@@ -304,14 +304,20 @@ class Regression:
             prediction = self.makeNetwork(x)
 
             with tf.name_scope('L2Norm'):
-                cost = tf.nn.l2_loss( tf.subtract(prediction, y) )
-                tf.summary.scalar('L2Norm', cost/batchSize)
+                trainCost = tf.div( tf.nn.l2_loss( tf.subtract(prediction, y) ), batchSize, name='/trainCost')
+                testCost  = tf.div( tf.nn.l2_loss( tf.subtract(prediction, y) ), testSize, name='/testCost')
+                #trainCost = tf.nn.l2_loss( tf.subtract(prediction, y) )
+                #testCost = tf.nn.l2_loss( tf.subtract(prediction, y) )
+                tf.summary.scalar('L2Norm', trainCost/batchSize)
                 
             with tf.name_scope('MAD'):
                 MAD = tf.reduce_sum( tf.abs( tf.subtract(prediction, y) ) )
 
             with tf.name_scope('train'):
-                trainStep = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
+                trainStep = tf.train.AdamOptimizer(learning_rate=0.001).minimize(trainCost)
+              
+            with tf.name_scope('networkGradient'):
+                networkGradient = tf.gradients(self.neuralNetwork.allActivations[-1], x);
 
             # initialize variables or restore from file
             #saver = tf.train.Saver(self.neuralNetwork.allWeights + self.neuralNetwork.allBiases,
@@ -321,7 +327,7 @@ class Regression:
             if loadFlag:
                 saver.restore(sess, loadFileName)
                 print 'Model restored'
-
+            
             # Merge all the summaries and write them out to /tmp/mnist_logs (by default)
             if summaryFlag:
                 merged = tf.merge_all_summaries()
@@ -339,23 +345,28 @@ class Regression:
                 xBatch = xTrain[indicies]
                 yBatch = yTrain[indicies]
 
+                """with open('tmp/testBatch.txt', 'w') as outfile:
+                    outfile.write(' \n')
+                    for i in range(len(xBatch[0])):
+                        outfile.write('%g' % xBatch[0][i])
+                        outfile.write('\n')"""
+ 
                 # train
-                trainCost, _ = sess.run([cost, trainStep], feed_dict={x: xBatch, y: yBatch})
+                sess.run(trainStep, feed_dict={x: xBatch, y: yBatch})
                 
                 if summaryFlag:
                     if epoch % 1000 == 0:
                         summary = sess.run(merged, feed_dict={x: xBatch, y: yBatch})
                         train_writer.add_summary(summary, epoch)
 
-                # calculate cost on test set every 1000th epoch
+                # calculate cost every 1000th epoch
                 if epoch % 1000 == 0:
-                    testCost = sess.run(cost, feed_dict={x: xTest, y: yTest})
-                    absErrorTrain = sess.run(MAD, feed_dict={x: xBatch, y: yBatch})
-                    absErrorTest = sess.run(MAD, feed_dict={x: xTest, y: yTest})
+                    trainError, absErrorTrain = sess.run([trainCost, MAD], feed_dict={x: xBatch, y: yBatch})
+                    testError, absErrorTest   = sess.run([testCost, MAD], feed_dict={x: xTest, y: yTest})
                     print 'Cost/N train test at epoch %4d: TF: %g %g, RMSE: %g %g, MAD: %g %g' % \
-                                                    ( epoch, trainCost/float(batchSize), testCost/float(testSize), \
-                                                      np.sqrt(trainCost*2/float(batchSize)), \
-                                                      np.sqrt(testCost*2/float(testSize)) , \
+                                                    ( epoch, trainError, testError, \
+                                                      np.sqrt(trainError*2), \
+                                                      np.sqrt(testError*2), \
                                                       absErrorTrain/float(batchSize), \
                                                       absErrorTest/float(testSize) )
                     #sys.stdout.flush()
@@ -393,7 +404,8 @@ class Regression:
                         saver.save(sess, saveFileName, global_step=saveEpochNumber,
                                    latest_filename="checkpoint_state")
                         saveEpochNumber += 1
-
+                        
+                        
             # elapsed time
             end = timer();
             print "Time elapsed: %g" % (end-start)

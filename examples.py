@@ -245,7 +245,7 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
 #                              varyingNeigh=False)
 
 """Stillinger Weber med angular symmetrifunksjoner og lammps-data"""
-StillingerWeberSymmetry(int(5e3), int(1e3), int(5e2), 2, 30, int(0), 15, 'G4', 'threeBodySymmetry', \
+StillingerWeberSymmetry(int(1e3), int(3e2), int(1e2), 2, 35, int(1e6), 15, 'G4', 'threeBodySymmetry', \
                         varyingNeigh=False)#, \
 #                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 

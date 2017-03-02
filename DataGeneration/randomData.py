@@ -288,52 +288,55 @@ def neighbourThreeBodySymmetry(function, size, \
     # NOTE: r is now r^2 because I want correspondence with lammps data,
     # where all r's are squared
     
-    """widthG2 = [0.001, 0.01, 0.1]
-    cutoffG2 = [6.0]
-    centerG2 = [0.0, 1.0, 2.0, 3.0, 4.0]
-
-    widthG41 = [0.001, 0.01]      
-    cutoffG41 = [6.0]
-    thetaRangeG41 = [1, 2, 4, 16] 
-    inversionG41 = [1.0]
-    
-    widthG42 = [0.0001, 0.001]      
-    cutoffG42 = [6.0]
-    thetaRangeG42 = [1, 2, 4, 16] 
-    inversionG42 = [-1.0]"""
-    
-    widthG2 = [0.001, 0.01, 0.1]
-    cutoffG2 = [4.0]
-    centerG2 = [0.0, 3.0]
-
-    widthG41 = [0.001, 0.01]      
-    cutoffG41 = [4.0]
-    thetaRangeG41 = [1.0, 2.0, 4.0] 
-    inversionG41 = [1.0]
-    
-    widthG42 = [0.001, 0.01]      
-    cutoffG42 = [4.0]
-    thetaRangeG42 = [1.0, 2.0, 4.0] 
-    inversionG42 = [-1.0]
-    
     # make nested list of all symetry function parameters
-    parameters = []
-    for width in widthG2:
-        for cutoff in cutoffG2:
-            for center in centerG2:           
-                parameters.append([width, cutoff, center])
-             
-    for width in widthG41:   
-        for cutoff in cutoffG41:
-            for zeta in thetaRangeG41:
-                for inversion in inversionG41:
-                    parameters.append([width, cutoff, zeta, inversion])
-                    
-    for width in widthG42:   
-        for cutoff in cutoffG42:
-            for zeta in thetaRangeG42:
-                for inversion in inversionG42:
-                    parameters.append([width, cutoff, zeta, inversion])
+    # parameters from Behler
+    parameters = []    
+    
+    # type1
+    center = 0.0
+    cutoff = 6.0
+    for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
+        parameters.append([eta, cutoff, center])
+    
+    # type2
+    zeta = 1.0
+    inversion = 1.0
+    eta = 0.01
+    for cutoff in [6.0, 5.5, 5.0, 4.5, 4.0, 3.5]:
+        parameters.append([eta, cutoff, zeta, inversion])
+        
+    # type 3
+    cutoff = 6.0
+    eta = 4.0
+    for center in [5.5, 5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0]:
+        parameters.append([eta, cutoff, center])
+        
+        
+    eta = 0.01
+    
+    # type 4
+    zeta = 1.0
+    inversion = -1.0    
+    for cutoff in [6.0, 5.5, 5.0, 4.5, 4.0, 3.5]:
+        parameters.append([eta, cutoff, zeta, inversion])
+        
+    # type 5 and 6
+    zeta = 2.0
+    for inversion in [1.0, -1.0]:
+        for cutoff in [6.0, 5.0, 4.0, 3.0]:
+            parameters.append([eta, cutoff, zeta, inversion])
+        
+    # type 7 and 8
+    zeta = 4.0
+    for inversion in [1.0, -1.0]:
+        for cutoff in [6.0, 5.0, 4.0, 3.0]:
+            parameters.append([eta, cutoff, zeta, inversion])
+    
+    # type 9 and 10
+    zeta = 16.0
+    for inversion in [1.0, -1.0]:
+        for cutoff in [6.0, 4.0]:
+            parameters.append([eta, cutoff, zeta, inversion])   
     
     # apply symmetry transformation to input data and generate output data
     inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, function=function)
