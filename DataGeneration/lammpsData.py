@@ -116,29 +116,55 @@ def SiTrainingData(filename, symmFuncType, function=None):
     x, y, z, r, E = readNeighbourData(filename)
     print "File is read..."
 
-    # parameters G2
-    widthG2 = [0.001, 0.01, 0.1, 1]
-    cutoffG2 = [4.0]
-    centerG2 = [0.0]
-
-    # parameters G4
-    widthG4 = [0.001, 0.01]      
-    cutoffG4 = [4.0]
-    thetaRangeG4 = [1, 2, 4] 
-    inversionG4 = [1.0, -1.0]
-    
     # make nested list of all symetry function parameters
-    parameters = []
-    for width in widthG2:
-        for cutoff in cutoffG2:
-            for center in centerG2:           
-                parameters.append([width, cutoff, center])
-             
-    for width in widthG4:   
-        for cutoff in cutoffG4:
-            for zeta in thetaRangeG4:
-                for inversion in inversionG4:
-                    parameters.append([width, cutoff, zeta, inversion])
+    # parameters from Behler
+    parameters = []    
+    
+    # type1
+    center = 0.0
+    cutoff = 6.0
+    for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
+        parameters.append([eta, cutoff, center])
+    
+    # type2
+    zeta = 1.0
+    inversion = 1.0
+    eta = 0.01
+    for cutoff in [6.0, 5.5, 5.0, 4.5, 4.0, 3.5]:
+        parameters.append([eta, cutoff, zeta, inversion])
+        
+    # type 3
+    cutoff = 6.0
+    eta = 4.0
+    for center in [5.5, 5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0]:
+        parameters.append([eta, cutoff, center])
+        
+        
+    eta = 0.01
+    
+    # type 4
+    zeta = 1.0
+    inversion = -1.0    
+    for cutoff in [6.0, 5.5, 5.0, 4.5, 4.0, 3.5]:
+        parameters.append([eta, cutoff, zeta, inversion])
+        
+    # type 5 and 6
+    zeta = 2.0
+    for inversion in [1.0, -1.0]:
+        for cutoff in [6.0, 5.0, 4.0, 3.0]:
+            parameters.append([eta, cutoff, zeta, inversion])
+        
+    # type 7 and 8
+    zeta = 4.0
+    for inversion in [1.0, -1.0]:
+        for cutoff in [6.0, 5.0, 4.0, 3.0]:
+            parameters.append([eta, cutoff, zeta, inversion])
+    
+    # type 9 and 10
+    zeta = 16.0
+    for inversion in [1.0, -1.0]:
+        for cutoff in [6.0, 4.0]:
+            parameters.append([eta, cutoff, zeta, inversion])   
                     
     numberOfSymmFunc = len(parameters)
     outputs = 1

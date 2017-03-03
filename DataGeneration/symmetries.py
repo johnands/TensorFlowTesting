@@ -195,17 +195,22 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
         sys.stdout.write("\r%2d %% complete" % ((float(i)/size)*100))
         sys.stdout.flush()
         
+        
     # test where my SW-potential is equivalent with lammps SW-potential
-    """print "Lammps:"
-    print E[:5][:]
+    """Etmp = np.array(E[:20][:])*2
+    outtmp = outputData[:20,:]
+    print "Lammps:"
+    print Etmp
     print 
     print "MySW:"
-    print outputData[:5,:]
+    print outtmp
+    print 
+    print outtmp - Etmp
+    print 
+    print outtmp/Etmp
     exit(1)"""
     
-        
-    
-    """fractionOfZeros = 1 - fractionOfNonZeros / float(size)
+    fractionOfZeros = 1 - fractionOfNonZeros / float(size)
     fractionOfInputVectorsOnlyZeros /= float(size)
     print "Fraction of zeros: ", fractionOfZeros
     print "Fraction of input vectors with only zeros: ", fractionOfInputVectorsOnlyZeros
@@ -263,7 +268,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
         print C
         print "Decorrelating input..."
           
-    print "New input data:"
+    """print "New input data:"
     maxInput = np.max(inputData)
     minInput = np.min(inputData)
     print "Max: ", maxInput
@@ -277,7 +282,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
     print "Max: ", maxOutput
     print "Min: ", minOutput
     print "Mean: ", np.mean(outputData)
-    print  """
+    print"""  
     
     return inputData, outputData
     

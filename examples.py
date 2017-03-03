@@ -200,16 +200,19 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     regress.train(nEpochs)
     
     
-def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1, activation=tf.nn.sigmoid):
+def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1, activation=tf.nn.sigmoid, 
+                     useFunction=True):
     """
     Use neighbour data and energies from lammps with sw-potential 
     as input and output training data respectively
     """
                
-    # get energies from sw lammps              
-    #function = None    
-    function, _, _ = getStillingerWeber()
-    
+    # get energies from sw lammps  
+    if useFunction: 
+        function, _, _ = getStillingerWeber()
+    else:
+        function = None    
+  
     # these are sampled from lammps
     trainSize = batchSize = testSize = inputs = low = high = 0
                        
@@ -245,14 +248,14 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
 #                              varyingNeigh=False)
 
 """Stillinger Weber med angular symmetrifunksjoner og lammpsffff-data"""
-StillingerWeberSymmetry(int(1e3), int(3e2), int(1e2), 2, 35, int(1e6), 15, 'G4', 'threeBodySymmetry', \
-                        varyingNeigh=False)#, \
+#StillingerWeberSymmetry(int(1e3), int(3e2), int(1e2), 2, 35, int(1e6), 15, 'G4', 'threeBodySymmetry', \
+#                        varyingNeigh=False)#, \
 #                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-#lammpsTrainingSi(2, 40, int(1e6), 'G4', \
-#                 "../LAMMPS_test/Silicon/Data/22.02-18.56.13/neighbours.txt", \
-#                 activation=tf.nn.tanh)
+lammpsTrainingSi(2, 35, int(1e6), 'G4', \
+                 "../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt", \
+                 activation=tf.nn.sigmoid, useFunction=False)
                         
                         
                         

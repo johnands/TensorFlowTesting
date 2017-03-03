@@ -304,10 +304,10 @@ class Regression:
             prediction = self.makeNetwork(x)
 
             with tf.name_scope('L2Norm'):
-                trainCost = tf.div( tf.nn.l2_loss( tf.subtract(prediction, y) ), batchSize, name='/trainCost')
-                testCost  = tf.div( tf.nn.l2_loss( tf.subtract(prediction, y) ), testSize, name='/testCost')
-                #trainCost = tf.nn.l2_loss( tf.subtract(prediction, y) )
-                #testCost = tf.nn.l2_loss( tf.subtract(prediction, y) )
+                #trainCost = tf.div( tf.nn.l2_loss( tf.subtract(prediction, y) ), batchSize, name='/trainCost')
+                #testCost  = tf.div( tf.nn.l2_loss( tf.subtract(prediction, y) ), testSize, name='/testCost')
+                trainCost = tf.nn.l2_loss( tf.subtract(prediction, y) )
+                testCost = tf.nn.l2_loss( tf.subtract(prediction, y) )
                 tf.summary.scalar('L2Norm', trainCost/batchSize)
                 
             with tf.name_scope('MAD'):
@@ -364,9 +364,9 @@ class Regression:
                     trainError, absErrorTrain = sess.run([trainCost, MAD], feed_dict={x: xBatch, y: yBatch})
                     testError, absErrorTest   = sess.run([testCost, MAD], feed_dict={x: xTest, y: yTest})
                     print 'Cost/N train test at epoch %4d: TF: %g %g, RMSE: %g %g, MAD: %g %g' % \
-                                                    ( epoch, trainError, testError, \
-                                                      np.sqrt(trainError*2), \
-                                                      np.sqrt(testError*2), \
+                                                    ( epoch, trainError/float(batchSize), testError/float(testSize), \
+                                                      np.sqrt(trainError*2/float(batchSize)), \
+                                                      np.sqrt(testError*2/float(testSize)), \
                                                       absErrorTrain/float(batchSize), \
                                                       absErrorTest/float(testSize) )
                     #sys.stdout.flush()
