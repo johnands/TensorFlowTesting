@@ -318,15 +318,30 @@ class Regression:
               
             with tf.name_scope('networkGradient'):
                 networkGradient = tf.gradients(self.neuralNetwork.allActivations[-1], x);
+                
+            #with tf.name_scope('CFDA'):
+            #    CFDA = tf.nn.l2_loss( tf.subtract(prediction, y)) + 
+            #           tf.nn.l2_loss( tf.subtract(analyticForces - Forces))
 
             # initialize variables or restore from file
-            #saver = tf.train.Saver(self.neuralNetwork.allWeights + self.neuralNetwork.allBiases,
-            #                       max_to_keep=None)
             saver = tf.train.Saver()
             sess.run(tf.global_variables_initializer())
             if loadFlag:
                 saver.restore(sess, loadFileName)
                 print 'Model restored'
+                
+            inputData = [];
+            with open('../LAMMPS_test/TestNN/Tests/TestEnergy/symmetrizedInput.txt', 'r') as infile:
+                for line in infile:
+                    words = line.split()
+                    tmp = []
+                    for word in words:
+                        tmp.append(float(word))
+                    inputData.append(tmp)
+            inputData = np.array(inputData)
+            print sess.run(prediction, feed_dict={x: inputData})
+            exit(1)
+                
             
             # Merge all the summaries and write them out to /tmp/mnist_logs (by default)
             if summaryFlag:

@@ -1,44 +1,48 @@
 import numpy as np
 import sys
 
-def cutoffFunction(rVector, cutoff, cut=False):   
+def cutoffFunction(rVector, Rc, cut=False):   
     
-    value = 0.5 * (np.cos(np.pi*rVector / cutoff) + 1)
+    value = 0.5 * (np.cos(np.pi*rVector / Rc) + 1)
 
     # set elements above cutoff to zero so they dont contribute to sum
     if cut:
-        value[np.where(rVector > cutoff)[0]] = 0
+        value[np.where(rVector > Rc)[0]] = 0
         
     return value
  
     
-def G1(Rij, cutoff):
+def G1(Rij, Rc):
     
-    return np.sum(cutoffFunction(Rij, cutoff))
-    
-    
-def G2(Rij, width, cutoff, center):
-    
-    return np.sum( np.exp(-width*(Rij - center)**2) * cutoffFunction(Rij, cutoff) )
+    return np.sum(cutoffFunction(Rij, Rc))
     
     
-def G3(Rij, cutoff, kappa):
+def G2(Rij, eta, Rc, Rs):
     
-    return np.sum( np.cos(kappa*Rij) * cutoffFunction(Rij, cutoff))
+    return np.sum( np.exp(-eta*(Rij - Rs)**2) * cutoffFunction(Rij, Rc) )
     
     
-def G4(Rij, Rik, Rjk, cosTheta, width, cutoff, thetaRange, inversion):
+def G3(Rij, Rc, kappa):
     
-    return 2**(1-thetaRange) * np.sum( (1 + inversion*cosTheta)**thetaRange * \
-           np.exp( -width*(Rij**2 + Rik**2 + Rjk**2) ) * \
-           cutoffFunction(Rij, cutoff) * cutoffFunction(Rik, cutoff) * cutoffFunction(Rjk, cutoff, cut=True) )
+    return np.sum( np.cos(kappa*Rij) * cutoffFunction(Rij, Rc))
+    
+    
+def G4(Rij, Rik, Rjk, cosTheta, eta, Rc, zeta, Lambda):
+    
+    return 2**(1-zeta) * np.sum( (1 + Lambda*cosTheta)**zeta * \
+           np.exp( -eta*(Rij**2 + Rik**2 + Rjk**2) ) * \
+           cutoffFunction(Rij, Rc) * cutoffFunction(Rik, Rc) * cutoffFunction(Rjk, Rc, cut=True) )
            
            
-def G5(Rij, Rik, cosTheta, width, cutoff, thetaRange, inversion):
+def G5(Rij, Rik, cosTheta, eta, Rc, zeta, Lambda):
     
-    return 2**(1-thetaRange) * np.sum( (1 + inversion*cosTheta)**thetaRange * \
-           np.exp( -width*(Rij**2 + Rik**2) ) * \
-           cutoffFunction(Rij, cutoff) * cutoffFunction(Rik, cutoff) )
+    return 2**(1-zeta) * np.sum( (1 + Lambda*cosTheta)**zeta* \
+           np.exp( -eta*(Rij**2 + Rik**2) ) * \
+           cutoffFunction(Rij, Rc) * cutoffFunction(Rik, Rc) )
+           
+def dG2dr(Rij, eta, Rc, Rs):
+    
+    return np.exp(-width*(Rij - center)**2) * (2*center*(center - Rij) + dfcdr(Rij, cutoff))
            
            
 def applyTwoBodySymmetry(inputTemp, parameters):
