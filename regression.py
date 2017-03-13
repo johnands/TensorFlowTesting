@@ -328,20 +328,7 @@ class Regression:
             sess.run(tf.global_variables_initializer())
             if loadFlag:
                 saver.restore(sess, loadFileName)
-                print 'Model restored'
-                
-            inputData = [];
-            with open('../LAMMPS_test/TestNN/Tests/TestEnergy/symmetrizedInput.txt', 'r') as infile:
-                for line in infile:
-                    words = line.split()
-                    tmp = []
-                    for word in words:
-                        tmp.append(float(word))
-                    inputData.append(tmp)
-            inputData = np.array(inputData)
-            print sess.run(prediction, feed_dict={x: inputData})
-            exit(1)
-                
+                print 'Model restored'              
             
             # Merge all the summaries and write them out to /tmp/mnist_logs (by default)
             if summaryFlag:

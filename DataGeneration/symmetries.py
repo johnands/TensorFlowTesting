@@ -40,9 +40,55 @@ def G5(Rij, Rik, cosTheta, eta, Rc, zeta, Lambda):
            np.exp( -eta*(Rij**2 + Rik**2) ) * \
            cutoffFunction(Rij, Rc) * cutoffFunction(Rik, Rc) )
            
+           
+           
+def dfcdr(rVector, Rc):
+    
+    return -0.5*(np.pi/Rc) * np.sin((np.pi*rVector) / Rc)
+           
+           
 def dG2dr(Rij, eta, Rc, Rs):
     
-    return np.exp(-width*(Rij - center)**2) * (2*center*(center - Rij) + dfcdr(Rij, cutoff))
+    return np.exp(-eta*(Rij - Rs)**2) * (2*eta*(Rs - Rij)*cutoffFunction(Rij, Rc) + dfcdr(Rij, Rc))
+    
+    
+def dG4dr(Rij, Rik, Rjk, cosTheta, xij, xik, yij, yik, zij, zik, eta, Rc, zeta, Lambda):
+    
+    F1 = 2**(1-zeta) * (1 + Lambda*cosTheta)**zeta
+    F2 = np.exp( -eta*(Rij**2 + Rik**2 + Rjk**2) )
+    
+    F3 = cutoffFunction(Rij, Rc) * cutoffFunction(Rik, Rc) * cutoffFunction(Rjk, Rc, cut=True)
+    
+    dF1dcosTheta = 2**(1-zeta) * Lambda*zeta*(1 + Lambda*cosTheta)**(zeta-1)
+    dF2dr = -2*eta*F2
+    dF3drij = dfcdr(Rij, Rc) * cutoffFunction(Rik, Rc) * cutoffFunction(Rjk, Rc, cut=True)
+    dF3drik = cutoffFunction(Rij, Rc) * dfcdr(Rik, Rc) * cutoffFunction(Rjk, Rc, cut=True)
+    
+    term1 = dF1dcosTheta * F2 * F3
+    term2 = F1 * dF2dr * F3
+    term3ij = F1 * F2 * dF3drij
+    term3ik = F1 * F2 * dF3drik
+    
+    Rijinv = 1.0 / Rij
+    Rikinv = 1.0 / Rik
+    cosRijinv2 = cosTheta*Rijinv*Rijinv
+    cosRikinv2 = cosTheta*Rikinv*Rikinv
+    RijRikinv = 1.0 / (Rij*Rik)
+    
+    dij = []
+    dik = []
+
+    dij.append( np.sum( xij*(cosRijinv2*term1 - term2 - Rijinv*term3ij) - xik*(RijRikinv*term1) ) ) 
+    dij.append( np.sum( yij*(cosRijinv2*term1 - term2 - Rijinv*term3ij) - yik*(RijRikinv*term1) ) )
+    dij.append( np.sum( zij*(cosRijinv2*term1 - term2 - Rijinv*term3ij) - zik*(RijRikinv*term1) ) )
+    
+    dik.append(xik*(cosRikinv2*term1 - term2 - Rikinv*term3ik) - xij*(RijRikinv*term1))
+    dik.append(yik*(cosRikinv2*term1 - term2 - Rikinv*term3ik) - yij*(RijRikinv*term1))
+    dik.append(zik*(cosRikinv2*term1 - term2 - Rikinv*term3ik) - zij*(RijRikinv*term1))
+    
+    return dij, dik 
+    
+    
            
            
 def applyTwoBodySymmetry(inputTemp, parameters):
@@ -296,7 +342,10 @@ normalizeFlag       = False
 shiftMeanFlag       = False
 scaleCovarianceFlag = False
 decorrelateFlag     = False
-    
+
+
+if __name__ == '__main__':
+    pass
     
     
     
