@@ -373,7 +373,7 @@ class Regression:
                                                       testRMSE, \
                                                       absErrorTrain/float(batchSize), \
                                                       absErrorTest/float(testSize) )
-                    #sys.stdout.flush()
+                    sys.stdout.flush()
 
                     if summaryFlag:
                         summary = sess.run(merged, feed_dict={x: xTest, y: yTest})
