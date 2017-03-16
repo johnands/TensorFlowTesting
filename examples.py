@@ -257,7 +257,7 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
 lammpsTrainingSi(2, 35, int(2e6), 'G4', \
                  "../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt", \
-                 activation=tf.nn.sigmoid, useFunction=False)
+                 activation=tf.nn.sigmoid, useFunction=True)
                         
                         
                         
