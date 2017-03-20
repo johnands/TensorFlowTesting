@@ -203,7 +203,7 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     
     
 def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1, activation=tf.nn.sigmoid, 
-                     useFunction=False):
+                     useFunction=False, forces=False):
     """
     Use neighbour data and energies from lammps with sw-potential 
     as input and output training data respectively
@@ -219,7 +219,7 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
     trainSize = batchSize = testSize = inputs = low = high = 0
                        
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
-    regress.generateData(low, high, 'lammps', symmFuncType='G4', filename=filename)
+    regress.generateData(low, high, 'lammps', symmFuncType='G4', filename=filename, forces=forces)
     regress.constructNetwork(nLayers, nNodes, activation=activation, \
                              wInit='xavier', bInit='zeros')
     regress.train(nEpochs)

@@ -160,7 +160,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
             print "Energy is supplied from lammps"
     else:
         outputData = np.zeros((size, 1))
-        #print "Energy is generated with user-supplied function"
+        print "Energy is generated with user-supplied function"
     
     # loop through each data vector, i.e. each atomic environment
     fractionOfNonZeros = 0.0

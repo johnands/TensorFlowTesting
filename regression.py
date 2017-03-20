@@ -158,10 +158,11 @@ class Regression:
 
 
     def generateData(self, a, b, method, numberOfSymmFunc=10, neighbours=80, \
-                     symmFuncType='G4', filename='', batch=0.5, varyingNeigh=True):
+                     symmFuncType='G4', filename='', batch=0.5, varyingNeigh=True, forces=False):
 
         self.a, self.b = a, b
         self.neighbours = neighbours
+        self.forces = forces
         global saveParametersFlag  
 
         if method == 'twoBody':
@@ -226,8 +227,9 @@ class Regression:
             else:
                 print "method=lammps: Reading data from lammps simulations, not including energies..."
                 
-            self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs, self.parameters = \
-                lammps.SiTrainingData(filename, symmFuncType, function=self.function)
+            self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs, self.parameters, \
+            self.Ftrain, self.Ftest = \
+                lammps.SiTrainingData(filename, symmFuncType, function=self.function, forces=forces)
             
             # set different sizes based on lammps data
             self.trainSize = self.xTrain.shape[0]
@@ -306,8 +308,6 @@ class Regression:
             with tf.name_scope('L2Norm'):
                 trainCost = tf.div( tf.nn.l2_loss( tf.subtract(prediction, y) ), batchSize, name='/trainCost')
                 testCost  = tf.div( tf.nn.l2_loss( tf.subtract(prediction, y) ), testSize, name='/testCost')
-                #trainCost = tf.nn.l2_loss( tf.subtract(prediction, y) )
-                #testCost = tf.nn.l2_loss( tf.subtract(prediction, y) )
                 tf.summary.scalar('L2Norm', trainCost/batchSize)
                 
             with tf.name_scope('MAD'):
@@ -317,11 +317,10 @@ class Regression:
                 trainStep = tf.train.AdamOptimizer(learning_rate=0.001).minimize(trainCost)
               
             with tf.name_scope('networkGradient'):
-                networkGradient = tf.gradients(self.neuralNetwork.allActivations[-1], x);
+                networkGradient = tf.gradients(self.neuralNetwork.allActivations[-1], x)
                 
-            #with tf.name_scope('CFDA'):
-            #    CFDA = tf.nn.l2_loss( tf.subtract(prediction, y)) + 
-            #           tf.nn.l2_loss( tf.subtract(analyticForces - Forces))
+            with tf.name_scope('L2Force'):
+                CFDATrain = tf.nn.l2_loss( tf.subtract(networkGradient, xTrain) )
 
             # initialize variables or restore from file
             saver = tf.train.Saver()
@@ -408,6 +407,13 @@ class Regression:
                         saver.save(sess, saveFileName, global_step=saveEpochNumber,
                                    latest_filename="checkpoint_state")
                         saveEpochNumber += 1
+                        
+                grad = sess.run(networkGradient, feed_dict={x: xBatch, y: yBatch})
+                print grad
+                grad = np.array(grad)
+                grad = grad.reshape([batchSize, 48])
+                print grad.shape
+                exit(1)
                         
                         
             # elapsed time

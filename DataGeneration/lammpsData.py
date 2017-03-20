@@ -104,9 +104,143 @@ def readNeighbourData(filename):
             E.append([float(words[-1])])  
                       
     return x, y, z, r, E
+    
+
+def readNeighbourDataForce(filename):
+    
+    with open(filename, 'r') as inFile:
+        
+        x = []; y = []; z = []
+        r = [];
+        E = []; Fx = []; Fy = []; Fz = []
+        for line in inFile:
+            words = line.split()
+            N = (len(words) - 4) / 4
+            xi = []; yi = []; zi = [];
+            ri = [];
+            for i in xrange(N):
+                xi.append(float(words[4*i]))
+                yi.append(float(words[4*i+1]))
+                zi.append(float(words[4*i+2]))
+                ri.append(float(words[4*i+3]))
+                
+            x.append(xi)
+            y.append(yi)
+            z.append(zi)
+            r.append(ri)
+            E.append([float(words[-4])])  
+            Fx.append([float(words[-3])])
+            Fy.append([float(words[-2])])
+            Fz.append([float(words[-1])])            
+            
+    return x, y, z, r, E, Fx, Fy, Fz
 
 
-def SiTrainingData(filename, symmFuncType, function=None):
+def SiTrainingData(filename, symmFuncType, function=None, forces=False):
+    """ 
+    Coordinates and energies of neighbours is sampled from lammps
+    Angular symmtry funcitons are used to transform input data  
+    """
+    
+    # read file
+    if forces:
+        x, y, z, r, E, Fx, Fy, Fz = readNeighbourDataForce(filename)
+        Fx = np.array(Fx)
+        Fy = np.array(Fy)
+        Fz = np.array(Fz)
+        print "Forces is applied"
+    else:
+        x, y, z, r, E = readNeighbourData(filename)
+    print "File is read..."
+
+    # make nested list of all symmetry function parameters
+    # parameters from Behler
+    parameters = []    
+    
+    # type1
+    center = 0.0
+    cutoff = 6.0
+    for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
+        parameters.append([eta, cutoff, center])
+    
+    # type2
+    zeta = 1.0
+    inversion = 1.0
+    eta = 0.01
+    for cutoff in [6.0, 5.5, 5.0, 4.5, 4.0, 3.5]:
+        parameters.append([eta, cutoff, zeta, inversion])
+        
+    # type 3
+    cutoff = 6.0
+    eta = 4.0
+    for center in [5.5, 5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0]:
+        parameters.append([eta, cutoff, center])
+        
+        
+    eta = 0.01
+    
+    # type 4
+    zeta = 1.0
+    inversion = -1.0    
+    for cutoff in [6.0, 5.5, 5.0, 4.5, 4.0, 3.5]:
+        parameters.append([eta, cutoff, zeta, inversion])
+        
+    # type 5 and 6
+    zeta = 2.0
+    for inversion in [1.0, -1.0]:
+        for cutoff in [6.0, 5.0, 4.0, 3.0]:
+            parameters.append([eta, cutoff, zeta, inversion])
+        
+    # type 7 and 8
+    zeta = 4.0
+    for inversion in [1.0, -1.0]:
+        for cutoff in [6.0, 5.0, 4.0, 3.0]:
+            parameters.append([eta, cutoff, zeta, inversion])
+    
+    # type 9 and 10
+    zeta = 16.0
+    for inversion in [1.0, -1.0]:
+        for cutoff in [6.0, 4.0]:
+            parameters.append([eta, cutoff, zeta, inversion])   
+                    
+    numberOfSymmFunc = len(parameters)
+    outputs = 1
+                   
+    # apply symmetry transformastion
+    inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, function=function, E=E)
+    
+    # split in training set and test set randomly
+    totalSize       = len(inputData)
+    testSize        = int(0.1*totalSize) 
+    indicies        = np.random.choice(totalSize, testSize, replace=False)
+    inputTest       = inputData[indicies]         
+    outputTest      = outputData[indicies]
+    inputTraining   = np.delete(inputData, indicies, axis=0)
+    outputTraining  = np.delete(outputData, indicies, axis=0)
+    
+    if forces:
+        FxTest = Fx[indicies]
+        FyTest = Fy[indicies]
+        FzTest = Fz[indicies]
+        FxTrain = np.delete(Fx, indicies, axis=0)
+        FyTrain = np.delete(Fy, indicies, axis=0)
+        FzTrain = np.delete(Fz, indicies, axis=0)
+        
+        Ftest = []; Ftrain = []
+        Ftest.append(FxTest)
+        Ftest.append(FyTest)
+        Ftest.append(FzTest)
+        Ftrain.append(FxTrain)
+        Ftrain.append(FyTrain)
+        Ftrain.append(FzTrain) 
+    else:
+        Ftest = None
+        Ftrain = None
+   
+    return inputTraining, outputTraining, inputTest, outputTest, numberOfSymmFunc, outputs, parameters, Ftrain, Ftest 
+    
+
+def SiO2TrainingData(filename, symmFuncType, function=None):
     """ 
     Coordinates and energies of neighbours is sampled from lammps
     Angular symmtry funcitons are used to transform input data  
