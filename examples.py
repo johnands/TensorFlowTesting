@@ -224,6 +224,29 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
                              wInit='xavier', bInit='zeros')
     regress.train(nEpochs)
     
+    
+def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, filename, outputs=1, activation=tf.nn.sigmoid, \
+                     useFunction=False):
+    """
+    Use neighbour data and energies from lammps with vashista?-potential
+    as input and output training data respectively
+    """
+    
+    # these are sampled from lammps
+    function = None
+    trainSize = batchSize = testSize = inputs = low = high = 0  
+    
+    regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
+    regress.generateData(low, high, 'lammps', filename=filename)
+    regress.constructNetwork(nLayers, nNodes, activation=activation, \
+                             wInit='xavier', bInit='zeros')
+    regress.train(nEpochs)
+    
+    
+    
+    
+    
+    
                
     
 #testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
