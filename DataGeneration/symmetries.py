@@ -1,15 +1,20 @@
 import numpy as np
 import sys
 
-def cutoffFunction(rVector, Rc, cut=False):   
+def cutoffFunction(R, Rc, cut=True):   
     
-    value = 0.5 * (np.cos(np.pi*rVector / Rc) + 1)
+    value = 0.5 * (np.cos(np.pi*R / Rc) + 1)
 
     # set elements above cutoff to zero so they dont contribute to sum
     if cut:
-        value[np.where(rVector > Rc)[0]] = 0
+        if isinstance(R, np.ndarray):
+            value[np.where(R > Rc)[0]] = 0
+        else:
+            if R > Rc:
+                value = 0
         
     return value
+    
  
     
 def G1(Rij, Rc):
