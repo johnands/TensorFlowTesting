@@ -278,9 +278,9 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, filename, outputs=1, activation=t
 #                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-lammpsTrainingSi(2, 35, int(2e6), 'G4', \
-                 "../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt", \
-                 activation=tf.nn.sigmoid, useFunction=True)
+lammpsTrainingSi(2, 35, int(1e6), 'G4', \
+                 "../LAMMPS_test/Silicon/Data/21.03-11.56.37/neighbours.txt", \
+                 activation=tf.nn.sigmoid, useFunction=False)
                         
                         
                         
