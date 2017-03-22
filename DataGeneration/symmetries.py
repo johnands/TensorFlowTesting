@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 
-def cutoffFunction(R, Rc, cut=True):   
+def cutoffFunction(R, Rc, cut=False):   
     
     value = 0.5 * (np.cos(np.pi*R / Rc) + 1)
 
@@ -194,13 +194,20 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
             rij = ri[j]
             xij = xi[j]; yij = yi[j]; zij = zi[j]
             
+            print "rij: ", rij
+            
             # all k != i,j OR I > J ???
             k = np.arange(len(ri[:])) > j  
             rik = ri[k] 
             xik = xi[k]; yik = yi[k]; zik = zi[k]
+            print "rik: ", rik
+            print "xik: ", xik
+            print "yik: ", yik
+            print "zik: ", zik
 
             # compute cos(theta_ijk) and rjk
             cosTheta = (xij*xik + yij*yik + zij*zik) / (rij*rik) 
+            print "cosTheta: ", cosTheta
             
             # floating-point error can yield an argument outside of arccos range
             if not (np.abs(cosTheta) <= 1).all():
@@ -213,6 +220,13 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
                         print "Warning: %.14f has been replaced by %d" % (arg, cosTheta[l])
             
             rjk = np.sqrt( rij**2 + rik**2 - 2*rij*rik*cosTheta )
+            xjk = xij - xik
+            yjk = yij - yik
+            zjk = zij - zik
+            print "rjk: ", rjk
+            print "xjk: ", xjk
+            print "yjk: ", yjk
+            print "zjk: ", zjk
             
             if rjk.size > 0:            
                 minR = np.min(rjk)
@@ -235,10 +249,6 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
             # calculate energy with supplied 3-body function or with
             if function != None:
                 outputData[i,0] += function(rij, rik, cosTheta)                   
-            
-        # shuffle input vector
-        #np.random.shuffle(inputData[i,:])
-        #print outputData[i,0]
         
         # count zeros
         fractionOfNonZeros += np.count_nonzero(inputData[i,:]) / float(numberOfSymmFunc)
@@ -252,7 +262,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
         
         
     # test where my SW-potential is equivalent with lammps SW-potential
-    """Etmp = np.array(E[:20][:])*2
+    """Etmp = np.array(E[:20][:])
     outtmp = outputData[:20,:]
     print "Lammps:"
     print Etmp
@@ -262,8 +272,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
     print 
     print outtmp - Etmp
     print 
-    print outtmp/Etmp
-    exit(1)"""
+    print outtmp/Etmp"""
     
     fractionOfZeros = 1 - fractionOfNonZeros / float(size)
     fractionOfInputVectorsOnlyZeros /= float(size)

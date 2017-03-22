@@ -217,6 +217,9 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False):
     outputTest      = outputData[indicies]
     inputTraining   = np.delete(inputData, indicies, axis=0)
     outputTraining  = np.delete(outputData, indicies, axis=0)
+
+    inputTest = inputTraining
+    outputTest = outputTraining
     
     if forces:
         FxTest = Fx[indicies]

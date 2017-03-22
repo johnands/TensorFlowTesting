@@ -234,7 +234,7 @@ class Regression:
             # set different sizes based on lammps data
             self.trainSize = self.xTrain.shape[0]
             self.testSize  = self.xTest.shape[0]
-            self.batchSize = int(batch*self.trainSize)
+            self.batchSize = 1#self.batchSize = int(batch*self.trainSize)
             
             if saveMetaFlag:
                 saveParametersFlag = True
@@ -343,8 +343,10 @@ class Regression:
 
                 # pick unique random batch
                 indicies = np.random.choice(trainSize, batchSize, replace=False)
-                xBatch = xTrain[indicies]
-                yBatch = yTrain[indicies]
+                #xBatch = xTrain[indicies]
+                #yBatch = yTrain[indicies]
+                xBatch = xTrain
+                yBatch = yTrain
 
                 """with open('tmp/testBatch.txt', 'w') as outfile:
                     outfile.write(' \n')
@@ -408,12 +410,13 @@ class Regression:
                                    latest_filename="checkpoint_state")
                         saveEpochNumber += 1
                         
-                """grad = sess.run(networkGradient, feed_dict={x: xBatch, y: yBatch})
+                print xBatch
+                print yBatch
+                grad = sess.run(networkGradient, feed_dict={x: xBatch, y: yBatch})
                 print grad
                 grad = np.array(grad)
                 grad = grad.reshape([batchSize, 48])
                 print grad.shape
-                exit(1)"""
                         
                         
             # elapsed time
