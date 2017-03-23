@@ -169,7 +169,7 @@ def getStillingerWeber():
     
 def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
                             neighbours, symmFunctype, method, 
-                            outputs=1, varyingNeigh=True, filename=''):
+                            outputs=1, varyingNeigh=True, dataFolder=''):
     """
     Train neural network to simulate tetrahedral Si atoms
     methodGenerate random input training data or use xyz-data from lammps
@@ -196,13 +196,13 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     # train                           
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
     regress.generateData(low, high, method, neighbours=neighbours, 
-                         symmFuncType='G4', filename=filename, varyingNeigh=varyingNeigh)
+                         symmFuncType='G4', dataFolder=dataFolder, varyingNeigh=varyingNeigh)
     regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
                              wInit='normal', bInit='normal')
     regress.train(nEpochs)
     
     
-def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1, activation=tf.nn.sigmoid, 
+def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, dataFolder, outputs=1, activation=tf.nn.sigmoid, 
                      useFunction=False, forces=False):
     """
     Use neighbour data and energies from lammps with sw-potential 
@@ -219,13 +219,13 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, filename, outputs=1
     trainSize = batchSize = testSize = inputs = low = high = 0
                        
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
-    regress.generateData(low, high, 'lammps', symmFuncType='G4', filename=filename, forces=forces)
+    regress.generateData(low, high, 'lammps', symmFuncType='G4', dataFolder=dataFolder, forces=forces)
     regress.constructNetwork(nLayers, nNodes, activation=activation, \
                              wInit='xavier', bInit='zeros')
     regress.train(nEpochs)
     
     
-def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, filename, outputs=1, activation=tf.nn.sigmoid, \
+def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, dataFolder, outputs=1, activation=tf.nn.sigmoid, \
                      useFunction=False):
     """
     Use neighbour data and energies from lammps with vashista?-potential
@@ -237,7 +237,7 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, filename, outputs=1, activation=t
     trainSize = batchSize = testSize = inputs = low = high = 0  
     
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
-    regress.generateData(low, high, 'lammps', filename=filename)
+    regress.generateData(low, high, 'lammps', dataFolder=dataFolder)
     regress.constructNetwork(nLayers, nNodes, activation=activation, \
                              wInit='xavier', bInit='zeros')
     regress.train(nEpochs)
@@ -278,9 +278,9 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, filename, outputs=1, activation=t
 #                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-lammpsTrainingSi(2, 35, int(1), 'G4', \
-                 "../LAMMPS_test/Silicon/Data/22.03-14.54.41/neighbours.txt", \
-                 activation=tf.nn.sigmoid, useFunction=True, forces=True)
+lammpsTrainingSi(2, 35, int(3e5), 'G4', \
+                 "../LAMMPS_test/Silicon/Data/22.03-14.35.05/", \
+                 activation=tf.nn.sigmoid, useFunction=False, forces=False)
                         
                         
                         

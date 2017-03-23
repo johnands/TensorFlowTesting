@@ -158,7 +158,8 @@ class Regression:
 
 
     def generateData(self, a, b, method, numberOfSymmFunc=10, neighbours=80, \
-                     symmFuncType='G4', filename='', batch=0.5, varyingNeigh=True, forces=False):
+                     symmFuncType='G4', dataFolder='', batch=0.5, 
+                     varyingNeigh=True, forces=False):
 
         self.a, self.b = a, b
         self.neighbours = neighbours
@@ -226,6 +227,18 @@ class Regression:
                 print "method=lammps: Reading data from lammps simulations, including energies..."
             else:
                 print "method=lammps: Reading data from lammps simulations, not including energies..."
+            
+            if not dataFolder:
+                print "Path to folder where data is stored must be supplied"
+                
+            filename = dataFolder + "neighbours.txt"
+            
+            # write content of README file to terminal
+            print
+            print "Content of lammps data file: "
+            command = "cat " + dataFolder + "README.txt"
+            os.system(command)
+            print 
                 
             self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs, self.parameters, \
             self.Ftrain, self.Ftest = \
@@ -234,7 +247,7 @@ class Regression:
             # set different sizes based on lammps data
             self.trainSize = self.xTrain.shape[0]
             self.testSize  = self.xTest.shape[0]
-            self.batchSize = 1#self.batchSize = int(batch*self.trainSize)
+            self.batchSize = int(batch*self.trainSize)
             
             if saveMetaFlag:
                 saveParametersFlag = True
@@ -343,10 +356,8 @@ class Regression:
 
                 # pick unique random batch
                 indicies = np.random.choice(trainSize, batchSize, replace=False)
-                #xBatch = xTrain[indicies]
-                #yBatch = yTrain[indicies]
-                xBatch = xTrain
-                yBatch = yTrain
+                xBatch = xTrain[indicies]
+                yBatch = yTrain[indicies]
 
                 """with open('tmp/testBatch.txt', 'w') as outfile:
                     outfile.write(' \n')
@@ -410,13 +421,14 @@ class Regression:
                                    latest_filename="checkpoint_state")
                         saveEpochNumber += 1
                         
-                print xBatch
+                """print xBatch
                 print yBatch
                 grad = sess.run(networkGradient, feed_dict={x: xBatch, y: yBatch})
                 print grad
                 grad = np.array(grad)
                 grad = grad.reshape([batchSize, 48])
                 print grad.shape
+                exit(1)"""
                         
                         
             # elapsed time

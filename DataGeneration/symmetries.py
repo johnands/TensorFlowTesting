@@ -47,17 +47,23 @@ def G5(Rij, Rik, cosTheta, eta, Rc, zeta, Lambda):
            
            
            
-def dfcdr(rVector, Rc):
+def dfcdr(R, Rc):
     
-    return -0.5*(np.pi/Rc) * np.sin((np.pi*rVector) / Rc)
+    return -0.5*(np.pi/Rc) * np.sin((np.pi*R) / Rc)
            
            
-def dG2dr(Rij, eta, Rc, Rs):
+def dG2dr(Rij, drij, eta, Rc, Rs):
     
-    return np.exp(-eta*(Rij - Rs)**2) * (2*eta*(Rs - Rij)*cutoffFunction(Rij, Rc) + dfcdr(Rij, Rc))
+    dr = np.exp(-eta*(Rij - Rs)**2) * (2*eta*(Rs - Rij)*cutoffFunction(Rij, Rc) + dfcdr(Rij, Rc))
+    fpair = -dr/Rij
+    
+    dij = []
+    dij.append(fpair*drij[0])
+    dij.append(fpair*drij[1])
+    dij.append(fpair*drij[2])
     
     
-def dG4dr(Rij, Rik, Rjk, cosTheta, xij, xik, yij, yik, zij, zik, eta, Rc, zeta, Lambda):
+def dG4dr(Rij, Rik, Rjk, cosTheta, drij, drik, drjk, eta, Rc, zeta, Lambda):
     
     F1 = 2**(1-zeta) * (1 + Lambda*cosTheta)**zeta
     F2 = np.exp( -eta*(Rij**2 + Rik**2 + Rjk**2) )
@@ -83,16 +89,70 @@ def dG4dr(Rij, Rik, Rjk, cosTheta, xij, xik, yij, yik, zij, zik, eta, Rc, zeta, 
     dij = []
     dik = []
 
-    dij.append( np.sum( xij*(cosRijinv2*term1 - term2 - Rijinv*term3ij) - xik*(RijRikinv*term1) ) ) 
-    dij.append( np.sum( yij*(cosRijinv2*term1 - term2 - Rijinv*term3ij) - yik*(RijRikinv*term1) ) )
-    dij.append( np.sum( zij*(cosRijinv2*term1 - term2 - Rijinv*term3ij) - zik*(RijRikinv*term1) ) )
+    dij.append( np.sum( drij[0]*(cosRijinv2*term1 - term2 - Rijinv*term3ij) - drik[0]*(RijRikinv*term1) ) ) 
+    dij.append( np.sum( drij[1]*(cosRijinv2*term1 - term2 - Rijinv*term3ij) - drik[1]*(RijRikinv*term1) ) )
+    dij.append( np.sum( drij[2]*(cosRijinv2*term1 - term2 - Rijinv*term3ij) - drik[2]*(RijRikinv*term1) ) )
     
-    dik.append(xik*(cosRikinv2*term1 - term2 - Rikinv*term3ik) - xij*(RijRikinv*term1))
-    dik.append(yik*(cosRikinv2*term1 - term2 - Rikinv*term3ik) - yij*(RijRikinv*term1))
-    dik.append(zik*(cosRikinv2*term1 - term2 - Rikinv*term3ik) - zij*(RijRikinv*term1))
+    dik.append(drik[0]*(cosRikinv2*term1 - term2 - Rikinv*term3ik) - drij[0]*(RijRikinv*term1))
+    dik.append(drik[1]*(cosRikinv2*term1 - term2 - Rikinv*term3ik) - drij[1]*(RijRikinv*term1))
+    dik.append(drik[2]*(cosRikinv2*term1 - term2 - Rikinv*term3ik) - drij[2]*(RijRikinv*term1))
     
     return dij, dik 
     
+
+def calculateForces(Rijs, drijs, Riks, driks, cosThetas, Rjks, drjks, parameters):
+    """
+    Calculate the derivative of all symmetry functions w.r.t. 
+    all the coordinates in the data set. Since the data nor the
+    symmetry functions change during training, this only needs to 
+    be done once. 
+    I need the derivatives of G2 w.r.t. all js and the derivatives of
+    G4 w.r.t. all js and ks
+    Actually, I can just as well sum up the derivatives of all the input vectors
+    right away, I will only use the sums anyway
+    """
+    
+    size = len(Rijs)        # number of data vectors
+    
+    diffj2x = np.zeros(size); diffj2y = np.zeros(size); diffj2z = np.zeros(size)
+    diffj3 = np.zeros(size)
+    diffk3 = np.zeros(size)
+
+    # differentiate all symmetry functions w.r.t. all coordinates in current batch  
+    for s in parameters:
+        
+        # G2
+        if len(s) == 3:           
+            # differentiate G2 w.r.t. all coordinates
+            # need dG2/dxij for all j
+            # must loop because Rijs is a list of arrays with different lengths
+            for i in xrange(size):
+                # Rijs[i]: 1d array: [rij1, rij2, ...]
+                # drijs[i]: [[xij1, xij2, ... ], [yij1, yij2, ... ], [zij1, zij2, ... ]]
+                diffj2[i] = np.sum( dG2dr(Rijs[i], drijs[i], s[0], s[1], s[2]) )  
+        
+        # G4
+        else:
+            # differentiate G4 w.r.t. all coordinates
+            # need dG4/dxij and dG4/dxik for all j and k
+            for i in xrange(size):
+                numberOfNeighbours = len(Rijs[i])
+                sumj = 0
+                sumk = 0
+                for j in xrange(numberOfNeighbours):
+                    # Rijs[i][j]: a number
+                    # drijs[i][j]: 1d array [xij, yij, zij]
+                    # Riks[i][j], Rjks[i][j], cosThetas[i][j]: 1d arrays
+                    # driks[i][j], drjks[i][j] (if numberOfNeighbours = 4):
+                    # list of 1d arrays[[xik2, xik3, xik4], [yik2, yik3, yik4], [zik2, zik3, zik4]]
+                    dij, dik = dG4dr(Rijs[i][j], Riks[i][j], Rjks[i][j], cosThetas[i][j], \
+                                     drijs[i][j], driks[i][j], drjks[i][j], \
+                                     s[0], s[1], s[2], s[3])
+                    sumj += np.sum(dij)
+                    sumk += np.sum(dik)
+                
+                diffj3[i] = sumj
+                diffk3[i] = sumk
     
            
            
@@ -166,6 +226,17 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
     else:
         outputData = np.zeros((size, 1))
         print "Energy is generated with user-supplied function"
+        
+    # store 
+    Rijs = []
+    drijs = []
+    Riks = []
+    driks = []
+    cosThetas = []
+    Rjks = []
+    drjks = []
+    
+    
     
     # loop through each data vector, i.e. each atomic environment
     fractionOfNonZeros = 0.0
@@ -173,7 +244,15 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
     meanNeighbours = 0.0
     rjkMin = 100.0
     rjkMax = 0.0
-    for i in xrange(size):      
+    for i in xrange(size):  
+        
+        # nested lists
+        drijs.append([])
+        Riks.append([])
+        driks.append([])
+        cosThetas.append([])
+        Rjks.append([])
+        drjks.append([])
     
         # neighbour coordinates for atom i
         xi = np.array(x[i][:])
@@ -183,31 +262,34 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
         ri = np.sqrt(ri)
         numberOfNeighbours = len(xi)
         
+        # store
+        Rijs.append(ri)     # list of arrays
+        drijs[i].append(xi) # list of list of arrays
+        drijs[i].append(yi)
+        drijs[i].append(zi)
+        
         # count mean number of neighbours
         meanNeighbours += numberOfNeighbours
         
         # sum over all neighbours k for each neighbour j
         # this loop takes care of both 2-body and 3-body configs   
         for j in xrange(numberOfNeighbours):
+            
+            # 3d lists
+            driks[i].append([]);
+            drjks[i].append([]);
                       
             # atom j
             rij = ri[j]
             xij = xi[j]; yij = yi[j]; zij = zi[j]
             
-            print "rij: ", rij
-            
             # all k != i,j OR I > J ???
-            k = np.arange(len(ri[:])) > j  
+            k = np.arange(len(ri[:])) != j  
             rik = ri[k] 
             xik = xi[k]; yik = yi[k]; zik = zi[k]
-            print "rik: ", rik
-            print "xik: ", xik
-            print "yik: ", yik
-            print "zik: ", zik
-
+            
             # compute cos(theta_ijk) and rjk
             cosTheta = (xij*xik + yij*yik + zij*zik) / (rij*rik) 
-            print "cosTheta: ", cosTheta
             
             # floating-point error can yield an argument outside of arccos range
             if not (np.abs(cosTheta) <= 1).all():
@@ -219,15 +301,22 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
                         cosTheta[l] = 1
                         print "Warning: %.14f has been replaced by %d" % (arg, cosTheta[l])
             
-            rjk = np.sqrt( rij**2 + rik**2 - 2*rij*rik*cosTheta )
             xjk = xij - xik
             yjk = yij - yik
             zjk = zij - zik
-            print "rjk: ", rjk
-            print "xjk: ", xjk
-            print "yjk: ", yjk
-            print "zjk: ", zjk
+            rjk = np.sqrt(xjk*xjk + yjk*yjk + zjk*zjk)
             
+            # store
+            Riks[i].append(rik)             # list of list of arrays
+            driks[i][j].append(xik)         # list of list of list of arrays
+            driks[i][j].append(yik)
+            driks[i][j].append(zik)
+            cosThetas[i].append(cosTheta)
+            Rjks[i].append(rjk)
+            drjks[i][j].append(xjk)
+            drjks[i][j].append(yjk)
+            drjks[i][j].append(zjk)
+                      
             if rjk.size > 0:            
                 minR = np.min(rjk)
                 maxR = np.max(rjk)

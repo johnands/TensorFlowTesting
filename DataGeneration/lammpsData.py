@@ -110,8 +110,7 @@ def readNeighbourDataForce(filename):
     
     with open(filename, 'r') as inFile:
         
-        x = []; y = []; z = []
-        r = [];
+        x = []; y = []; z = []; r = [];
         E = []; Fx = []; Fy = []; Fz = []
         for line in inFile:
             words = line.split()
@@ -134,6 +133,7 @@ def readNeighbourDataForce(filename):
             Fz.append([float(words[-1])])            
             
     return x, y, z, r, E, Fx, Fy, Fz
+    
 
 
 def SiTrainingData(filename, symmFuncType, function=None, forces=False):
