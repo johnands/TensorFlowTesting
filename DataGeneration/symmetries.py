@@ -115,8 +115,8 @@ def calculateForces(Rijs, drijs, Riks, driks, cosThetas, Rjks, drjks, parameters
     size = len(Rijs)        # number of data vectors
     
     diffj2x = np.zeros(size); diffj2y = np.zeros(size); diffj2z = np.zeros(size)
-    diffj3 = np.zeros(size)
-    diffk3 = np.zeros(size)
+    diffj3x = np.zeros(size); diffj3y = np.zeros(size); diffj3z = np.zeros(size)
+    diffk3x = np.zeros(size); diffk3y = np.zeros(size); diffk3z = np.zeros(size)
 
     # differentiate all symmetry functions w.r.t. all coordinates in current batch  
     for s in parameters:
@@ -129,7 +129,10 @@ def calculateForces(Rijs, drijs, Riks, driks, cosThetas, Rjks, drjks, parameters
             for i in xrange(size):
                 # Rijs[i]: 1d array: [rij1, rij2, ...]
                 # drijs[i]: [[xij1, xij2, ... ], [yij1, yij2, ... ], [zij1, zij2, ... ]]
-                diffj2[i] = np.sum( dG2dr(Rijs[i], drijs[i], s[0], s[1], s[2]) )  
+                dij = np.sum( dG2dr(Rijs[i], drijs[i], s[0], s[1], s[2]) )  
+                diffj2x[i] = np.sum(dij[0])
+                diffj2y[i] = np.sum(dij[1])
+                diffj2z[i] = np.sum(dij[2])
         
         # G4
         else:
@@ -137,8 +140,8 @@ def calculateForces(Rijs, drijs, Riks, driks, cosThetas, Rjks, drjks, parameters
             # need dG4/dxij and dG4/dxik for all j and k
             for i in xrange(size):
                 numberOfNeighbours = len(Rijs[i])
-                sumj = 0
-                sumk = 0
+                sumjx = 0; sumjy = 0; sumjz = 0;
+                sumkx = 0; sumky = 0; sumkz = 0;
                 for j in xrange(numberOfNeighbours):
                     # Rijs[i][j]: a number
                     # drijs[i][j]: 1d array [xij, yij, zij]
@@ -148,11 +151,19 @@ def calculateForces(Rijs, drijs, Riks, driks, cosThetas, Rjks, drjks, parameters
                     dij, dik = dG4dr(Rijs[i][j], Riks[i][j], Rjks[i][j], cosThetas[i][j], \
                                      drijs[i][j], driks[i][j], drjks[i][j], \
                                      s[0], s[1], s[2], s[3])
-                    sumj += np.sum(dij)
-                    sumk += np.sum(dik)
+                    sumjx += np.sum(dij[0])
+                    sumjy += np.sum(dij[1])
+                    sumjz += np.sum(dij[2])
+                    sumkx += np.sum(dik[0])
+                    sumky += np.sum(dik[1])
+                    sumkz += np.sum(dik[2])
                 
-                diffj3[i] = sumj
-                diffk3[i] = sumk
+                diffj3x[i] = sumjx
+                diffj3y[i] = sumjy
+                diffj3z[i] = sumjz
+                diffk3x[i] = sumkx
+                diffk3y[i] = sumky
+                diffk3z[i] = sumkz
     
            
            
@@ -203,7 +214,7 @@ def applyTwoBodySymmetry(inputTemp, parameters):
       
       
            
-def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
+def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None, forces=False):
     """
     Transform input coordinates with 2- and 3-body symmetry functions
     Input coordinates can be random or sampled from lammps
@@ -349,6 +360,10 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None):
         sys.stdout.write("\r%2d %% complete" % ((float(i)/size)*100))
         sys.stdout.flush()
         
+    
+    # differentiate the symmetry functions
+    if forces:
+        calculateForces(Rijs, drijs, Riks, driks, cosThetas, Rjks, drjks, parameters)
         
     # test where my SW-potential is equivalent with lammps SW-potential
     """Etmp = np.array(E[:20][:])

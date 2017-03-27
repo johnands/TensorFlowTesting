@@ -272,14 +272,14 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, dataFolder, outputs=1, activation
 #LennardJonesSymmetryFunctions(int(5e3), int(1e3), int(5e2), 2, 70, int(1e6), 70, 70, 'G2', 
 #                              varyingNeigh=False)
 
-"""Stillinger Weber med angular symmetrifunksjoner og lammpsffff-data"""
+"""Stillinger Weber med angular symmetrifunksjoner og lammps-data"""
 #StillingerWeberSymmetry(int(1e3), int(3e2), int(1e2), 2, 35, int(1e6), 15, 'G4', 'threeBodySymmetry', \
 #                        varyingNeigh=False)#, \
 #                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-lammpsTrainingSi(2, 35, int(3e5), 'G4', \
-                 "../LAMMPS_test/Silicon/Data/22.03-14.35.05/", \
+lammpsTrainingSi(2, 35, int(1e5), 'G4', \
+                 "../LAMMPS_test/Silicon/Data/27.03-19.45.57/", \
                  activation=tf.nn.sigmoid, useFunction=False, forces=False)
                         
                         
