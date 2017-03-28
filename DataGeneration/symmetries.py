@@ -295,7 +295,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None, forces
             xij = xi[j]; yij = yi[j]; zij = zi[j]
             
             # all k != i,j OR I > J ???
-            k = np.arange(len(ri[:])) != j  
+            k = np.arange(len(ri[:])) > j  
             rik = ri[k] 
             xik = xi[k]; yik = yi[k]; zik = zi[k]
             
@@ -342,8 +342,11 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None, forces
                 if len(s) == 3:
                     inputData[i,symmFuncNumber] += G2(rij, s[0], s[1], s[2])
                 else:
-                    inputData[i,symmFuncNumber] += G4(rij, rik, rjk, cosTheta, \
+                    #inputData[i,symmFuncNumber] += G4(rij, rik, rjk, cosTheta, \
+                    #                                  s[0], s[1], s[2], s[3])
+                    inputData[i,symmFuncNumber] += G5(rij, rik, cosTheta, \
                                                       s[0], s[1], s[2], s[3])
+                    
                 symmFuncNumber += 1
 
             # calculate energy with supplied 3-body function or with
