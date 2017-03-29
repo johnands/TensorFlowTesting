@@ -46,7 +46,7 @@ def G4new(xij, yij, zij, xik, yik, zik, eta, Rc, zeta, Lambda):
 
 with tf.Session() as sess:
 
-    inputs = 3
+    inputs = 1
     xij = tf.placeholder('float', [None, 1])
     yij = tf.placeholder('float', [None, 1])
     zij = tf.placeholder('float', [None, 1])
@@ -55,13 +55,18 @@ with tf.Session() as sess:
     yik = tf.placeholder('float', [None, inputs])
     zik = tf.placeholder('float', [None, inputs])
     
-    filename = "../LAMMPS_test/Silicon/Data/21.03-11.56.37/neighbours.txt"
-    x, y, z, r, E = data.readNeighbourData(filename)
+    x0 = np.array([1.360657349, -1.382538701, -1.356904817, 1.347116757])
+    y0 = np.array([1.377881253, -1.325733246, 1.378576362, -1.334633321])
+    z0 = np.array([1.313130941, 1.293225662, -1.387754934, -1.412519148]) 
+    r0 = x0**2 + y0**2 + z0**2
     
-    x0 = np.array(x[4])
+    #filename = "../LAMMPS_test/Silicon/Data/21.03-11.56.37/neighbours.txt"
+    #x, y, z, r, E = data.readNeighbourData(filename)
+    
+    """x0 = np.array(x[4])
     y0 = np.array(y[4])
     z0 = np.array(z[4])
-    r0 = np.array(r[4])
+    r0 = np.array(r[4])"""
     print "x: ", x0
     print "y: ", y0
     print "z: ", z0
@@ -74,7 +79,8 @@ with tf.Session() as sess:
     zeta = 1
     Lambda = 1
     
-    k = np.arange(len(r0[:])) > 0
+    #k = np.arange(len(r0[:])) > 0
+    k = 1
     
     """xij = x0[0]
     yij = y0[0]
@@ -115,7 +121,10 @@ with tf.Session() as sess:
     print "Rjk: ", Rjk
     exit(1)"""
     
-    feed_dict = {xij: [[x0[0]]], yij: [[y0[0]]], zij: [[z0[0]]], xik: [x0[k]], yik: [y0[k]], zik: [z0[k]]}
+    # xij: shape [1,1]
+    # xik: shape [1,inputs] or [1,len(k)]
+    # now k is a number, if a list: remove the outermost brackets on xik, yik and zik
+    feed_dict = {xij: [[x0[0]]], yij: [[y0[0]]], zij: [[z0[0]]], xik: [[x0[k]]], yik: [[y0[k]]], zik: [[z0[k]]]}
     
     y = G4new(xij, yij, zij, xik, yik, zik, eta, Rc, zeta, Lambda)
     
