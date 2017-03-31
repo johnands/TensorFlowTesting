@@ -256,7 +256,7 @@ class Regression:
             print "Invalid data generation method chosen. Exiting..."
             exit(1)
             
-        # print out sizes and stuff
+        # print out sizes
         print 
         print "##### Training parameters #####"
         print "Training set size: ", self.trainSize
@@ -421,14 +421,14 @@ class Regression:
                                    latest_filename="checkpoint_state")
                         saveEpochNumber += 1
                         
-                print xBatch
+                """print xBatch
                 print yBatch
                 grad = sess.run(networkGradient, feed_dict={x: xBatch, y: yBatch})
                 print grad
                 grad = np.array(grad)
                 grad = grad.reshape([batchSize, 48])
                 print grad.shape
-                exit(1)
+                exit(1)"""
                         
                         
             # elapsed time

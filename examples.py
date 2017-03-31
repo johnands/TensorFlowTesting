@@ -164,6 +164,27 @@ def getStillingerWeber():
                                                    np.exp( (gamma*sigma) / (Rik - a*sigma) ) )
                                                    
     return function, a, sigma
+    
+
+def getTwoBodySW(): 
+    
+    # parameters                            
+    A = 7.049556277
+    B = 0.6022245584
+    p = 4.0
+    q = 0.0
+    a = 1.80
+    Lambda = 21.0
+    gamma = 1.20
+    cosC = -1.0/3
+    epsilon = 2.1683
+    sigma = 2.0951  
+    
+    # Stillinger-Weber            
+    function = lambda Rij:  epsilon*A*(B*(sigma/Rij)**p - (sigma/Rij)**q) * \
+                            np.exp(sigma / (Rij - a*sigma))
+                                                   
+    return function, a, sigma
 
     
     
@@ -211,7 +232,8 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, dataFolder, outputs
                
     # get energies from sw lammps  
     if useFunction: 
-        function, _, _ = getStillingerWeber()
+        #function, _, _ = getStillingerWeber()
+        function, _, _ = getTwoBodySW()
     else:
         function = None    
   
@@ -278,9 +300,9 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, dataFolder, outputs=1, activation
 #                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-lammpsTrainingSi(2, 35, int(1e5), 'G4', \
+lammpsTrainingSi(2, 35, int(0), 'G4', \
                  "../LAMMPS_test/Silicon/Data/27.03-19.45.57/", \
-                 activation=tf.nn.sigmoid, useFunction=False, forces=False)
+                 activation=tf.nn.sigmoid, useFunction=True, forces=False)
                         
                         
                         
