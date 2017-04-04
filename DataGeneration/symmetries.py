@@ -164,6 +164,10 @@ def calculateForces(Rijs, drijs, Riks, driks, cosThetas, Rjks, drjks, parameters
                 diffk3x[i] = sumkx
                 diffk3y[i] = sumky
                 diffk3z[i] = sumkz
+                
+#def calculateForcesNew():
+    
+    
     
            
            

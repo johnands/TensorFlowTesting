@@ -352,7 +352,7 @@ class Regression:
             print 
             print "##### Starting training session #####"
             start = timer()
-            for epoch in xrange(numberOfEpochs):
+            for epoch in xrange(numberOfEpochs+1):
 
                 # pick unique random batch
                 indicies = np.random.choice(trainSize, batchSize, replace=False)
