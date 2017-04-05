@@ -241,7 +241,7 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, dataFolder, outputs
     trainSize = batchSize = testSize = inputs = low = high = 0
                        
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
-    regress.generateData(low, high, 'lammps', symmFuncType='G4', dataFolder=dataFolder, forces=forces)
+    regress.generateData(low, high, 'lammps', symmFuncType=symmFuncType, dataFolder=dataFolder, forces=forces)
     regress.constructNetwork(nLayers, nNodes, activation=activation, \
                              wInit='xavier', bInit='zeros')
     regress.train(nEpochs)
@@ -300,8 +300,8 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, dataFolder, outputs=1, activation
 #                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-lammpsTrainingSi(2, 35, int(1e5), 'G4', \
-                 "../LAMMPS_test/Silicon/Data/04.04-22.54.07/", \
+lammpsTrainingSi(2, 35, int(1e5), 'G5', \
+                 "../LAMMPS_test/Silicon/Data/05.04-20.33.53/", \
                  activation=tf.nn.sigmoid, useFunction=False, forces=False)
                         
                         

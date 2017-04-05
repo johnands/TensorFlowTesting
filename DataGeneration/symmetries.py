@@ -218,13 +218,23 @@ def applyTwoBodySymmetry(inputTemp, parameters):
       
       
            
-def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None, forces=False):
+def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, E=None, forces=False):
     """
     Transform input coordinates with 2- and 3-body symmetry functions
     Input coordinates can be random or sampled from lammps
     Output data can be supplied with an array E or be generated
     using the optional function argument
     """
+    
+    if symmFuncType == 'G4':
+        print 
+        print 'Using G4'
+    elif symmFuncType == 'G5':
+        print 
+        print 'Using G5'
+    else:
+        print 'Not valid triplet symmetry function'
+        exit(1)
     
     size = len(x)
     numberOfSymmFunc = len(parameters)
@@ -250,8 +260,6 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None, forces
     cosThetas = []
     Rjks = []
     drjks = []
-    
-    
     
     # loop through each data vector, i.e. each atomic environment
     fractionOfNonZeros = 0.0
@@ -346,10 +354,12 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, function=None, E=None, forces
                 if len(s) == 3:
                     inputData[i,symmFuncNumber] += G2(rij, s[0], s[1], s[2])
                 else:
-                    #inputData[i,symmFuncNumber] += G4(rij, rik, rjk, cosTheta, \
-                    #                                  s[0], s[1], s[2], s[3])
-                    inputData[i,symmFuncNumber] += G5(rij, rik, cosTheta, \
-                                                      s[0], s[1], s[2], s[3])
+                    if symmFuncType == 'G4':
+                        inputData[i,symmFuncNumber] += G4(rij, rik, rjk, cosTheta, \
+                                                          s[0], s[1], s[2], s[3])
+                    else:
+                        inputData[i,symmFuncNumber] += G5(rij, rik, cosTheta, \
+                                                          s[0], s[1], s[2], s[3])
                     
                 symmFuncNumber += 1
 

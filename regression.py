@@ -155,6 +155,12 @@ class Regression:
         self.inputs    = inputs
         self.outputs   = outputs
         self.functionDerivative = functionDerivative
+        
+        # save output to terminal
+        if saveFlag or saveGraphFlag:
+            filepath = trainingDir + '/output.txt'
+            self.outputFile = open(filepath, 'w')
+            sys.stdout = self.outputFile
 
 
     def generateData(self, a, b, method, numberOfSymmFunc=10, neighbours=80, \
@@ -502,6 +508,8 @@ class Regression:
                              filename_tensor_name, output_graph_path,
                              clear_devices, "")
 
+            self.outputFile.close()
+            
             # plot many-body error
             if plotFlag:
                 

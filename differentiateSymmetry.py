@@ -30,7 +30,8 @@ xj, yj, zj, xk, yk, zk =  symbols('xj yj zj xk yk zk')
 eta, Rc, zeta, Lambda = symbols('eta Rc zeta Lambda')
 
 # substituion parameters
-Rj, Rk, Rjk, Rj2, Rk2, Rjk2, RjDotRk, CosTheta, Fcj, Fck, Fcjk, dFcj, dFck, dFcjk = symbols('Rj Rk Rjk Rj2 Rk2 Rjk2 RjDotRk CosTheta Fcj Fck Fcjk dFcj dFck dFcjk')
+Rj, Rk, Rjk, Rj2, Rk2, Rjk2, RjDotRk, CosTheta, Fcj, Fck, Fcjk, dFcj, dFck, dFcjk = \
+    symbols('Rj Rk Rjk Rj2 Rk2 Rjk2 RjDotRk CosTheta Fcj Fck Fcjk dFcj dFck dFcjk')
 
 rj = sqrt(xj**2 + yj**2 + zj**2)
 rk = sqrt(xk**2 + yk**2 + zk**2)

@@ -207,7 +207,7 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False):
     outputs = 1
                    
     # apply symmetry transformastion
-    inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, function=function, E=E)
+    inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=function, E=E)
     
     # split in training set and test set randomly
     totalSize       = len(inputData)
@@ -304,7 +304,7 @@ def SiO2TrainingData(filename, symmFuncType, function=None):
     outputs = 1
                    
     # apply symmetry transformastion
-    inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, function=function, E=E)
+    inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=function, E=E)
     
     # split in training set and test set randomly
     totalSize       = len(inputData)
