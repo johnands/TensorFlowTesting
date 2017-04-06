@@ -235,6 +235,14 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
     else:
         print 'Not valid triplet symmetry function'
         exit(1)
+        
+    # train only on parts of configs to test
+    """indicies = np.arange(5)
+    N = 5
+    x = x[:3]
+    y = y[:3]
+    z = z[:3]
+    r = r[:3]"""
     
     size = len(x)
     numberOfSymmFunc = len(parameters)
@@ -307,7 +315,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
             xij = xi[j]; yij = yi[j]; zij = zi[j]
             
             # all k != i,j OR I > J ???
-            k = np.arange(len(ri[:])) > j  
+            k = np.arange(len(ri[:])) != j  
             rik = ri[k] 
             xik = xi[k]; yik = yi[k]; zik = zi[k]
             

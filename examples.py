@@ -224,7 +224,7 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     
     
 def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, dataFolder, outputs=1, activation=tf.nn.sigmoid, 
-                     useFunction=False, forces=False):
+                     useFunction=False, forces=False, batch=5):
     """
     Use neighbour data and energies from lammps with sw-potential 
     as input and output training data respectively
@@ -241,7 +241,8 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, dataFolder, outputs
     trainSize = batchSize = testSize = inputs = low = high = 0
                        
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
-    regress.generateData(low, high, 'lammps', symmFuncType=symmFuncType, dataFolder=dataFolder, forces=forces)
+    regress.generateData(low, high, 'lammps', 
+                         symmFuncType=symmFuncType, dataFolder=dataFolder, forces=forces, batch=batch)
     regress.constructNetwork(nLayers, nNodes, activation=activation, \
                              wInit='xavier', bInit='zeros')
     regress.train(nEpochs)
@@ -265,10 +266,7 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, dataFolder, outputs=1, activation
     regress.train(nEpochs)
     
     
-    
-    
-    
-    
+
                
     
 #testActivations(int(1e6), int(1e4), int(1e3), 3, 5, 100000)
@@ -300,9 +298,9 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, dataFolder, outputs=1, activation
 #                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-lammpsTrainingSi(2, 35, int(1e5), 'G5', \
-                 "../LAMMPS_test/Silicon/Data/05.04-20.33.53/", \
-                 activation=tf.nn.sigmoid, useFunction=False, forces=False)
+lammpsTrainingSi(1, 5, int(5e4), 'G5', \
+                 "../LAMMPS_test/Silicon/Data/06.04-19.49.20/", \
+                 activation=tf.nn.sigmoid, useFunction=False, forces=False, batch=5)
                         
                         
                         

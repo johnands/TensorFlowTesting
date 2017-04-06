@@ -164,7 +164,7 @@ class Regression:
 
 
     def generateData(self, a, b, method, numberOfSymmFunc=10, neighbours=80, \
-                     symmFuncType='G4', dataFolder='', batch=0.5, 
+                     symmFuncType='G4', dataFolder='', batch=5, 
                      varyingNeigh=True, forces=False):
 
         self.a, self.b = a, b
@@ -253,7 +253,16 @@ class Regression:
             # set different sizes based on lammps data
             self.trainSize = self.xTrain.shape[0]
             self.testSize  = self.xTest.shape[0]
-            self.batchSize = int(batch*self.trainSize)
+            
+            # set batch size, ensure that train size is a multiple of batch size
+            rest = self.trainSize % batch
+            if rest != 0:
+                self.trainSize -= rest
+                self.xTrain = self.xTrain[:-rest]
+                self.yTrain = self.yTrain[:-rest]
+                
+            self.batchSize = int(self.trainSize/batch)
+            self.numberOfBatches = batch
             
             if saveMetaFlag:
                 saveParametersFlag = True
@@ -268,6 +277,7 @@ class Regression:
         print "Training set size: ", self.trainSize
         print "Test set size: ", self.testSize
         print "Batch size: ", self.batchSize
+        print "Number of batches: ", self.numberOfBatches
             
 
 
@@ -306,17 +316,18 @@ class Regression:
 
     def train(self, numberOfEpochs):
 
-        trainSize = self.trainSize
-        batchSize = self.batchSize
-        testSize  = self.testSize
-        xTrain    = self.xTrain
-        yTrain    = self.yTrain
-        xTest     = self.xTest
-        yTest     = self.yTest
-        x         = self.x
-        y         = self.y
-        nNodes    = self.nNodes
-        nLayers   = self.nLayers
+        trainSize       = self.trainSize
+        batchSize       = self.batchSize
+        testSize        = self.testSize
+        xTrain          = self.xTrain
+        yTrain          = self.yTrain
+        xTest           = self.xTest
+        yTest           = self.yTest
+        numberOfBatches = self.numberOfBatches
+        x               = self.x
+        y               = self.y
+        nNodes          = self.nNodes
+        nLayers         = self.nLayers
 
         # begin session
         with tf.Session() as sess:
@@ -348,39 +359,53 @@ class Regression:
                 saver.restore(sess, loadFileName)
                 print 'Model restored'              
             
-            # Merge all the summaries and write them out to /tmp/mnist_logs (by default)
+            # merge all the summaries and write them out to training directory
             if summaryFlag:
                 merged = tf.merge_all_summaries()
                 train_writer = tf.train.SummaryWriter(summaryDir + '/train', sess.graph)
                 test_writer = tf.train.SummaryWriter(summaryDir + '/test')
+                
+            # decide how often to print and store things
+            every = 1000/self.numberOfBatches
 
             # train
             print 
             print "##### Starting training session #####"
             start = timer()
-            for epoch in xrange(numberOfEpochs+1):
-
-                # pick unique random batch
-                indicies = np.random.choice(trainSize, batchSize, replace=False)
-                xBatch = xTrain[indicies]
-                yBatch = yTrain[indicies]
-
-                """with open('tmp/testBatch.txt', 'w') as outfile:
-                    outfile.write(' \n')
-                    for i in range(len(xBatch[0])):
-                        outfile.write('%g' % xBatch[0][i])
-                        outfile.write('\n')"""
- 
-                # train
-                sess.run(trainStep, feed_dict={x: xBatch, y: yBatch})
+            for epoch in xrange(numberOfEpochs+1): 
+                
+                # for shuffling the training set
+                indicies = np.random.choice(trainSize, trainSize, replace=False)
+                
+                # offline learning
+                if batchSize == trainSize:    
+                    
+                    # pick whole set in random order               
+                    xBatch = xTrain[indicies]
+                    yBatch = yTrain[indicies]
+                    
+                    # train
+                    sess.run(trainStep, feed_dict={x: xBatch, y: yBatch})
+                    
+                # online learning
+                else:   
+                    
+                    # loop through whole set, train each iteration
+                    for b in xrange(numberOfBatches):
+                        batch = indicies[b*batchSize:(b+1)*batchSize]
+                        xBatch = xTrain[batch]
+                        yBatch = yTrain[batch]
+                        
+                        # train
+                        sess.run(trainStep, feed_dict={x: xBatch, y: yBatch})
                 
                 if summaryFlag:
-                    if epoch % 1000 == 0:
+                    if not epoch % every:
                         summary = sess.run(merged, feed_dict={x: xBatch, y: yBatch})
                         train_writer.add_summary(summary, epoch)
 
                 # calculate cost every 1000th epoch
-                if epoch % 1000 == 0:
+                if not epoch % every:
                     trainError, absErrorTrain = sess.run([trainCost, MAD], feed_dict={x: xBatch, y: yBatch})
                     testError, absErrorTest   = sess.run([testCost, MAD], feed_dict={x: xTest, y: yTest})
                     trainRMSE = np.sqrt(trainError*2)
@@ -414,14 +439,14 @@ class Regression:
                                      (epoch, trainRMSE, testRMSE)
                             outFile.write(outStr + '\n')
                     else:
-                        if epoch % 1000 == 0:
+                        if not epoch % every:
                              with open(saveMetaName, 'a') as outFile :
                                  outStr = '%d %g %g' % \
                                           (epoch, trainRMSE, testRMSE)
                                  outFile.write(outStr + '\n')
 
                 if saveFlag or saveGraphProtoFlag:
-                    if epoch % 1000 == 0:
+                    if not epoch % every:
                         saveFileName = saveDirName + '/' 'ckpt'
                         saver.save(sess, saveFileName, global_step=saveEpochNumber,
                                    latest_filename="checkpoint_state")
@@ -513,9 +538,7 @@ class Regression:
             # plot many-body error
             if plotFlag:
                 
-                neighbours = self.neighbours
-                function = self.function
-                a = self.a; b = self.b
+                a = 2; b = 3.8
                 
                 # make random coordinates, only one set
                 inputTemp = data.neighbourCoordinatesInput(1, a, b, neighbours)
@@ -523,8 +546,6 @@ class Regression:
                 y = inputTemp[:,:,1]
                 z = inputTemp[:,:,2]
                 r = inputTemp[:,:,3]
-                
-                inputTemp, outputData = data.neighbourTwoBodyEnergy(function, 1, a, b, neighbours)
             
                 # 1. vary coordinates of only one atom and plot the error
                 N = 50     
@@ -550,16 +571,17 @@ class Regression:
                     # set new coordinates for one of the atoms
                     
                     # 2-body
-                    inputTemp[0][atom] = Rij[i]
+                    """inputTemp[0][atom] = Rij[i]
                     inputData = symmetries.applyTwoBodySymmetry(inputTemp, self.parameters)
                     energy1 = sess.run(prediction, feed_dict={self.x: inputData})[0][0]
-                    energy2 = np.sum(function(inputTemp[0][:]))
+                    energy2 = np.sum(function(inputTemp[0][:]))"""
                     
                     # 3-body
-                    """x[0][atom] = xi; y[0][atom] = yi; 
+                    x[0][atom] = xi; y[0][atom] = yi; 
                     z[0][atom] = zi; r[0][atom] = Rij2
                     inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, self.parameters, function=function)
-                    energy = sess.run(prediction, feed_dict={self.x: inputData})"""
+                    energy1 = sess.run(prediction, feed_dict={self.x: inputData})
+                    energy2 = np.sum(function())
                     
                     energyNN.append(energy1)
                     energyAnalytic.append(energy2)
