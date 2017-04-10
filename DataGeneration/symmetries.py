@@ -315,7 +315,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
             xij = xi[j]; yij = yi[j]; zij = zi[j]
             
             # all k != i,j OR I > J ???
-            k = np.arange(len(ri[:])) != j  
+            k = np.arange(len(ri[:])) > j  
             rik = ri[k] 
             xik = xi[k]; yik = yi[k]; zik = zi[k]
             

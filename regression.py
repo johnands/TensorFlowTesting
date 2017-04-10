@@ -535,82 +535,30 @@ class Regression:
 
             self.outputFile.close()
             
-            # plot many-body error
+            # plot RMSE as function of epoch
             if plotFlag:
                 
-                a = 2; b = 3.8
+                if loadFlag and not saveFlag:
+                    location = loadFileName
+                else:
+                    location = saveMetaName
                 
-                # make random coordinates, only one set
-                inputTemp = data.neighbourCoordinatesInput(1, a, b, neighbours)
-                x = inputTemp[:,:,0]
-                y = inputTemp[:,:,1]
-                z = inputTemp[:,:,2]
-                r = inputTemp[:,:,3]
-            
-                # 1. vary coordinates of only one atom and plot the error
-                N = 50     
-                atom = neighbours/2
-                Rij = np.linspace(a, b, N)
-                Rik = 3.0
-                theta = 90*np.pi/180.0
-                energyNN = []
-                energyAnalytic = []
-                xyz = np.zeros(3)
-                for i in range(N):
+                with open(location) as infile:
                     
-                    # generate new coordinates for one atom
-                    Rij2 = Rij[i]**2
-                    xyz[0] = np.random.uniform(0, Rij2)
-                    xyz[1] = np.random.uniform(0, Rij2-xyz[0])
-                    xyz[2] = Rij2 - xyz[0] - xyz[1]
-                    #np.random.shuffle(xyz)
-                    xi = np.sqrt(xyz[0])# * np.random.choice([-1,1])
-                    yi = np.sqrt(xyz[1])# * np.random.choice([-1,1])
-                    zi = np.sqrt(xyz[2])# * np.random.choice([-1,1])
+                    # skip headers
+                    infile.readline(); infile.readline()
                     
-                    # set new coordinates for one of the atoms
-                    
-                    # 2-body
-                    """inputTemp[0][atom] = Rij[i]
-                    inputData = symmetries.applyTwoBodySymmetry(inputTemp, self.parameters)
-                    energy1 = sess.run(prediction, feed_dict={self.x: inputData})[0][0]
-                    energy2 = np.sum(function(inputTemp[0][:]))"""
-                    
-                    # 3-body
-                    x[0][atom] = xi; y[0][atom] = yi; 
-                    z[0][atom] = zi; r[0][atom] = Rij2
-                    inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, self.parameters, function=function)
-                    energy1 = sess.run(prediction, feed_dict={self.x: inputData})
-                    energy2 = np.sum(function())
-                    
-                    energyNN.append(energy1)
-                    energyAnalytic.append(energy2)
-            
-                # convert to arrays
-                energyNN = np.array(energyNN)
-                energyAnalytic = np.array(energyAnalytic)
-            
-                # plot error
-                plt.plot(Rij, energyNN - energyAnalytic)
-                plt.xlabel('r [MD]', fontsize=15)
-                plt.ylabel('E [MD]', fontsize=15)
-                plt.legend(['NN(r) - LJ(r)'], fontsize=15)
-                plt.show()
-                #plt.savefig('Tests/TrainLennardJones/ManyNeighbourNetwork/Plots/manyNeighbourEnergyError.pdf')
-                print 'Cost: ', ( np.sum((energyNN - energyAnalytic)**2) ) / N
-                
-                
-                """x_test  = np.linspace(self.a, self.b, self.testSize)
-                x_test  = x_test.reshape([testSize,self.inputs])
-                yy = sess.run(prediction, feed_dict={self.x: x_test})
-                plt.plot(x_test[:,0], yy[:,0] - self.function(x_test[:,0]), 'b-')
-                #plt.hold('on')
-                #plt.plot(x_test[:,0], self.function(x_test[:,0]), 'g-')
-                plt.xlabel('r [MD]', fontsize=15)
-                plt.ylabel('E [MD]', fontsize=15)
-                plt.legend(['NN(r) - LJ(r)'], loc=1)
-                plt.savefig(trainingDir + '/errorLJ.pdf', format='pdf')
-                #plt.show()"""
+                    # read RMSE of train and test
+                    epoch = []; trainError = [], testError = [];
+                    for line in infile:
+                        words = line.split()
+                        epoch.append(float(words[0]))
+                        trainError.append(float(words[1]))
+                        testError.append(float(words[2]))
+                        
+                plt.plot(epoch, trainError, 'b-', epoch, testError, 'g-')
+                plt.xlabel()
+
 
 
 if __name__ == '__main__':
