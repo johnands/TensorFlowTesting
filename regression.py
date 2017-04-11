@@ -1,11 +1,9 @@
 """
 Train a neural network to approximate a continous function
 Generate/get training data methods:
-
 size = number of training vectors
 LJ: Lennard-Jones
 SW: Stillinger-Weber
-
 functionData:       random 1-dim input and output data: 
                     input: r = [size,1], output: E = [size,1] (LJ)
 neighbourData:      random N-dim input data (N neighbours)
@@ -63,7 +61,6 @@ saveMetaFlag        = False
 saveParametersFlag  = False
 plotFlag            = False
 testFlag            = False
-trainFlag           = True
 
 now             = time.datetime.now().strftime("%d.%m-%H.%M.%S")
 trainingDir     = 'TrainingData' + '/' + now
@@ -94,26 +91,8 @@ if len(sys.argv) > 1:
         if sys.argv[i] == '--load':
             i += 1
             loadFlag     = True
-            loadDir = sys.argv[i]
+            loadFileName = sys.argv[i]
             i += 1
-            
-            # find latest checkpoint
-            checkpointFile = loadDir + "/Checkpoints/checkpoint_state"
-            with open(checkpointFile, 'r') as infile:
-                line = infile.readline()
-                words = line.split()
-                checkpoint = words[1][1:-1]
-                loadFileName = loadDir + "/Checkpoints/" + checkpoint
-                
-            print
-            print "Information on trained graph: "
-            command = "cat " + loadDir + "/README.txt"
-            os.system(command)
-            print 
-            
-        elif sys.argv[i] == '--analyze':
-            i += 1
-            trainFlag = False
 
         elif sys.argv[i] == '--save':
             i += 1
@@ -184,14 +163,12 @@ class Regression:
 
     def generateData(self, a, b, method, numberOfSymmFunc=10, neighbours=80, \
                      symmFuncType='G4', dataFolder='', batch=5, 
-                     varyingNeigh=True, forces=False, Behler=True):
+                     varyingNeigh=True, forces=False):
 
         self.a, self.b = a, b
         self.neighbours = neighbours
         self.forces = forces
         global saveParametersFlag  
-        
-        self.samplesDir = dataFolder
 
         if method == 'twoBody':
             print "method=twoBody: Generating random, radial 1-neighbour data..."
@@ -258,19 +235,18 @@ class Regression:
             if not dataFolder:
                 print "Path to folder where data is stored must be supplied"
                 
-            samplesFile = dataFolder + "neighbours.txt"
+            filename = dataFolder + "neighbours.txt"
             
             # write content of README file to terminal
             print
-            print "Content of lammps data file " + samplesFile + ":"
+            print "Content of lammps data file: "
             command = "cat " + dataFolder + "README.txt"
             os.system(command)
             print 
                 
             self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs, self.parameters, \
             self.Ftrain, self.Ftest = \
-                lammps.SiTrainingData(samplesFile, symmFuncType, function=self.function, forces=forces, 
-                                      Behler=Behler)
+                lammps.SiTrainingData(filename, symmFuncType, function=self.function, forces=forces)
             
             # set different sizes based on lammps data
             self.trainSize = self.xTrain.shape[0]
@@ -379,8 +355,7 @@ class Regression:
             sess.run(tf.global_variables_initializer())
             if loadFlag:
                 saver.restore(sess, loadFileName)
-                print 
-                print 'Model restored: ', loadFileName              
+                print 'Model restored'              
             
             # merge all the summaries and write them out to training directory
             if summaryFlag:
@@ -390,16 +365,10 @@ class Regression:
                 
             # decide how often to print and store things
             every = 1000/self.numberOfBatches
-            
-            # decide if training or analyzing
-            if not trainFlag:
-                numberOfEpochs = -1
 
             # train
-            else:
-                print 
-                print "##### Starting training session #####"
-                
+            print 
+            print "##### Starting training session #####"
             start = timer()
             for epoch in xrange(numberOfEpochs+1): 
                 
@@ -462,7 +431,7 @@ class Regression:
                             outStr += 'a: %1.1f, b: %1.1f, activation: %s, wInit: %s, bInit: %s' % \
                                        (self.a, self.b, self.activation.__name__, self.wInit, self.bInit)
                             outFile.write(outStr + '\n')
-                            outStr = 'Inputs: %d, outputs: %d, trained on: %s \n' % (self.inputs, self.outputs, self.samplesDir)
+                            outStr = 'Inputs: %d, outputs: %d \n' % (self.inputs, self.outputs)
                             outFile.write(outStr)
                             outStr = '%d %g %g' % \
                                      (epoch, trainRMSE, testRMSE)
@@ -562,9 +531,31 @@ class Regression:
                              filename_tensor_name, output_graph_path,
                              clear_devices, "")
 
-            if saveFlag or saveGraphFlag:
-                self.outputFile.close()
+            self.outputFile.close()
             
+            # plot RMSE as function of epoch
+            if plotFlag:
+                
+                if loadFlag and not saveFlag:
+                    location = loadFileName
+                else:
+                    location = saveMetaName
+                
+                with open(location) as infile:
+                    
+                    # skip headers
+                    infile.readline(); infile.readline()
+                    
+                    # read RMSE of train and test
+                    epoch = []; trainError = [], testError = [];
+                    for line in infile:
+                        words = line.split()
+                        epoch.append(float(words[0]))
+                        trainError.append(float(words[1]))
+                        testError.append(float(words[2]))
+                        
+                plt.plot(epoch, trainError, 'b-', epoch, testError, 'g-')
+                plt.xlabel()
 
 
 
