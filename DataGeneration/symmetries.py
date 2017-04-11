@@ -218,7 +218,8 @@ def applyTwoBodySymmetry(inputTemp, parameters):
       
       
            
-def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, E=None, forces=False):
+def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, E=None, forces=False,
+                           sampleDir=''):
     """
     Transform input coordinates with 2- and 3-body symmetry functions
     Input coordinates can be random or sampled from lammps
@@ -314,7 +315,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
             rij = ri[j]
             xij = xi[j]; yij = yi[j]; zij = zi[j]
             
-            # all k != i,j OR I > J ???
+            # all k != i,j OR I > J ??? REMEMBER TO CHANGE
             k = np.arange(len(ri[:])) != j  
             rik = ri[k] 
             xik = xi[k]; yik = yi[k]; zik = zi[k]
@@ -389,6 +390,23 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
     # differentiate the symmetry functions
     if forces:
         calculateForces(Rijs, drijs, Riks, driks, cosThetas, Rjks, drjks, parameters)
+        
+    if sampleDir:
+        print 
+        print "Writing symmetrized input data to file"
+        with open(sampleDir + 'symmetryBehler.txt', 'w') as outfile:
+            for vector in inputData:
+                for symmValue in vector:
+                    outfile.write('%g ' % symmValue)
+                outfile.write('\n')
+            outfile.write('\n')
+            for vector in outputData:
+                for symmValue in vector:
+                    outfile.write('%g ' % symmValue)
+                outfile.write('\n')
+                
+    exit(1)
+        
         
     # test where my SW-potential is equivalent with lammps SW-potential
     """Etmp = np.array(E[:20][:])

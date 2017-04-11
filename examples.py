@@ -224,7 +224,7 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     
     
 def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, dataFolder, outputs=1, activation=tf.nn.sigmoid, 
-                     useFunction=False, forces=False, batch=5):
+                     useFunction=False, forces=False, batch=5, Behler=True):
     """
     Use neighbour data and energies from lammps with sw-potential 
     as input and output training data respectively
@@ -242,7 +242,8 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, dataFolder, outputs
                        
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
     regress.generateData(low, high, 'lammps', 
-                         symmFuncType=symmFuncType, dataFolder=dataFolder, forces=forces, batch=batch)
+                         symmFuncType=symmFuncType, dataFolder=dataFolder, forces=forces, batch=batch, \
+                         Behler=Behler)
     regress.constructNetwork(nLayers, nNodes, activation=activation, \
                              wInit='xavier', bInit='zeros')
     regress.train(nEpochs)
@@ -299,7 +300,7 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, dataFolder, outputs=1, activation
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
 lammpsTrainingSi(1, 5, int(5e4), 'G5', \
-                 "../LAMMPS_test/Silicon/Data/06.04-19.49.20/", \
+                 "../LAMMPS_test/Silicon/Data/06.04-16.21.00/", \
                  activation=tf.nn.sigmoid, useFunction=False, forces=False, batch=5)
                         
                         

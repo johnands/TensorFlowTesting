@@ -63,6 +63,7 @@ saveMetaFlag        = False
 saveParametersFlag  = False
 plotFlag            = False
 testFlag            = False
+trainFlag           = True
 
 now             = time.datetime.now().strftime("%d.%m-%H.%M.%S")
 trainingDir     = 'TrainingData' + '/' + now
@@ -93,8 +94,26 @@ if len(sys.argv) > 1:
         if sys.argv[i] == '--load':
             i += 1
             loadFlag     = True
-            loadFileName = sys.argv[i]
+            loadDir = sys.argv[i]
             i += 1
+            
+            # find latest checkpoint
+            checkpointFile = loadDir + "/Checkpoints/checkpoint_state"
+            with open(checkpointFile, 'r') as infile:
+                line = infile.readline()
+                words = line.split()
+                checkpoint = words[1][1:-1]
+                loadFileName = loadDir + "/Checkpoints/" + checkpoint
+                
+            print
+            print "Information on trained graph: "
+            command = "cat " + loadDir + "/README.txt"
+            os.system(command)
+            print 
+            
+        elif sys.argv[i] == '--analyze':
+            i += 1
+            trainFlag = False
 
         elif sys.argv[i] == '--save':
             i += 1
@@ -165,12 +184,14 @@ class Regression:
 
     def generateData(self, a, b, method, numberOfSymmFunc=10, neighbours=80, \
                      symmFuncType='G4', dataFolder='', batch=5, 
-                     varyingNeigh=True, forces=False):
+                     varyingNeigh=True, forces=False, Behler=True):
 
         self.a, self.b = a, b
         self.neighbours = neighbours
         self.forces = forces
         global saveParametersFlag  
+        
+        self.samplesDir = dataFolder
 
         if method == 'twoBody':
             print "method=twoBody: Generating random, radial 1-neighbour data..."
@@ -237,18 +258,19 @@ class Regression:
             if not dataFolder:
                 print "Path to folder where data is stored must be supplied"
                 
-            filename = dataFolder + "neighbours.txt"
+            samplesFile = dataFolder + "neighbours.txt"
             
             # write content of README file to terminal
             print
-            print "Content of lammps data file: "
+            print "Content of lammps data file " + samplesFile + ":"
             command = "cat " + dataFolder + "README.txt"
             os.system(command)
             print 
                 
             self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs, self.parameters, \
             self.Ftrain, self.Ftest = \
-                lammps.SiTrainingData(filename, symmFuncType, function=self.function, forces=forces)
+                lammps.SiTrainingData(samplesFile, symmFuncType, function=self.function, forces=forces, 
+                                      Behler=Behler)
             
             # set different sizes based on lammps data
             self.trainSize = self.xTrain.shape[0]
@@ -357,7 +379,8 @@ class Regression:
             sess.run(tf.global_variables_initializer())
             if loadFlag:
                 saver.restore(sess, loadFileName)
-                print 'Model restored'              
+                print 
+                print 'Model restored: ', loadFileName              
             
             # merge all the summaries and write them out to training directory
             if summaryFlag:
@@ -367,10 +390,16 @@ class Regression:
                 
             # decide how often to print and store things
             every = 1000/self.numberOfBatches
+            
+            # decide if training or analyzing
+            if not trainFlag:
+                numberOfEpochs = -1
 
             # train
-            print 
-            print "##### Starting training session #####"
+            else:
+                print 
+                print "##### Starting training session #####"
+                
             start = timer()
             for epoch in xrange(numberOfEpochs+1): 
                 
@@ -433,7 +462,7 @@ class Regression:
                             outStr += 'a: %1.1f, b: %1.1f, activation: %s, wInit: %s, bInit: %s' % \
                                        (self.a, self.b, self.activation.__name__, self.wInit, self.bInit)
                             outFile.write(outStr + '\n')
-                            outStr = 'Inputs: %d, outputs: %d \n' % (self.inputs, self.outputs)
+                            outStr = 'Inputs: %d, outputs: %d, trained on: %s \n' % (self.inputs, self.outputs, self.samplesDir)
                             outFile.write(outStr)
                             outStr = '%d %g %g' % \
                                      (epoch, trainRMSE, testRMSE)
@@ -533,84 +562,10 @@ class Regression:
                              filename_tensor_name, output_graph_path,
                              clear_devices, "")
 
-            self.outputFile.close()
+            if saveFlag or saveGraphFlag:
+                self.outputFile.close()
             
-            # plot many-body error
-            if plotFlag:
-                
-                a = 2; b = 3.8
-                
-                # make random coordinates, only one set
-                inputTemp = data.neighbourCoordinatesInput(1, a, b, neighbours)
-                x = inputTemp[:,:,0]
-                y = inputTemp[:,:,1]
-                z = inputTemp[:,:,2]
-                r = inputTemp[:,:,3]
-            
-                # 1. vary coordinates of only one atom and plot the error
-                N = 50     
-                atom = neighbours/2
-                Rij = np.linspace(a, b, N)
-                Rik = 3.0
-                theta = 90*np.pi/180.0
-                energyNN = []
-                energyAnalytic = []
-                xyz = np.zeros(3)
-                for i in range(N):
-                    
-                    # generate new coordinates for one atom
-                    Rij2 = Rij[i]**2
-                    xyz[0] = np.random.uniform(0, Rij2)
-                    xyz[1] = np.random.uniform(0, Rij2-xyz[0])
-                    xyz[2] = Rij2 - xyz[0] - xyz[1]
-                    #np.random.shuffle(xyz)
-                    xi = np.sqrt(xyz[0])# * np.random.choice([-1,1])
-                    yi = np.sqrt(xyz[1])# * np.random.choice([-1,1])
-                    zi = np.sqrt(xyz[2])# * np.random.choice([-1,1])
-                    
-                    # set new coordinates for one of the atoms
-                    
-                    # 2-body
-                    """inputTemp[0][atom] = Rij[i]
-                    inputData = symmetries.applyTwoBodySymmetry(inputTemp, self.parameters)
-                    energy1 = sess.run(prediction, feed_dict={self.x: inputData})[0][0]
-                    energy2 = np.sum(function(inputTemp[0][:]))"""
-                    
-                    # 3-body
-                    x[0][atom] = xi; y[0][atom] = yi; 
-                    z[0][atom] = zi; r[0][atom] = Rij2
-                    inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, self.parameters, function=function)
-                    energy1 = sess.run(prediction, feed_dict={self.x: inputData})
-                    energy2 = np.sum(function())
-                    
-                    energyNN.append(energy1)
-                    energyAnalytic.append(energy2)
-            
-                # convert to arrays
-                energyNN = np.array(energyNN)
-                energyAnalytic = np.array(energyAnalytic)
-            
-                # plot error
-                plt.plot(Rij, energyNN - energyAnalytic)
-                plt.xlabel('r [MD]', fontsize=15)
-                plt.ylabel('E [MD]', fontsize=15)
-                plt.legend(['NN(r) - LJ(r)'], fontsize=15)
-                plt.show()
-                #plt.savefig('Tests/TrainLennardJones/ManyNeighbourNetwork/Plots/manyNeighbourEnergyError.pdf')
-                print 'Cost: ', ( np.sum((energyNN - energyAnalytic)**2) ) / N
-                
-                
-                """x_test  = np.linspace(self.a, self.b, self.testSize)
-                x_test  = x_test.reshape([testSize,self.inputs])
-                yy = sess.run(prediction, feed_dict={self.x: x_test})
-                plt.plot(x_test[:,0], yy[:,0] - self.function(x_test[:,0]), 'b-')
-                #plt.hold('on')
-                #plt.plot(x_test[:,0], self.function(x_test[:,0]), 'g-')
-                plt.xlabel('r [MD]', fontsize=15)
-                plt.ylabel('E [MD]', fontsize=15)
-                plt.legend(['NN(r) - LJ(r)'], loc=1)
-                plt.savefig(trainingDir + '/errorLJ.pdf', format='pdf')
-                #plt.show()"""
+
 
 
 if __name__ == '__main__':

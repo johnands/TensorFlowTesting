@@ -3,6 +3,7 @@
 import numpy as np
 import sys
 import symmetries
+import os
 
 def readXYZ(filename, cut):
     """
@@ -134,25 +135,9 @@ def readNeighbourDataForce(filename):
             
     return x, y, z, r, E, Fx, Fy, Fz
     
-
-
-def SiTrainingData(filename, symmFuncType, function=None, forces=False):
-    """ 
-    Coordinates and energies of neighbours is sampled from lammps
-    Angular symmtry funcitons are used to transform input data  
-    """
     
-    # read file
-    if forces:
-        x, y, z, r, E, Fx, Fy, Fz = readNeighbourDataForce(filename)
-        Fx = np.array(Fx)
-        Fy = np.array(Fy)
-        Fz = np.array(Fz)
-        print "Forces is applied"
-    else:
-        x, y, z, r, E = readNeighbourData(filename)
-    print "File is read..."
-
+def parametersBehler():
+    
     # make nested list of all symmetry function parameters
     # parameters from Behler
     parameters = []    
@@ -201,14 +186,81 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False):
     zeta = 16.0
     for inversion in [1.0, -1.0]:
         for cutoff in [6.0, 4.0]:
-            parameters.append([eta, cutoff, zeta, inversion])   
+            parameters.append([eta, cutoff, zeta, inversion])  
+            
+    return parameters
+            
+    
+    
+def readSymmetryData(filename):
+    
+    inputData = []
+    outputData = []
+    with open(filename, 'r') as infile:
+        
+        for line in infile:
+            inputVector = []
+            words = line.split()
+            if len(words) == 0:
+                break
+            for word in words:
+                inputVector.append(float(word))
+            inputData.append(inputVector)
+            
+        for line in infile:
+            outputVector = []
+            words = line.split()
+            for word in words:
+                outputVector.append(float(word))
+            outputData.append(outputVector)
+            
+    return np.array(inputData), np.array(outputData)
+
+
+def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=True):
+    """ 
+    Coordinates and energies of neighbours is sampled from lammps
+    Angular symmtry funcitons are used to transform input data  
+    """
+    
+    
+    
+    # read file
+    if forces:
+        x, y, z, r, E, Fx, Fy, Fz = readNeighbourDataForce(filename)
+        Fx = np.array(Fx)
+        Fy = np.array(Fy)
+        Fz = np.array(Fz)
+        print "Forces is applied"
+    else:
+        x, y, z, r, E = readNeighbourData(filename)
+    print "File is read..."
+
+    # make nested list of all symmetry function parameters
+    # parameters from Behler
+    if Behler:
+        print 
+        print "Using Behler parameters"
+        parameters = parametersBehler()
+    else:
+        print "Other parameters than Behler are used. These must be supplied" 
+        exit(1)
                     
     numberOfSymmFunc = len(parameters)
     outputs = 1
-                   
-    # apply symmetry transformastion
-    inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=function, E=E)
     
+    # check whether symmetrized Behler coordinates alreadly exist
+    sampleDir = filename[:-14]
+    if Behler:
+        symmetryFileName = sampleDir + 'symmetryBehler.txt'
+        if os.path.isfile(symmetryFileName):
+            print "Reading symmetrized Behler data"
+            inputData, outputData = readSymmetryData(symmetryFileName)
+        else: 
+            # apply symmetry transformastion
+            inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, \
+                                                                      function=function, E=E, sampleDir=sampleDir)
+                                                                        
     # split in training set and test set randomly
     totalSize       = len(inputData)
     testSize        = int(0.1*totalSize) 
@@ -217,6 +269,28 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False):
     outputTest      = outputData[indicies]
     inputTraining   = np.delete(inputData, indicies, axis=0)
     outputTraining  = np.delete(outputData, indicies, axis=0)
+    
+    with open(sampleDir + 'symmetryBehlerTrain.txt', 'w') as outfile:
+        for vector in inputTraining:
+            for symmValue in vector:
+                outfile.write('%g ' % symmValue)
+            outfile.write('\n')
+        outfile.write('\n')
+        for vector in outputTraining:
+            for symmValue in vector:
+                outfile.write('%g ' % symmValue)
+                outfile.write('\n')
+                
+    with open(sampleDir + 'symmetryBehlerTest.txt', 'w') as outfile:
+        for vector in inputTest:
+            for symmValue in vector:
+                outfile.write('%g ' % symmValue)
+            outfile.write('\n')
+        outfile.write('\n')
+        for vector in outputTest:
+            for symmValue in vector:
+                outfile.write('%g ' % symmValue)
+                outfile.write('\n')
     
     if forces:
         FxTest = Fx[indicies]
