@@ -106,6 +106,17 @@ def readNeighbourData(filename):
                       
     return x, y, z, r, E
     
+def readEnergy(filename):
+    
+    with open(filename, 'r') as inFile:
+        
+        E = []
+        for line in inFile:
+            words = line.split()
+            E.append([float(words[-1])])  
+                      
+    return E
+    
 
 def readNeighbourDataForce(filename):
     
@@ -134,6 +145,21 @@ def readNeighbourDataForce(filename):
             Fz.append([float(words[-1])])            
             
     return x, y, z, r, E, Fx, Fy, Fz
+    
+    
+def readEnergyAndForce(filename):
+    
+    with open(filename, 'r') as inFile:
+        
+        E = []; Fx = []; Fy = []; Fz = []
+        for line in inFile:
+            words = line.split()
+            E.append([float(words[-4])])  
+            Fx.append([float(words[-3])])
+            Fy.append([float(words[-2])])
+            Fz.append([float(words[-1])])            
+            
+    return E, Fx, Fy, Fz
     
     
 def parametersBehler():
@@ -195,26 +221,16 @@ def parametersBehler():
 def readSymmetryData(filename):
     
     inputData = []
-    outputData = []
     with open(filename, 'r') as infile:
         
         for line in infile:
             inputVector = []
             words = line.split()
-            if len(words) == 0:
-                break
             for word in words:
                 inputVector.append(float(word))
             inputData.append(inputVector)
             
-        for line in infile:
-            outputVector = []
-            words = line.split()
-            for word in words:
-                outputVector.append(float(word))
-            outputData.append(outputVector)
-            
-    return np.array(inputData), np.array(outputData)
+    return np.array(inputData)
 
 
 def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=True):
@@ -222,9 +238,7 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=T
     Coordinates and energies of neighbours is sampled from lammps
     Angular symmtry funcitons are used to transform input data  
     """
-    
-    
-    
+     
     # read file
     if forces:
         x, y, z, r, E, Fx, Fy, Fz = readNeighbourDataForce(filename)
@@ -253,13 +267,16 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=T
     sampleDir = filename[:-14]
     if Behler:
         symmetryFileName = sampleDir + 'symmetryBehler.txt'
-        if os.path.isfile(symmetryFileName):
-            print "Reading symmetrized Behler data"
-            inputData, outputData = readSymmetryData(symmetryFileName)
+        if False:#os.path.isfile(symmetryFileName):
+            print "Reading symmetrized Behler input data"
+            inputData = readSymmetryData(symmetryFileName)
+            outputData = np.array(E)
+            print "Energy is supplied from lammps"
         else: 
             # apply symmetry transformastion
             inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, \
-                                                                      function=function, E=E, sampleDir=sampleDir)
+                                                                      function=function, E=E, sampleDir=sampleDir, 
+                                                                      forces=forces)
                                                                         
     # split in training set and test set randomly
     totalSize       = len(inputData)
@@ -270,7 +287,7 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=T
     inputTraining   = np.delete(inputData, indicies, axis=0)
     outputTraining  = np.delete(outputData, indicies, axis=0)
     
-    with open(sampleDir + 'symmetryBehlerTrain.txt', 'w') as outfile:
+    """with open(sampleDir + 'symmetryBehlerTrain.txt', 'w') as outfile:
         for vector in inputTraining:
             for symmValue in vector:
                 outfile.write('%g ' % symmValue)
@@ -290,7 +307,7 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=T
         for vector in outputTest:
             for symmValue in vector:
                 outfile.write('%g ' % symmValue)
-                outfile.write('\n')
+                outfile.write('\n')"""
     
     if forces:
         FxTest = Fx[indicies]

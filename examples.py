@@ -287,7 +287,7 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, dataFolder, outputs=1, activation
 
 
 
-"""trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, nNeighbours, nSymmfuncs, symmFuncType (G1 or G2)"""
+"""trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, nNeighbours, nSymmfuncs, symmFuncType"""
 
 """LJ med radielle symmetrifunksjoner"""
 #LennardJonesSymmetryFunctions(int(5e3), int(1e3), int(5e2), 2, 70, int(1e6), 70, 70, 'G2', 
@@ -300,8 +300,8 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, dataFolder, outputs=1, activation
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
 lammpsTrainingSi(1, 5, int(5e4), 'G5', \
-                 "../LAMMPS_test/Silicon/Data/06.04-16.21.00/", \
-                 activation=tf.nn.sigmoid, useFunction=False, forces=False, batch=5)
+                 "../LAMMPS_test/Silicon/Data/11.04-13.10.11/", \
+                 activation=tf.nn.sigmoid, useFunction=False, forces=True, batch=5, Behler=True)
                         
                         
                         

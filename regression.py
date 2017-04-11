@@ -91,8 +91,22 @@ if len(sys.argv) > 1:
         if sys.argv[i] == '--load':
             i += 1
             loadFlag     = True
-            loadFileName = sys.argv[i]
+            loadDir = sys.argv[i]
             i += 1
+            
+            # find latest checkpoint
+            checkpointFile = loadDir + "/Checkpoints/checkpoint_state"
+            with open(checkpointFile, 'r') as infile:
+                line = infile.readline()
+                words = line.split()
+                checkpoint = words[1][1:-1]
+                loadFileName = loadDir + "/Checkpoints/" + checkpoint
+                
+            print
+            print "Information on trained graph: "
+            command = "cat " + loadDir + "/README.txt"
+            os.system(command)
+            print 
 
         elif sys.argv[i] == '--save':
             i += 1
@@ -163,12 +177,13 @@ class Regression:
 
     def generateData(self, a, b, method, numberOfSymmFunc=10, neighbours=80, \
                      symmFuncType='G4', dataFolder='', batch=5, 
-                     varyingNeigh=True, forces=False):
+                     varyingNeigh=True, forces=False, Behler=True):
 
         self.a, self.b = a, b
         self.neighbours = neighbours
         self.forces = forces
-        global saveParametersFlag  
+        global saveParametersFlag
+        self.samplesDir = dataFolder
 
         if method == 'twoBody':
             print "method=twoBody: Generating random, radial 1-neighbour data..."
@@ -235,6 +250,8 @@ class Regression:
             if not dataFolder:
                 print "Path to folder where data is stored must be supplied"
                 
+            self.samplesDir = dataFolder
+                
             filename = dataFolder + "neighbours.txt"
             
             # write content of README file to terminal
@@ -246,7 +263,7 @@ class Regression:
                 
             self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs, self.parameters, \
             self.Ftrain, self.Ftest = \
-                lammps.SiTrainingData(filename, symmFuncType, function=self.function, forces=forces)
+                lammps.SiTrainingData(filename, symmFuncType, function=self.function, forces=forces, Behler=Behler)
             
             # set different sizes based on lammps data
             self.trainSize = self.xTrain.shape[0]
@@ -431,7 +448,7 @@ class Regression:
                             outStr += 'a: %1.1f, b: %1.1f, activation: %s, wInit: %s, bInit: %s' % \
                                        (self.a, self.b, self.activation.__name__, self.wInit, self.bInit)
                             outFile.write(outStr + '\n')
-                            outStr = 'Inputs: %d, outputs: %d \n' % (self.inputs, self.outputs)
+                            outStr = 'Inputs: %d, outputs: %d, sampled: %s \n' % (self.inputs, self.outputs, self.samplesDir)
                             outFile.write(outStr)
                             outStr = '%d %g %g' % \
                                      (epoch, trainRMSE, testRMSE)
@@ -531,7 +548,8 @@ class Regression:
                              filename_tensor_name, output_graph_path,
                              clear_devices, "")
 
-            self.outputFile.close()
+            if saveFlag or saveGraphFlag:
+                self.outputFile.close()
             
             # plot RMSE as function of epoch
             if plotFlag:

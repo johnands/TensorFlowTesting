@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 import sys
 
 def cutoffFunction(R, Rc, cut=False):   
@@ -47,127 +48,80 @@ def G5(Rij, Rik, cosTheta, eta, Rc, zeta, Lambda):
            
            
            
+def cutoffFunctionTF(R, Rc, cut=False):   
+    
+    value = 0.5 * (tf.cos(np.pi*R / Rc) + 1)
+
+    # set elements above cutoff to zero so they dont contribute to sum
+    """if cut:
+        if isinstance(R, np.ndarray):
+            value[np.where(R > Rc)[0]] = 0
+        else:
+            if R > Rc:
+                value = 0"""
+        
+    return value
+    
+    
+def G2TF(xij, yij, zij, eta, Rc, Rs):
+    
+    Rij = tf.sqrt(xij*xij + yij*yij + zij*zij)
+    
+    return tf.reduce_sum( tf.exp(-eta*(Rij - Rs)**2) * cutoffFunctionTF(Rij, Rc) )
+    
+    
+def G4TF(xij, yij, zij, xik, yik, zik, eta, Rc, zeta, Lambda):
+       
+    Rij2 = xij*xij + yij*yij + zij*zij
+    Rij = tf.sqrt(Rij2)
+    
+    Rik2 = xik*xik + yik*yik + zik*zik
+    Rik = tf.sqrt(Rik2)
+    
+    cosTheta = (xij*xik + yij*yik + zij*zik) / (Rij*Rik)
+
+    xjk = xij - xik
+    yjk = yij - yik
+    zjk = zij - zik
+    Rjk = tf.sqrt(xjk*xjk + yjk*yjk + zjk*zjk)
+
+    
+    return 2**(1-zeta) * tf.reduce_sum( (1 + Lambda*cosTheta)**zeta * \
+           tf.exp( -eta*(Rij2 + Rik2 + Rjk*Rjk) ) * \
+           cutoffFunctionTF(Rij, Rc) * cutoffFunctionTF(Rik, Rc) * cutoffFunctionTF(Rjk, Rc, cut=True) )
+           
+        
+def G5TF(xij, yij, zij, xik, yik, zik, eta, Rc, zeta, Lambda):
+       
+    Rij2 = xij*xij + yij*yij + zij*zij
+    Rij = tf.sqrt(Rij2)
+    
+    Rik2 = xik*xik + yik*yik + zik*zik
+    Rik = tf.sqrt(Rik2)
+    
+    cosTheta = (xij*xik + yij*yik + zij*zik) / (Rij*Rik)
+   
+    return 2**(1-zeta) * tf.reduce_sum( (1 + Lambda*cosTheta)**zeta * \
+           tf.exp( -eta*(Rij2 + Rik2) ) * \
+           cutoffFunctionTF(Rij, Rc) * cutoffFunctionTF(Rik, Rc) )
+           
+           
 def dfcdr(R, Rc):
     
     return -0.5*(np.pi/Rc) * np.sin((np.pi*R) / Rc)
-           
-           
-def dG2dr(Rij, drij, eta, Rc, Rs):
+          
+          
+def dG2dr(xij, yij, zij, Rij, eta, Rc, Rs):
     
     dr = np.exp(-eta*(Rij - Rs)**2) * (2*eta*(Rs - Rij)*cutoffFunction(Rij, Rc) + dfcdr(Rij, Rc))
     fpair = -dr/Rij
     
     dij = []
-    dij.append(fpair*drij[0])
-    dij.append(fpair*drij[1])
-    dij.append(fpair*drij[2])
+    dij.append(fpair*xij)
+    dij.append(fpair*yij)
+    dij.append(fpair*zij)
     
-    
-def dG4dr(Rij, Rik, Rjk, cosTheta, drij, drik, drjk, eta, Rc, zeta, Lambda):
-    
-    F1 = 2**(1-zeta) * (1 + Lambda*cosTheta)**zeta
-    F2 = np.exp( -eta*(Rij**2 + Rik**2 + Rjk**2) )
-    
-    F3 = cutoffFunction(Rij, Rc) * cutoffFunction(Rik, Rc) * cutoffFunction(Rjk, Rc, cut=True)
-    
-    dF1dcosTheta = 2**(1-zeta) * Lambda*zeta*(1 + Lambda*cosTheta)**(zeta-1)
-    dF2dr = -2*eta*F2
-    dF3drij = dfcdr(Rij, Rc) * cutoffFunction(Rik, Rc) * cutoffFunction(Rjk, Rc, cut=True)
-    dF3drik = cutoffFunction(Rij, Rc) * dfcdr(Rik, Rc) * cutoffFunction(Rjk, Rc, cut=True)
-    
-    term1 = dF1dcosTheta * F2 * F3
-    term2 = F1 * dF2dr * F3
-    term3ij = F1 * F2 * dF3drij
-    term3ik = F1 * F2 * dF3drik
-    
-    Rijinv = 1.0 / Rij
-    Rikinv = 1.0 / Rik
-    cosRijinv2 = cosTheta*Rijinv*Rijinv
-    cosRikinv2 = cosTheta*Rikinv*Rikinv
-    RijRikinv = 1.0 / (Rij*Rik)
-    
-    dij = []
-    dik = []
-
-    dij.append( np.sum( drij[0]*(cosRijinv2*term1 - term2 - Rijinv*term3ij) - drik[0]*(RijRikinv*term1) ) ) 
-    dij.append( np.sum( drij[1]*(cosRijinv2*term1 - term2 - Rijinv*term3ij) - drik[1]*(RijRikinv*term1) ) )
-    dij.append( np.sum( drij[2]*(cosRijinv2*term1 - term2 - Rijinv*term3ij) - drik[2]*(RijRikinv*term1) ) )
-    
-    dik.append(drik[0]*(cosRikinv2*term1 - term2 - Rikinv*term3ik) - drij[0]*(RijRikinv*term1))
-    dik.append(drik[1]*(cosRikinv2*term1 - term2 - Rikinv*term3ik) - drij[1]*(RijRikinv*term1))
-    dik.append(drik[2]*(cosRikinv2*term1 - term2 - Rikinv*term3ik) - drij[2]*(RijRikinv*term1))
-    
-    return dij, dik 
-    
-
-def calculateForces(Rijs, drijs, Riks, driks, cosThetas, Rjks, drjks, parameters):
-    """
-    Calculate the derivative of all symmetry functions w.r.t. 
-    all the coordinates in the data set. Since the data nor the
-    symmetry functions change during training, this only needs to 
-    be done once. 
-    I need the derivatives of G2 w.r.t. all js and the derivatives of
-    G4 w.r.t. all js and ks
-    Actually, I can just as well sum up the derivatives of all the input vectors
-    right away, I will only use the sums anyway
-    """
-    
-    size = len(Rijs)        # number of data vectors
-    
-    diffj2x = np.zeros(size); diffj2y = np.zeros(size); diffj2z = np.zeros(size)
-    diffj3x = np.zeros(size); diffj3y = np.zeros(size); diffj3z = np.zeros(size)
-    diffk3x = np.zeros(size); diffk3y = np.zeros(size); diffk3z = np.zeros(size)
-
-    # differentiate all symmetry functions w.r.t. all coordinates in current batch  
-    for s in parameters:
-        
-        # G2
-        if len(s) == 3:           
-            # differentiate G2 w.r.t. all coordinates
-            # need dG2/dxij for all j
-            # must loop because Rijs is a list of arrays with different lengths
-            for i in xrange(size):
-                # Rijs[i]: 1d array: [rij1, rij2, ...]
-                # drijs[i]: [[xij1, xij2, ... ], [yij1, yij2, ... ], [zij1, zij2, ... ]]
-                dij = np.sum( dG2dr(Rijs[i], drijs[i], s[0], s[1], s[2]) )  
-                diffj2x[i] = np.sum(dij[0])
-                diffj2y[i] = np.sum(dij[1])
-                diffj2z[i] = np.sum(dij[2])
-        
-        # G4
-        else:
-            # differentiate G4 w.r.t. all coordinates
-            # need dG4/dxij and dG4/dxik for all j and k
-            for i in xrange(size):
-                numberOfNeighbours = len(Rijs[i])
-                sumjx = 0; sumjy = 0; sumjz = 0;
-                sumkx = 0; sumky = 0; sumkz = 0;
-                for j in xrange(numberOfNeighbours):
-                    # Rijs[i][j]: a number
-                    # drijs[i][j]: 1d array [xij, yij, zij]
-                    # Riks[i][j], Rjks[i][j], cosThetas[i][j]: 1d arrays
-                    # driks[i][j], drjks[i][j] (if numberOfNeighbours = 4):
-                    # list of 1d arrays[[xik2, xik3, xik4], [yik2, yik3, yik4], [zik2, zik3, zik4]]
-                    dij, dik = dG4dr(Rijs[i][j], Riks[i][j], Rjks[i][j], cosThetas[i][j], \
-                                     drijs[i][j], driks[i][j], drjks[i][j], \
-                                     s[0], s[1], s[2], s[3])
-                    sumjx += np.sum(dij[0])
-                    sumjy += np.sum(dij[1])
-                    sumjz += np.sum(dij[2])
-                    sumkx += np.sum(dik[0])
-                    sumky += np.sum(dik[1])
-                    sumkz += np.sum(dik[2])
-                
-                diffj3x[i] = sumjx
-                diffj3y[i] = sumjy
-                diffj3z[i] = sumjz
-                diffk3x[i] = sumkx
-                diffk3y[i] = sumky
-                diffk3z[i] = sumkz
-                
-#def calculateForcesNew():
-    
-    
+    return dij
     
            
            
@@ -215,6 +169,122 @@ def applyTwoBodySymmetry(inputTemp, parameters):
     print "Fraction of input vectors with only zeros: ", fractionOfInputVectorsOnlyZeros
     
     return inputData
+    
+    
+def calculateForces(x, y, z, r, parameters, sampleDir, dEdG):
+    
+    print
+    print "Computing forces..."
+    
+    size = len(x)
+    
+    outName = sampleDir + "/forces.txt"
+    
+    with open(outName, 'w') as outfile:
+        
+        # calculate force for each neighbour atom at each time step in given configs
+        for i in xrange(size):  
+        
+            # neighbour coordinates for atom i
+            xi = np.array(x[i][:])
+            yi = np.array(y[i][:])
+            zi = np.array(z[i][:])
+            ri = np.array(r[i][:])
+            ri = np.sqrt(ri)
+            numberOfNeighbours = len(xi)
+               
+            # sum over all neighbours k for each neighbour j
+            # this loop takes care of both 2-body and 3-body configs
+            f2x = np.zeros(numberOfNeighbours)
+            f2y = np.zeros(numberOfNeighbours)
+            f2z = np.zeros(numberOfNeighbours)
+            for j in xrange(numberOfNeighbours):
+                
+                # atom j
+                rij = ri[j]
+                xij = xi[j]; yij = yi[j]; zij = zi[j]
+                
+                # all k != i,j OR I > J ??? REMEMBER TO CHANGE WHEN NEEDED
+                k = np.arange(len(ri[:])) > j  
+                rik = ri[k] 
+                xik = xi[k]; yik = yi[k]; zik = zi[k]
+                
+                # compute cos(theta_ijk) and rjk
+                cosTheta = (xij*xik + yij*yik + zij*zik) / (rij*rik) 
+                
+                xjk = xij - xik
+                yjk = yij - yik
+                zjk = zij - zik
+                rjk = np.sqrt(xjk*xjk + yjk*yjk + zjk*zjk)   
+                
+                # differentiate each symmetry function and compute forces for current input vector
+                symmFuncNumber = 0
+                for s in parameters:
+                    if len(s) == 3:
+                        # compute derivative of G2 w.r.t. (x,y,z) of all neighbours simultaneously
+                        dij = dG2dr(xij, yij, zij, rij, s[0], s[1], s[2]) 
+                        f2x[j] += dEdG[i][symmFuncNumber]*dij[0]
+                        f2y[j] += dEdG[i][symmFuncNumber]*dij[1]
+                        f2z[j] += dEdG[i][symmFuncNumber]*dij[2]
+                    else:
+                        """if symmFuncType == 'G4':
+                            inputData[i,symmFuncNumber] += G4(rij, rik, rjk, cosTheta, \
+                                                              s[0], s[1], s[2], s[3])
+                        else:
+                            inputData[i,symmFuncNumber] += G5(rij, rik, cosTheta, \
+                                                              s[0], s[1], s[2], s[3])"""
+                        
+                    symmFuncNumber += 1
+                    
+                outfile.write('%g %g %g ' % (f2x[j], f2y[j], f2z[j]))
+            
+            outfile.write('\n')
+            
+            # show progress
+            sys.stdout.write("\r%2d %% complete" % ((float(i)/size)*100))
+            sys.stdout.flush()
+            
+            # G2
+            """if len(s) == 3:           
+
+                for i in xrange(size):
+                    # Rijs[i]: 1d array: [rij1, rij2, ...]
+                    # drijs[i]: [[xij1, xij2, ... ], [yij1, yij2, ... ], [zij1, zij2, ... ]]
+                    dij = np.sum( dG2dr(Rijs[i], drijs[i], s[0], s[1], s[2]) )  
+                    diffj2x[i] = np.sum(dij[0])
+                    diffj2y[i] = np.sum(dij[1])
+                    diffj2z[i] = np.sum(dij[2])
+            
+            # G4
+            else:
+                # differentiate G4 w.r.t. all coordinates
+                # need dG4/dxij and dG4/dxik for all j and k
+                for i in xrange(size):
+                    numberOfNeighbours = len(Rijs[i])
+                    sumjx = 0; sumjy = 0; sumjz = 0;
+                    sumkx = 0; sumky = 0; sumkz = 0;
+                    for j in xrange(numberOfNeighbours):
+                        # Rijs[i][j]: a number
+                        # drijs[i][j]: 1d array [xij, yij, zij]
+                        # Riks[i][j], Rjks[i][j], cosThetas[i][j]: 1d arrays
+                        # driks[i][j], drjks[i][j] (if numberOfNeighbours = 4):
+                        # list of 1d arrays[[xik2, xik3, xik4], [yik2, yik3, yik4], [zik2, zik3, zik4]]
+                        dij, dik = dG4dr(Rijs[i][j], Riks[i][j], Rjks[i][j], cosThetas[i][j], \
+                                         drijs[i][j], driks[i][j], drjks[i][j], \
+                                         s[0], s[1], s[2], s[3])
+                        sumjx += np.sum(dij[0])
+                        sumjy += np.sum(dij[1])
+                        sumjz += np.sum(dij[2])
+                        sumkx += np.sum(dik[0])
+                        sumky += np.sum(dik[1])
+                        sumkz += np.sum(dik[2])
+                    
+                    diffj3x[i] = sumjx
+                    diffj3y[i] = sumjy
+                    diffj3z[i] = sumjz
+                    diffk3x[i] = sumkx
+                    diffk3y[i] = sumky
+                    diffk3z[i] = sumkz"""
       
       
            
@@ -315,7 +385,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
             rij = ri[j]
             xij = xi[j]; yij = yi[j]; zij = zi[j]
             
-            # all k != i,j OR I > J ???
+            # all k != i,j OR I > J ??? REMEMBER TO CHANGE WHEN NEEDED
             k = np.arange(len(ri[:])) > j  
             rik = ri[k] 
             xik = xi[k]; yik = yi[k]; zik = zi[k]
@@ -386,28 +456,15 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
         sys.stdout.write("\r%2d %% complete" % ((float(i)/size)*100))
         sys.stdout.flush()
         
-    
-    # differentiate the symmetry functions
-    if forces:
-        calculateForces(Rijs, drijs, Riks, driks, cosThetas, Rjks, drjks, parameters)
-        
-    if sampleDir:
+    """if sampleDir:
         print 
         print "Writing symmetrized input data to file"
         with open(sampleDir + 'symmetryBehler.txt', 'w') as outfile:
             for vector in inputData:
                 for symmValue in vector:
                     outfile.write('%g ' % symmValue)
-                outfile.write('\n')
-            outfile.write('\n')
-            for vector in outputData:
-                for symmValue in vector:
-                    outfile.write('%g ' % symmValue)
-                outfile.write('\n')
-                
-    exit(1)
-        
-        
+                outfile.write('\n')"""
+              
     # test where my SW-potential is equivalent with lammps SW-potential
     """Etmp = np.array(E[:20][:])
     outtmp = outputData[:20,:]
