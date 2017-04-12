@@ -40,7 +40,7 @@ def readMetaFile(filename):
     
     # must first create a NN with the same architecture as the
     # on I want to load
-    with open(loadDir + '/meta.dat', 'r') as infile:
+    with open(filename, 'r') as infile:
         
         # read number of nodes and layers
         words = infile.readline().split()
@@ -70,6 +70,37 @@ def readMetaFile(filename):
         print "Lammps folder: ", lammpsDir
         
         return nNodes, nLayers, activation, inputs, outputs, lammpsDir
+        
+        
+def readForces(filename, numberOfAtoms, numberOfTimeSteps):
+    
+    with open(filename, 'r') as infile:
+        
+        timeStep = 0
+        atom = 1
+        FxNN = np.zeros(numberOfTimeSteps)
+        FyNN = np.zeros(numberOfTimeSteps) 
+        FzNN = np.zeros(numberOfTimeSteps)
+        for line in infile:
+            words = line.split()
+            if atom == 1:
+                atom += 1
+                continue
+            else:
+                FxNN[timeStep] += float(words[0])
+                FyNN[timeStep] += float(words[1])
+                FzNN[timeStep] += float(words[2])
+                            
+                if atom == numberOfAtoms:
+                    timeStep += 1
+                    atom = 1
+                    continue
+                atom += 1
+                
+    print FxNN[:5]
+                
+    return FxNN, FyNN, FzNN
+            
     
 
 
@@ -107,8 +138,10 @@ def analyze():
             print "Symmetry values file does not exist, has to be made"
             exit(1)
         numberOfSamples = len(inputData)
+        numberOfTimeSteps = numberOfSamples/3
         print "Number of samples: ", numberOfSamples
-        
+        print "Number of time steps: ", numberOfTimeSteps
+
         # read energy and eventual forces
         if forces:
             x0, y0, z0, r0, E, Fx, Fy, Fz = lammps.readNeighbourDataForce(lammpsDir + "/neighbours.txt")
@@ -116,6 +149,8 @@ def analyze():
             Fx = np.array(Fx)
             Fy = np.array(Fy)
             Fz = np.array(Fz)
+            numberOfAtoms = len(x0[0]) + 1
+            print "Number of atoms: ", numberOfAtoms
             print "Forces is supplied"
         else:
             E = lammps.readEnergy(lammpsDir + "/neighbours.txt")
@@ -151,23 +186,13 @@ def analyze():
         """plt.plot(energyNN, 'b-', energySW, 'g-')
         plt.show()
         plt.plot(energyError)
-        plt.show()"""        
+        plt.show()"""       
+              
+        tf.global_variables_initializer()
         
         # calculate deriviative of NN
-        tf.global_variables_initializer()
         dEdG = sess.run(networkGradient, feed_dict={x: inputData})
         dEdG = np.array(dEdG).reshape([numberOfSamples, inputs])
-        
-        """# read derivatives of symmetry functions
-        with open(lammpsDir + "/derivatives.txt", 'r') as infile:
-            derivatives = np.zeros((numberOfSamples, 3))
-            i = 0
-            for line in infile:
-                words = line.split()
-                derivatives[i,0] = float(words[0])
-                derivatives[i,1] = float(words[1])
-                derivatives[i,2] = float(words[2])
-                i += 1"""
                 
         parameters = []
         with open(loadDir + "/parameters.dat", 'r') as infile:
@@ -179,28 +204,40 @@ def analyze():
                     param.append(float(word))
                 parameters.append(param)
                     
-        # calculate forces for each time step
-        forceFile = lammpsDir + '/forces.txt'
-        if os.path.isfile(forceFile):
-            # read file
+        # calculate/read forces for each time step
+        forceFile = loadDir + '/forces.txt'
+        if not os.path.isfile(forceFile):
+            # calculate forces if not done already
+            symmetries.calculateForces(x0, y0, z0, r0, parameters, loadDir, dEdG)
+            print
+            print "Forces are written to file"
+
+        print "Reading forces"
+        if numberOfAtoms == 2:
+            forcesNN = np.loadtxt(forceFile)
+            FxNN = -forcesNN[:,0].reshape([numberOfSamples,1])
+            FyNN = -forcesNN[:,1].reshape([numberOfSamples,1])
+            FzNN = -forcesNN[:,2].reshape([numberOfSamples,1])
         else:
-            # calculate forces
-            symmetries.calculateForces(x0, y0, z0, r0, parameters, lammpsDir, dEdG)
-                    
-        Forces = np.loadtxt(lammpsDir + '/forces.txt')
-        FxNN = Forces[:,0].reshape([numberOfSamples,1])
-        FyNN = Forces[:,1].reshape([numberOfSamples,1])
-        FzNN = Forces[:,2].reshape([numberOfSamples,1])
-         
-        """plt.plot(FxNN, 'b-', -Fx, 'g-')
-        plt.show()"""
+            FxNN, FyNN, FzNN = readForces(forceFile, numberOfAtoms, numberOfTimeSteps)
+            
+        Fx = Fx[np.arange(0,numberOfSamples,3)].reshape(numberOfTimeSteps)
+        Fy = Fy[np.arange(1,numberOfSamples,3)].reshape(numberOfTimeSteps)
+        Fz = Fz[np.arange(2,numberOfSamples,3)].reshape(numberOfTimeSteps)
+
+        print Fx.shape
+        print Fy.shape
+        print Fz.shape
+        print FxNN.shape
+        print FyNN.shape
+        print FzNN.shape
         
         Fsw = np.sqrt(Fx**2 + Fy**2 + Fz**2)
         Fnn = np.sqrt(FxNN**2 + FyNN**2 + Fz**2)
         
-        xError = np.abs(FxNN + Fx)
-        yError = np.abs(FyNN + Fy)
-        zError = np.abs(FzNN + Fz)
+        xError = FxNN - Fx
+        yError = FyNN - Fy
+        zError = FzNN - Fz
         absError = Fnn - Fsw      
         
         # set parameters
@@ -212,19 +249,36 @@ def analyze():
         
         plt.figure()
         
-        plt.subplot(4,1,1)
+        plt.subplot(4,2,1)
+        plt.plot(FxNN, 'b-', Fx, 'g-')
+        plt.legend([r'$F_x^{NN}$', r'$F_x^{SW}$'])
+        
+        plt.subplot(4,2,3)
+        plt.plot(FyNN, 'b-', Fy, 'g-')
+        plt.legend([r'$F_y^{NN}$', r'$F_y^{SW}$'])   
+        
+        plt.subplot(4,2,5)        
+        plt.plot(FzNN, 'b-', Fz, 'g-')
+        plt.legend([r'$F_z^{NN}$', r'$F_z^{SW}$'])
+        
+        plt.subplot(4,2,7)       
+        plt.plot(Fnn, 'b-', Fsw, 'g-')
+        plt.xlabel('Timestep')
+        plt.legend([r'$|F|^{NN}$', r'$|F|^{SW}$'])
+        
+        plt.subplot(4,2,2)
         plt.plot(xError)
         plt.ylabel(r'$\Delta F_x$')
         
-        plt.subplot(4,1,2)
+        plt.subplot(4,2,4)
         plt.plot(yError)
         plt.ylabel(r'$\Delta F_y$')     
         
-        plt.subplot(4,1,3)        
+        plt.subplot(4,2,6)        
         plt.plot(zError)
         plt.ylabel(r'$\Delta F_z$')
         
-        plt.subplot(4,1,4)       
+        plt.subplot(4,2,8)       
         plt.plot(absError)
         plt.xlabel('Timestep')
         plt.ylabel(r'$\Delta F$')
@@ -232,9 +286,7 @@ def analyze():
         plt.show()
      
      
-    
-    
-    
+  
     
 ##### main #####
 analyze()

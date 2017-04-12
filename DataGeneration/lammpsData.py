@@ -267,7 +267,7 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=T
     sampleDir = filename[:-14]
     if Behler:
         symmetryFileName = sampleDir + 'symmetryBehler.txt'
-        if False:#os.path.isfile(symmetryFileName):
+        if os.path.isfile(symmetryFileName):
             print "Reading symmetrized Behler input data"
             inputData = readSymmetryData(symmetryFileName)
             outputData = np.array(E)

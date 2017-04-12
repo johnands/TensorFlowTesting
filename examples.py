@@ -300,7 +300,7 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, dataFolder, outputs=1, activation
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
 lammpsTrainingSi(1, 5, int(5e4), 'G5', \
-                 "../LAMMPS_test/Silicon/Data/11.04-13.10.11/", \
+                 "../LAMMPS_test/Silicon/Data/12.04-20.47.37/", \
                  activation=tf.nn.sigmoid, useFunction=False, forces=True, batch=5, Behler=True)
                         
                         

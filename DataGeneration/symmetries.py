@@ -1,128 +1,8 @@
 import numpy as np
 import tensorflow as tf
 import sys
-
-def cutoffFunction(R, Rc, cut=False):   
-    
-    value = 0.5 * (np.cos(np.pi*R / Rc) + 1)
-
-    # set elements above cutoff to zero so they dont contribute to sum
-    if cut:
-        if isinstance(R, np.ndarray):
-            value[np.where(R > Rc)[0]] = 0
-        else:
-            if R > Rc:
-                value = 0
-        
-    return value
-    
- 
-    
-def G1(Rij, Rc):
-    
-    return np.sum(cutoffFunction(Rij, Rc))
-    
-    
-def G2(Rij, eta, Rc, Rs):
-    
-    return np.sum( np.exp(-eta*(Rij - Rs)**2) * cutoffFunction(Rij, Rc) )
-    
-    
-def G3(Rij, Rc, kappa):
-    
-    return np.sum( np.cos(kappa*Rij) * cutoffFunction(Rij, Rc))
-    
-    
-def G4(Rij, Rik, Rjk, cosTheta, eta, Rc, zeta, Lambda):
-    
-    return 2**(1-zeta) * np.sum( (1 + Lambda*cosTheta)**zeta * \
-           np.exp( -eta*(Rij**2 + Rik**2 + Rjk**2) ) * \
-           cutoffFunction(Rij, Rc) * cutoffFunction(Rik, Rc) * cutoffFunction(Rjk, Rc, cut=True) )
-           
-           
-def G5(Rij, Rik, cosTheta, eta, Rc, zeta, Lambda):
-    
-    return 2**(1-zeta) * np.sum( (1 + Lambda*cosTheta)**zeta* \
-           np.exp( -eta*(Rij**2 + Rik**2) ) * \
-           cutoffFunction(Rij, Rc) * cutoffFunction(Rik, Rc) )
-           
-           
-           
-def cutoffFunctionTF(R, Rc, cut=False):   
-    
-    value = 0.5 * (tf.cos(np.pi*R / Rc) + 1)
-
-    # set elements above cutoff to zero so they dont contribute to sum
-    """if cut:
-        if isinstance(R, np.ndarray):
-            value[np.where(R > Rc)[0]] = 0
-        else:
-            if R > Rc:
-                value = 0"""
-        
-    return value
-    
-    
-def G2TF(xij, yij, zij, eta, Rc, Rs):
-    
-    Rij = tf.sqrt(xij*xij + yij*yij + zij*zij)
-    
-    return tf.reduce_sum( tf.exp(-eta*(Rij - Rs)**2) * cutoffFunctionTF(Rij, Rc) )
-    
-    
-def G4TF(xij, yij, zij, xik, yik, zik, eta, Rc, zeta, Lambda):
-       
-    Rij2 = xij*xij + yij*yij + zij*zij
-    Rij = tf.sqrt(Rij2)
-    
-    Rik2 = xik*xik + yik*yik + zik*zik
-    Rik = tf.sqrt(Rik2)
-    
-    cosTheta = (xij*xik + yij*yik + zij*zik) / (Rij*Rik)
-
-    xjk = xij - xik
-    yjk = yij - yik
-    zjk = zij - zik
-    Rjk = tf.sqrt(xjk*xjk + yjk*yjk + zjk*zjk)
-
-    
-    return 2**(1-zeta) * tf.reduce_sum( (1 + Lambda*cosTheta)**zeta * \
-           tf.exp( -eta*(Rij2 + Rik2 + Rjk*Rjk) ) * \
-           cutoffFunctionTF(Rij, Rc) * cutoffFunctionTF(Rik, Rc) * cutoffFunctionTF(Rjk, Rc, cut=True) )
-           
-        
-def G5TF(xij, yij, zij, xik, yik, zik, eta, Rc, zeta, Lambda):
-       
-    Rij2 = xij*xij + yij*yij + zij*zij
-    Rij = tf.sqrt(Rij2)
-    
-    Rik2 = xik*xik + yik*yik + zik*zik
-    Rik = tf.sqrt(Rik2)
-    
-    cosTheta = (xij*xik + yij*yik + zij*zik) / (Rij*Rik)
-   
-    return 2**(1-zeta) * tf.reduce_sum( (1 + Lambda*cosTheta)**zeta * \
-           tf.exp( -eta*(Rij2 + Rik2) ) * \
-           cutoffFunctionTF(Rij, Rc) * cutoffFunctionTF(Rik, Rc) )
-           
-           
-def dfcdr(R, Rc):
-    
-    return -0.5*(np.pi/Rc) * np.sin((np.pi*R) / Rc)
-          
-          
-def dG2dr(xij, yij, zij, Rij, eta, Rc, Rs):
-    
-    dr = np.exp(-eta*(Rij - Rs)**2) * (2*eta*(Rs - Rij)*cutoffFunction(Rij, Rc) + dfcdr(Rij, Rc))
-    fpair = -dr/Rij
-    
-    dij = []
-    dij.append(fpair*xij)
-    dij.append(fpair*yij)
-    dij.append(fpair*zij)
-    
-    return dij
-    
+import symmetryFunctions
+     
            
            
 def applyTwoBodySymmetry(inputTemp, parameters):
@@ -149,9 +29,9 @@ def applyTwoBodySymmetry(inputTemp, parameters):
         symmFuncNumber = 0
         for s in parameters:
             if len(s) == 1:
-                inputData[i,symmFuncNumber] += G1(rij, s[0])              
+                inputData[i,symmFuncNumber] += symmetryFunctions.G1(rij, s[0])              
             else:
-                inputData[i,symmFuncNumber] += G2(rij, s[0], s[1], s[2])
+                inputData[i,symmFuncNumber] += symmetryFunctions.G2(rij, s[0], s[1], s[2])
             symmFuncNumber += 1
                
         # count zeros
@@ -171,14 +51,14 @@ def applyTwoBodySymmetry(inputTemp, parameters):
     return inputData
     
     
-def calculateForces(x, y, z, r, parameters, sampleDir, dEdG):
+def calculateForces(x, y, z, r, parameters, trainingDir, dEdG):
     
     print
     print "Computing forces..."
     
     size = len(x)
     
-    outName = sampleDir + "/forces.txt"
+    outName = trainingDir + "/forces.txt"
     
     with open(outName, 'w') as outfile:
         
@@ -195,9 +75,10 @@ def calculateForces(x, y, z, r, parameters, sampleDir, dEdG):
                
             # sum over all neighbours k for each neighbour j
             # this loop takes care of both 2-body and 3-body configs
-            f2x = np.zeros(numberOfNeighbours)
-            f2y = np.zeros(numberOfNeighbours)
-            f2z = np.zeros(numberOfNeighbours)
+            # want to save total force on all NEIGHBOURS, not the atom i itself
+            Fx = np.zeros(numberOfNeighbours)
+            Fy = np.zeros(numberOfNeighbours)
+            Fz = np.zeros(numberOfNeighbours)
             for j in xrange(numberOfNeighbours):
                 
                 # atom j
@@ -215,29 +96,44 @@ def calculateForces(x, y, z, r, parameters, sampleDir, dEdG):
                 xjk = xij - xik
                 yjk = yij - yik
                 zjk = zij - zik
-                rjk = np.sqrt(xjk*xjk + yjk*yjk + zjk*zjk)   
+                rjk = np.sqrt(xjk*xjk + yjk*yjk + zjk*zjk)  
                 
                 # differentiate each symmetry function and compute forces for current input vector
+                # xij, yij, zij, rij are numbers, i.e. on neighbour j at a tie
+                # xik, yik, zik, rik are vectors, i.e. all neighbours k > j
+                # we therefore include all triplets for a specific pair (i,j)
                 symmFuncNumber = 0
                 for s in parameters:
                     if len(s) == 3:
                         # compute derivative of G2 w.r.t. (x,y,z) of all neighbours simultaneously
-                        dij = dG2dr(xij, yij, zij, rij, s[0], s[1], s[2]) 
-                        f2x[j] += dEdG[i][symmFuncNumber]*dij[0]
-                        f2y[j] += dEdG[i][symmFuncNumber]*dij[1]
-                        f2z[j] += dEdG[i][symmFuncNumber]*dij[2]
+                        dij = symmetryFunctions.dG2dr(xij, yij, zij, rij, s[0], s[1], s[2]) 
+                        Fx[j] += dEdG[i][symmFuncNumber]*dij[0]
+                        Fy[j] += dEdG[i][symmFuncNumber]*dij[1]
+                        Fz[j] += dEdG[i][symmFuncNumber]*dij[2]
                     else:
-                        """if symmFuncType == 'G4':
-                            inputData[i,symmFuncNumber] += G4(rij, rik, rjk, cosTheta, \
-                                                              s[0], s[1], s[2], s[3])
-                        else:
-                            inputData[i,symmFuncNumber] += G5(rij, rik, cosTheta, \
-                                                              s[0], s[1], s[2], s[3])"""
+                        # compute derivative of G4 w.r.t. (x,y,z) of all k for on j 
+                        # atom j must get contribution from all k's
+                        # each k gets one contribution per k
+                        dij = symmetryFunctions.dG5dj(xij, yij, zij, xik, yik, zik, rij, rik, cosTheta, \
+                                                      s[0], s[1], s[2], s[3])
+                        dik = symmetryFunctions.dG5dk(xij, yij, zij, xik, yik, zik, rij, rik, cosTheta, \
+                                                      s[0], s[1], s[2], s[3])
+                                                      
+                        # atom j gets force contribution for all ks, i.e. all triplets for this (i,j)                                      
+                        Fx[j] += dEdG[i][symmFuncNumber]*np.sum(dij[0])
+                        Fy[j] += dEdG[i][symmFuncNumber]*np.sum(dij[1])
+                        Fz[j] += dEdG[i][symmFuncNumber]*np.sum(dij[2])
                         
+                        # find force contribution on each k
+                        Fx[k] += dEdG[i][symmFuncNumber]*dik[0]
+                        Fy[k] += dEdG[i][symmFuncNumber]*dik[1]
+                        Fz[k] += dEdG[i][symmFuncNumber]*dik[2]
+                                         
                     symmFuncNumber += 1
                     
-                outfile.write('%g %g %g ' % (f2x[j], f2y[j], f2z[j]))
-            
+                # write force on current j, this will be total force when k > j
+                outfile.write('%.12g %.12g %.12g ' % (Fx[j], Fy[j], Fz[j])) 
+                    
             outfile.write('\n')
             
             # show progress
@@ -306,14 +202,6 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
     else:
         print 'Not valid triplet symmetry function'
         exit(1)
-        
-    # train only on parts of configs to test
-    """indicies = np.arange(5)
-    N = 5
-    x = x[:3]
-    y = y[:3]
-    z = z[:3]
-    r = r[:3]"""
     
     size = len(x)
     numberOfSymmFunc = len(parameters)
@@ -431,13 +319,13 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
             symmFuncNumber = 0
             for s in parameters:
                 if len(s) == 3:
-                    inputData[i,symmFuncNumber] += G2(rij, s[0], s[1], s[2])
+                    inputData[i,symmFuncNumber] += symmetryFunctions.G2(rij, s[0], s[1], s[2])
                 else:
                     if symmFuncType == 'G4':
-                        inputData[i,symmFuncNumber] += G4(rij, rik, rjk, cosTheta, \
+                        inputData[i,symmFuncNumber] += symmetryFunctions.G4(rij, rik, rjk, cosTheta, \
                                                           s[0], s[1], s[2], s[3])
                     else:
-                        inputData[i,symmFuncNumber] += G5(rij, rik, cosTheta, \
+                        inputData[i,symmFuncNumber] += symmetryFunctions.G5(rij, rik, cosTheta, \
                                                           s[0], s[1], s[2], s[3])
                     
                 symmFuncNumber += 1
@@ -456,14 +344,14 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
         sys.stdout.write("\r%2d %% complete" % ((float(i)/size)*100))
         sys.stdout.flush()
         
-    """if sampleDir:
+    if sampleDir:
         print 
         print "Writing symmetrized input data to file"
         with open(sampleDir + 'symmetryBehler.txt', 'w') as outfile:
             for vector in inputData:
                 for symmValue in vector:
                     outfile.write('%g ' % symmValue)
-                outfile.write('\n')"""
+                outfile.write('\n')
               
     # test where my SW-potential is equivalent with lammps SW-potential
     """Etmp = np.array(E[:20][:])
