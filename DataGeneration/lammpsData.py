@@ -124,8 +124,10 @@ def readNeighbourDataForce(filename):
         
         x = []; y = []; z = []; r = [];
         E = []; Fx = []; Fy = []; Fz = []
+        k = 0
         for line in inFile:
             words = line.split()
+
             N = (len(words) - 4) / 4
             xi = []; yi = []; zi = [];
             ri = [];
@@ -142,9 +144,11 @@ def readNeighbourDataForce(filename):
             E.append([float(words[-4])])  
             Fx.append([float(words[-3])])
             Fy.append([float(words[-2])])
-            Fz.append([float(words[-1])])            
+            Fz.append([float(words[-1])])
+            k += 1
             
     return x, y, z, r, E, Fx, Fy, Fz
+    
     
     
 def readEnergyAndForce(filename):

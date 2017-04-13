@@ -35,6 +35,10 @@ print
 
 forces = True
 
+class prettyfloat(float):
+    def __repr__(self):
+        return "%0.10f" % self
+
 
 def readMetaFile(filename):
     
@@ -83,6 +87,10 @@ def readForces(filename, numberOfAtoms, numberOfTimeSteps):
         FzNN = np.zeros(numberOfTimeSteps)
         for line in infile:
             words = line.split()
+            
+            if len(words) != 6:
+                continue
+            
             if atom == 1:
                 atom += 1
                 continue
@@ -91,13 +99,15 @@ def readForces(filename, numberOfAtoms, numberOfTimeSteps):
                 FyNN[timeStep] += float(words[1])
                 FzNN[timeStep] += float(words[2])
                             
-                if atom == numberOfAtoms:
+                if atom == numberOfAtoms:  
                     timeStep += 1
                     atom = 1
                     continue
                 atom += 1
                 
-    print FxNN[:5]
+    print map(prettyfloat, FxNN[:1])
+    print map(prettyfloat, FyNN[:1])
+    print map(prettyfloat, FzNN[:1])
                 
     return FxNN, FyNN, FzNN
             
@@ -175,7 +185,7 @@ def analyze():
         
         # make energy error vs time step plot
         energyNN = np.zeros(numberOfSamples)
-        energySW = E[:,0]
+        energySW = E[:,0].reshape([numberOfSamples])
         for i in xrange(numberOfSamples):
             energyNN[i] = sess.run(prediction, feed_dict={x: inputData[i].reshape([1,inputs])})
             
@@ -183,10 +193,14 @@ def analyze():
         aveError = np.sum(energyError) / len(energyError)
         print "Average error: ", aveError
         
-        """plt.plot(energyNN, 'b-', energySW, 'g-')
-        plt.show()
+        """plt.subplot(2,1,1)
+        plt.plot(energyNN, 'b-', energySW, 'g-')
+        plt.legend([r'$E_{NN}$', r'$E_{SW}$'])
+        plt.subplot(2,1,2)
         plt.plot(energyError)
-        plt.show()"""       
+        plt.xlabel('Timestep')
+        plt.legend(r'$E_{NN} - E_{SW}$')      
+        plt.show()"""   
               
         tf.global_variables_initializer()
         
@@ -205,10 +219,11 @@ def analyze():
                 parameters.append(param)
                     
         # calculate/read forces for each time step
-        forceFile = loadDir + '/forces.txt'
+        forceFile = loadDir + '/forcesklargerjplus.txt'
+        print "Force file: ", forceFile
         if not os.path.isfile(forceFile):
             # calculate forces if not done already
-            symmetries.calculateForces(x0, y0, z0, r0, parameters, loadDir, dEdG)
+            symmetries.calculateForces(x0, y0, z0, r0, parameters, forceFile, dEdG)
             print
             print "Forces are written to file"
 
@@ -222,15 +237,8 @@ def analyze():
             FxNN, FyNN, FzNN = readForces(forceFile, numberOfAtoms, numberOfTimeSteps)
             
         Fx = Fx[np.arange(0,numberOfSamples,3)].reshape(numberOfTimeSteps)
-        Fy = Fy[np.arange(1,numberOfSamples,3)].reshape(numberOfTimeSteps)
-        Fz = Fz[np.arange(2,numberOfSamples,3)].reshape(numberOfTimeSteps)
-
-        print Fx.shape
-        print Fy.shape
-        print Fz.shape
-        print FxNN.shape
-        print FyNN.shape
-        print FzNN.shape
+        Fy = Fy[np.arange(0,numberOfSamples,3)].reshape(numberOfTimeSteps)
+        Fz = Fz[np.arange(0,numberOfSamples,3)].reshape(numberOfTimeSteps)
         
         Fsw = np.sqrt(Fx**2 + Fy**2 + Fz**2)
         Fnn = np.sqrt(FxNN**2 + FyNN**2 + Fz**2)
@@ -238,7 +246,21 @@ def analyze():
         xError = FxNN - Fx
         yError = FyNN - Fy
         zError = FzNN - Fz
-        absError = Fnn - Fsw      
+        absError = Fnn - Fsw 
+        
+        # compute standard deviation of error
+        xStd = np.std(xError)
+        yStd = np.std(yError)
+        zStd = np.std(zError)
+        absStd = np.std(absError)
+        print "Std. x: ", xStd
+        print "Std. y: ", yStd
+        print "Std. z: ", zStd
+        print "Std. abs: ", absStd
+        
+        print 'x0NN - x0SW:', FxNN[0] - Fx[0]
+        print 'y0NN - y0SW:', FyNN[0] - Fy[0]
+        print 'z0NN - z0SW:', FzNN[0] - Fz[0]
         
         # set parameters
         plt.rc('lines', linewidth=1.5)

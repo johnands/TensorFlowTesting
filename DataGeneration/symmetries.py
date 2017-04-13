@@ -51,16 +51,14 @@ def applyTwoBodySymmetry(inputTemp, parameters):
     return inputData
     
     
-def calculateForces(x, y, z, r, parameters, trainingDir, dEdG):
+def calculateForces(x, y, z, r, parameters, forceFile, dEdG):
     
     print
     print "Computing forces..."
     
     size = len(x)
     
-    outName = trainingDir + "/forces.txt"
-    
-    with open(outName, 'w') as outfile:
+    with open(forceFile, 'w') as outfile:
         
         # calculate force for each neighbour atom at each time step in given configs
         for i in xrange(size):  
@@ -86,7 +84,7 @@ def calculateForces(x, y, z, r, parameters, trainingDir, dEdG):
                 xij = xi[j]; yij = yi[j]; zij = zi[j]
                 
                 # all k != i,j OR I > J ??? REMEMBER TO CHANGE WHEN NEEDED
-                k = np.arange(len(ri[:])) > j  
+                k = np.arange(len(ri[:])) > j
                 rik = ri[k] 
                 xik = xi[k]; yik = yi[k]; zik = zi[k]
                 
@@ -96,7 +94,7 @@ def calculateForces(x, y, z, r, parameters, trainingDir, dEdG):
                 xjk = xij - xik
                 yjk = yij - yik
                 zjk = zij - zik
-                rjk = np.sqrt(xjk*xjk + yjk*yjk + zjk*zjk)  
+                rjk = np.sqrt(xjk*xjk + yjk*yjk + zjk*zjk) 
                 
                 # differentiate each symmetry function and compute forces for current input vector
                 # xij, yij, zij, rij are numbers, i.e. on neighbour j at a tie
@@ -110,19 +108,20 @@ def calculateForces(x, y, z, r, parameters, trainingDir, dEdG):
                         Fx[j] += dEdG[i][symmFuncNumber]*dij[0]
                         Fy[j] += dEdG[i][symmFuncNumber]*dij[1]
                         Fz[j] += dEdG[i][symmFuncNumber]*dij[2]
+                        
                     else:
                         # compute derivative of G4 w.r.t. (x,y,z) of all k for on j 
                         # atom j must get contribution from all k's
                         # each k gets one contribution per k
-                        dij = symmetryFunctions.dG5dj(xij, yij, zij, xik, yik, zik, rij, rik, cosTheta, \
+                        dij3 = symmetryFunctions.dG5dj(xij, yij, zij, xik, yik, zik, rij, rik, cosTheta, \
                                                       s[0], s[1], s[2], s[3])
                         dik = symmetryFunctions.dG5dk(xij, yij, zij, xik, yik, zik, rij, rik, cosTheta, \
                                                       s[0], s[1], s[2], s[3])
                                                       
                         # atom j gets force contribution for all ks, i.e. all triplets for this (i,j)                                      
-                        Fx[j] += dEdG[i][symmFuncNumber]*np.sum(dij[0])
-                        Fy[j] += dEdG[i][symmFuncNumber]*np.sum(dij[1])
-                        Fz[j] += dEdG[i][symmFuncNumber]*np.sum(dij[2])
+                        Fx[j] += dEdG[i][symmFuncNumber]*np.sum(dij3[0])
+                        Fy[j] += dEdG[i][symmFuncNumber]*np.sum(dij3[1])
+                        Fz[j] += dEdG[i][symmFuncNumber]*np.sum(dij3[2])
                         
                         # find force contribution on each k
                         Fx[k] += dEdG[i][symmFuncNumber]*dik[0]
@@ -130,57 +129,15 @@ def calculateForces(x, y, z, r, parameters, trainingDir, dEdG):
                         Fz[k] += dEdG[i][symmFuncNumber]*dik[2]
                                          
                     symmFuncNumber += 1
-                    
+                
                 # write force on current j, this will be total force when k > j
-                outfile.write('%.12g %.12g %.12g ' % (Fx[j], Fy[j], Fz[j])) 
+                outfile.write('%.17g %.17g %.17g ' % (Fx[j], Fy[j], Fz[j])) 
                     
             outfile.write('\n')
             
             # show progress
             sys.stdout.write("\r%2d %% complete" % ((float(i)/size)*100))
             sys.stdout.flush()
-            
-            # G2
-            """if len(s) == 3:           
-
-                for i in xrange(size):
-                    # Rijs[i]: 1d array: [rij1, rij2, ...]
-                    # drijs[i]: [[xij1, xij2, ... ], [yij1, yij2, ... ], [zij1, zij2, ... ]]
-                    dij = np.sum( dG2dr(Rijs[i], drijs[i], s[0], s[1], s[2]) )  
-                    diffj2x[i] = np.sum(dij[0])
-                    diffj2y[i] = np.sum(dij[1])
-                    diffj2z[i] = np.sum(dij[2])
-            
-            # G4
-            else:
-                # differentiate G4 w.r.t. all coordinates
-                # need dG4/dxij and dG4/dxik for all j and k
-                for i in xrange(size):
-                    numberOfNeighbours = len(Rijs[i])
-                    sumjx = 0; sumjy = 0; sumjz = 0;
-                    sumkx = 0; sumky = 0; sumkz = 0;
-                    for j in xrange(numberOfNeighbours):
-                        # Rijs[i][j]: a number
-                        # drijs[i][j]: 1d array [xij, yij, zij]
-                        # Riks[i][j], Rjks[i][j], cosThetas[i][j]: 1d arrays
-                        # driks[i][j], drjks[i][j] (if numberOfNeighbours = 4):
-                        # list of 1d arrays[[xik2, xik3, xik4], [yik2, yik3, yik4], [zik2, zik3, zik4]]
-                        dij, dik = dG4dr(Rijs[i][j], Riks[i][j], Rjks[i][j], cosThetas[i][j], \
-                                         drijs[i][j], driks[i][j], drjks[i][j], \
-                                         s[0], s[1], s[2], s[3])
-                        sumjx += np.sum(dij[0])
-                        sumjy += np.sum(dij[1])
-                        sumjz += np.sum(dij[2])
-                        sumkx += np.sum(dik[0])
-                        sumky += np.sum(dik[1])
-                        sumkz += np.sum(dik[2])
-                    
-                    diffj3x[i] = sumjx
-                    diffj3y[i] = sumjy
-                    diffj3z[i] = sumjz
-                    diffk3x[i] = sumkx
-                    diffk3y[i] = sumky
-                    diffk3z[i] = sumkz"""
       
       
            
@@ -344,6 +301,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
         sys.stdout.write("\r%2d %% complete" % ((float(i)/size)*100))
         sys.stdout.flush()
         
+        
     if sampleDir:
         print 
         print "Writing symmetrized input data to file"
@@ -352,20 +310,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
                 for symmValue in vector:
                     outfile.write('%g ' % symmValue)
                 outfile.write('\n')
-              
-    # test where my SW-potential is equivalent with lammps SW-potential
-    """Etmp = np.array(E[:20][:])
-    outtmp = outputData[:20,:]
-    print "Lammps:"
-    print Etmp
-    print 
-    print "MySW:"
-    print outtmp
-    print 
-    print outtmp - Etmp
-    print 
-    print outtmp/Etmp"""
-    
+                  
     fractionOfZeros = 1 - fractionOfNonZeros / float(size)
     fractionOfInputVectorsOnlyZeros /= float(size)
     print "Fraction of zeros: ", fractionOfZeros
