@@ -110,7 +110,7 @@ def calculateForces(x, y, z, r, parameters, forceFile, dEdG):
                         Fz[j] += dEdG[i][symmFuncNumber]*dij[2]
                         
                     else:
-                        # compute derivative of G4 w.r.t. (x,y,z) of all k for on j 
+                        # compute derivative of G5 w.r.t. (x,y,z) of all k for on j 
                         # atom j must get contribution from all k's
                         # each k gets one contribution per k
                         dij3 = symmetryFunctions.dG5dj(xij, yij, zij, xik, yik, zik, rij, rik, cosTheta, \
@@ -132,6 +132,122 @@ def calculateForces(x, y, z, r, parameters, forceFile, dEdG):
                 
                 # write force on current j, this will be total force when k > j
                 outfile.write('%.17g %.17g %.17g ' % (Fx[j], Fy[j], Fz[j])) 
+            
+                    
+            outfile.write('\n')
+            
+            # show progress
+            sys.stdout.write("\r%2d %% complete" % ((float(i)/size)*100))
+            sys.stdout.flush()
+            
+            
+def calculateForcesTags(x, y, z, r, tags, parameters, forceFile, dEdG, chosenAtom, numberOfAtoms):
+    
+    print
+    print "Computing forces..."
+    
+    size = len(x)    
+    atom = 0
+    
+    with open(forceFile, 'w') as outfile:
+        
+        # calculate force for each neighbour atom at each time step in given configs
+        for i in xrange(size):
+            
+            # reset atom counter, this means new time step
+            if atom == numberOfAtoms-1:
+                atom = 0
+                outfile.write('\n')
+            
+            # skip if current neighbour list belongs to chosen atom
+            # can I just use all tags as strings?
+            if tags[i][-1] == chosenAtom:
+                atom += 1
+                continue
+            
+            # find out which coordinates in current list that belongs to chosen atom
+            chosen = np.where(tags[i] == chosenAtom)[0]
+            
+            # skip if chosen atom is not in this list
+            if len(chosen) == 0:
+                atom += 1
+                continue
+        
+            # neighbour coordinates for atom i
+            xi = np.array(x[i][:])
+            yi = np.array(y[i][:])
+            zi = np.array(z[i][:])
+            ri = np.array(r[i][:])
+            ri = np.sqrt(ri)
+            numberOfNeighbours = len(xi)
+                         
+            # sum over all neighbours k for each neighbour j
+            # this loop takes care of both 2-body and 3-body configs
+            # want to save total force on all NEIGHBOURS, not the atom i itself
+            Fx = np.zeros(numberOfNeighbours)
+            Fy = np.zeros(numberOfNeighbours)
+            Fz = np.zeros(numberOfNeighbours)
+            for j in xrange(numberOfNeighbours):
+                
+                # atom j
+                rij = ri[j]
+                xij = xi[j]; yij = yi[j]; zij = zi[j]
+                
+                # all k != i,j OR I > J ??? REMEMBER TO CHANGE WHEN NEEDED
+                k = np.arange(len(ri[:])) > j
+                rik = ri[k] 
+                xik = xi[k]; yik = yi[k]; zik = zi[k]
+                
+                # skip if chosen atom is not in current triplet
+                if not (j == chosen or (k == chosen).any()):
+                    continue
+                    
+                
+                # compute cos(theta_ijk) and rjk
+                cosTheta = (xij*xik + yij*yik + zij*zik) / (rij*rik) 
+                
+                xjk = xij - xik
+                yjk = yij - yik
+                zjk = zij - zik
+                rjk = np.sqrt(xjk*xjk + yjk*yjk + zjk*zjk) 
+                
+                # differentiate each symmetry function and compute forces for current input vector
+                # xij, yij, zij, rij are numbers, i.e. on neighbour j at a tie
+                # xik, yik, zik, rik are vectors, i.e. all neighbours k > j
+                # we therefore include all triplets for a specific pair (i,j)
+                symmFuncNumber = 0
+                for s in parameters:
+                    if len(s) == 3:
+                        # compute derivative of G2 w.r.t. (x,y,z) of all neighbours simultaneously
+                        dij = symmetryFunctions.dG2dr(xij, yij, zij, rij, s[0], s[1], s[2]) 
+                        Fx[j] += dEdG[i][symmFuncNumber]*dij[0]
+                        Fy[j] += dEdG[i][symmFuncNumber]*dij[1]
+                        Fz[j] += dEdG[i][symmFuncNumber]*dij[2]
+                        
+                    else:
+                        # compute derivative of G5 w.r.t. (x,y,z) of all k for on j 
+                        # atom j must get contribution from all k's
+                        # each k gets one contribution per k
+                        dij3 = symmetryFunctions.dG5dj(xij, yij, zij, xik, yik, zik, rij, rik, cosTheta, \
+                                                      s[0], s[1], s[2], s[3])
+                        dik = symmetryFunctions.dG5dk(xij, yij, zij, xik, yik, zik, rij, rik, cosTheta, \
+                                                      s[0], s[1], s[2], s[3])
+                                                      
+                        # atom j gets force contribution for all ks, i.e. all triplets for this (i,j)                                      
+                        Fx[j] += dEdG[i][symmFuncNumber]*np.sum(dij3[0])
+                        Fy[j] += dEdG[i][symmFuncNumber]*np.sum(dij3[1])
+                        Fz[j] += dEdG[i][symmFuncNumber]*np.sum(dij3[2])
+                        
+                        # find force contribution on each k
+                        Fx[k] += dEdG[i][symmFuncNumber]*dik[0]
+                        Fy[k] += dEdG[i][symmFuncNumber]*dik[1]
+                        Fz[k] += dEdG[i][symmFuncNumber]*dik[2]
+                                         
+                    symmFuncNumber += 1
+                
+                # write force on current j, this will be total force when k > j
+                outfile.write('%.17g %.17g %.17g ' % (Fx[j], Fy[j], Fz[j])) 
+            
                     
             outfile.write('\n')
             
@@ -142,7 +258,7 @@ def calculateForces(x, y, z, r, parameters, forceFile, dEdG):
       
            
 def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, E=None, forces=False,
-                           sampleDir=''):
+                           sampleName='', klargerj=False):
     """
     Transform input coordinates with 2- and 3-body symmetry functions
     Input coordinates can be random or sampled from lammps
@@ -159,6 +275,13 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
     else:
         print 'Not valid triplet symmetry function'
         exit(1)
+        
+    if klargerj:
+        print 
+        print "Using k > j when training"
+    else:
+        print
+        print "Using k != j when training"
     
     size = len(x)
     numberOfSymmFunc = len(parameters)
@@ -230,8 +353,12 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
             rij = ri[j]
             xij = xi[j]; yij = yi[j]; zij = zi[j]
             
-            # all k != i,j OR I > J ??? REMEMBER TO CHANGE WHEN NEEDED
-            k = np.arange(len(ri[:])) > j  
+            # all k != i,j OR I > J
+            if klargerj:
+                k = np.arange(len(ri[:])) > j
+            else:
+                k = np.arange(len(ri[:])) != j  
+                
             rik = ri[k] 
             xik = xi[k]; yik = yi[k]; zik = zi[k]
             
@@ -302,10 +429,10 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
         sys.stdout.flush()
         
         
-    if sampleDir:
+    if sampleName:
         print 
         print "Writing symmetrized input data to file"
-        with open(sampleDir + 'symmetryBehler.txt', 'w') as outfile:
+        with open(sampleName, 'w') as outfile:
             for vector in inputData:
                 for symmValue in vector:
                     outfile.write('%g ' % symmValue)

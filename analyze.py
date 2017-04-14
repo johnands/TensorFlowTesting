@@ -140,7 +140,7 @@ def analyze():
         print 'Model restored: ', loadFileName 
         
         # read symmetry input values to reconstruct training set
-        symmetryFileName = lammpsDir + '/symmetryBehler.txt'
+        symmetryFileName = lammpsDir + '/symmetryBehlerkunequalj.txt'
         if os.path.isfile(symmetryFileName):
             print "Reading symmetrized Behler data"
             inputData = lammps.readSymmetryData(symmetryFileName)
@@ -219,7 +219,7 @@ def analyze():
                 parameters.append(param)
                     
         # calculate/read forces for each time step
-        forceFile = loadDir + '/forcesklargerjplus.txt'
+        forceFile = loadDir + '/forceskunequaljplus2.txt'
         print "Force file: ", forceFile
         if not os.path.isfile(forceFile):
             # calculate forces if not done already
@@ -258,9 +258,9 @@ def analyze():
         print "Std. z: ", zStd
         print "Std. abs: ", absStd
         
-        print 'x0NN - x0SW:', FxNN[0] - Fx[0]
-        print 'y0NN - y0SW:', FyNN[0] - Fy[0]
-        print 'z0NN - z0SW:', FzNN[0] - Fz[0]
+        print 'x0NN - x0SW:', FxNN[:10]/Fx[:10]
+        print 'y0NN - y0SW:', FyNN[:10]/Fy[:10]
+        print 'z0NN - z0SW:', #FzNN[0]/Fz[0]
         
         # set parameters
         plt.rc('lines', linewidth=1.5)

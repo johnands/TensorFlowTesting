@@ -124,7 +124,6 @@ def readNeighbourDataForce(filename):
         
         x = []; y = []; z = []; r = [];
         E = []; Fx = []; Fy = []; Fz = []
-        k = 0
         for line in inFile:
             words = line.split()
 
@@ -145,9 +144,42 @@ def readNeighbourDataForce(filename):
             Fx.append([float(words[-3])])
             Fy.append([float(words[-2])])
             Fz.append([float(words[-1])])
-            k += 1
             
     return x, y, z, r, E, Fx, Fy, Fz
+    
+
+def readNeighbourDataForceTag(filename):
+    
+    with open(filename, 'r') as inFile:
+        
+        x = []; y = []; z = []; r = [];
+        tags = []
+        E = []; Fx = []; Fy = []; Fz = []
+        for line in inFile:
+            words = line.split()
+
+            N = (len(words) - 4) / 5
+            xi = []; yi = []; zi = [];
+            tagsi = []
+            ri = [];
+            for i in xrange(N):
+                tagsi.append(float(words[5*i]))
+                xi.append(float(words[5*i+1]))
+                yi.append(float(words[5*i+2]))
+                zi.append(float(words[5*i+3]))
+                ri.append(float(words[5*i+4]))
+                
+            tags.append(tagsi)
+            x.append(xi)
+            y.append(yi)
+            z.append(zi)
+            r.append(ri)
+            E.append([float(words[-4])])  
+            Fx.append([float(words[-3])])
+            Fy.append([float(words[-2])])
+            Fz.append([float(words[-1])])
+            
+    return x, y, z, r, E, Fx, Fy, Fz, tags
     
     
     
@@ -237,7 +269,8 @@ def readSymmetryData(filename):
     return np.array(inputData)
 
 
-def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=True):
+def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=True, 
+                   klargerj=False, tags=True):
     """ 
     Coordinates and energies of neighbours is sampled from lammps
     Angular symmtry funcitons are used to transform input data  
@@ -245,14 +278,21 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=T
      
     # read file
     if forces:
-        x, y, z, r, E, Fx, Fy, Fz = readNeighbourDataForce(filename)
+        if tags:
+            print 
+            print "Tags are included in neighbour lists"
+            x, y, z, r, E, Fx, Fy, Fz, _ = readNeighbourDataForceTag(filename)
+        else:
+            print 
+            print "Tags are not included in neighbour lists"
+            x, y, z, r, E, Fx, Fy, Fz = readNeighbourDataForce(filename)
         Fx = np.array(Fx)
         Fy = np.array(Fy)
         Fz = np.array(Fz)
         print "Forces is applied"
     else:
         x, y, z, r, E = readNeighbourData(filename)
-    print "File is read..."
+    print "Neighbour list file is read..."
 
     # make nested list of all symmetry function parameters
     # parameters from Behler
@@ -270,7 +310,7 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=T
     # check whether symmetrized Behler coordinates alreadly exist
     sampleDir = filename[:-14]
     if Behler:
-        symmetryFileName = sampleDir + 'symmetryBehler.txt'
+        symmetryFileName = sampleDir + 'symmetryBehlerkunequalj.txt'
         if os.path.isfile(symmetryFileName):
             print "Reading symmetrized Behler input data"
             inputData = readSymmetryData(symmetryFileName)
@@ -279,12 +319,15 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=T
         else: 
             # apply symmetry transformastion
             inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, \
-                                                                      function=function, E=E, sampleDir=sampleDir, 
-                                                                      forces=forces)
+                                                                      function=function, E=E, sampleName=symmetryFileName, 
+                                                                      forces=forces, klargerj=klargerj)
                                                                         
     # split in training set and test set randomly
     totalSize       = len(inputData)
-    testSize        = int(0.1*totalSize) 
+    if len(inputData) < 10:
+        testSize = 1
+    else:
+        testSize        = int(0.1*totalSize) 
     indicies        = np.random.choice(totalSize, testSize, replace=False)
     inputTest       = inputData[indicies]         
     outputTest      = outputData[indicies]

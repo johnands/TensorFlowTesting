@@ -224,7 +224,8 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     
     
 def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, dataFolder, outputs=1, activation=tf.nn.sigmoid, 
-                     useFunction=False, forces=False, batch=5, Behler=True):
+                     useFunction=False, forces=False, batch=5, Behler=True, 
+                     klargerj=False, tags=False):
     """
     Use neighbour data and energies from lammps with sw-potential 
     as input and output training data respectively
@@ -243,7 +244,7 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, dataFolder, outputs
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
     regress.generateData(low, high, 'lammps', 
                          symmFuncType=symmFuncType, dataFolder=dataFolder, forces=forces, batch=batch, \
-                         Behler=Behler)
+                         Behler=Behler, klargerj=klargerj, tags=tags)
     regress.constructNetwork(nLayers, nNodes, activation=activation, \
                              wInit='xavier', bInit='zeros')
     regress.train(nEpochs)
@@ -263,7 +264,7 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, dataFolder, outputs=1, activation
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
     regress.generateData(low, high, 'lammps', dataFolder=dataFolder)
     regress.constructNetwork(nLayers, nNodes, activation=activation, \
-                             wInit='xavier', bInit='zeros')
+                             wInit='xavier', bInit='constant')
     regress.train(nEpochs)
     
     
@@ -299,9 +300,10 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, dataFolder, outputs=1, activation
 #                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-lammpsTrainingSi(1, 5, int(5e4), 'G5', \
-                 "../LAMMPS_test/Silicon/Data/14.04-00.17.36/", \
-                 activation=tf.nn.sigmoid, useFunction=False, forces=True, batch=5, Behler=True)
+lammpsTrainingSi(1, 5, int(1e5), 'G5', \
+                 "../LAMMPS_test/Silicon/Data/14.04-19.09.37/", \
+                 activation=tf.nn.sigmoid, useFunction=False, forces=True, batch=5, Behler=True, 
+                 klargerj=False, tags=True)
                         
                         
                         

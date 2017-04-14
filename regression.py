@@ -177,7 +177,8 @@ class Regression:
 
     def generateData(self, a, b, method, numberOfSymmFunc=10, neighbours=80, \
                      symmFuncType='G4', dataFolder='', batch=5, 
-                     varyingNeigh=True, forces=False, Behler=True):
+                     varyingNeigh=True, forces=False, Behler=True, 
+                     klargerj=False, tags=False):
 
         self.a, self.b = a, b
         self.neighbours = neighbours
@@ -263,11 +264,22 @@ class Regression:
                 
             self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs, self.parameters, \
             self.Ftrain, self.Ftest = \
-                lammps.SiTrainingData(filename, symmFuncType, function=self.function, forces=forces, Behler=Behler)
+                lammps.SiTrainingData(filename, symmFuncType, function=self.function, forces=forces, Behler=Behler, 
+                                      klargerj=klargerj, tags=tags)
             
             # set different sizes based on lammps data
             self.trainSize = self.xTrain.shape[0]
             self.testSize  = self.xTest.shape[0]
+            
+            if batch == 1:
+                print
+                print "Doing offline learning"
+            elif batch > 1:
+                print 
+                print "Doing online learning with", batch, "batches"
+            else:
+                print "Batch has to be 1 or above, exiting"
+                exit(1)
             
             # set batch size, ensure that train size is a multiple of batch size
             rest = self.trainSize % batch
