@@ -84,7 +84,7 @@ def calculateForces(x, y, z, r, parameters, forceFile, dEdG):
                 xij = xi[j]; yij = yi[j]; zij = zi[j]
                 
                 # all k != i,j OR I > J ??? REMEMBER TO CHANGE WHEN NEEDED
-                k = np.arange(len(ri[:])) > j
+                k = np.arange(len(ri[:])) != j
                 rik = ri[k] 
                 xik = xi[k]; yik = yi[k]; zik = zi[k]
                 
@@ -124,9 +124,9 @@ def calculateForces(x, y, z, r, parameters, forceFile, dEdG):
                         Fz[j] += dEdG[i][symmFuncNumber]*np.sum(dij3[2])
                         
                         # find force contribution on each k
-                        Fx[k] += dEdG[i][symmFuncNumber]*dik[0]
-                        Fy[k] += dEdG[i][symmFuncNumber]*dik[1]
-                        Fz[k] += dEdG[i][symmFuncNumber]*dik[2]
+                        #Fx[k] += dEdG[i][symmFuncNumber]*dik[0]
+                        #Fy[k] += dEdG[i][symmFuncNumber]*dik[1]
+                        #Fz[k] += dEdG[i][symmFuncNumber]*dik[2]
                                          
                     symmFuncNumber += 1
                 
@@ -181,12 +181,13 @@ def calculateForcesTags(x, y, z, r, tags, parameters, forceFile, dEdG, chosenAto
             ri = np.sqrt(ri)
             numberOfNeighbours = len(xi)
                          
-            # sum over all neighbours k for each neighbour j
-            # this loop takes care of both 2-body and 3-body configs
-            # want to save total force on all NEIGHBOURS, not the atom i itself
+            # find total force only on chosen atom for each time step
             Fx = np.zeros(numberOfNeighbours)
             Fy = np.zeros(numberOfNeighbours)
             Fz = np.zeros(numberOfNeighbours)
+            
+            # only include pair when j == chosen
+            # and triplets where k == chosen
             for j in xrange(numberOfNeighbours):
                 
                 # atom j
@@ -201,8 +202,7 @@ def calculateForcesTags(x, y, z, r, tags, parameters, forceFile, dEdG, chosenAto
                 # skip if chosen atom is not in current triplet
                 if not (j == chosen or (k == chosen).any()):
                     continue
-                    
-                
+                              
                 # compute cos(theta_ijk) and rjk
                 cosTheta = (xij*xik + yij*yik + zij*zik) / (rij*rik) 
                 

@@ -11,7 +11,6 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-from Tools.inspect_checkpoint import print_tensors_in_checkpoint_file
 import os
 import neuralNetwork as nn
 import DataGeneration.lammpsData as lammps
@@ -19,7 +18,7 @@ import DataGeneration.symmetries as symmetries
 
 
 # find latest checkpoint
-loadDir = sys.argv[1]
+loadDir = "TrainingData/" + sys.argv[1]
 checkpointFile = loadDir + "/Checkpoints/checkpoint_state"
 with open(checkpointFile, 'r') as infile:
     line = infile.readline()
@@ -33,152 +32,141 @@ command = "cat " + loadDir + "/README.txt"
 os.system(command)
 print 
 
-forces = True
+# set matplotlib parameters
+plt.rc('lines', linewidth=1.5)
+#plt.rc('axes', prop_cycle=(cycler('color', ['g', 'k', 'y', 'b', 'r', 'c', 'm']) ))
+plt.rc('xtick', labelsize=20)
+plt.rc('ytick', labelsize=20)
+plt.rc('axes', labelsize=25)
 
-class prettyfloat(float):
+class Prettyfloat(float):
     def __repr__(self):
         return "%0.10f" % self
-
-
-def readMetaFile(filename):
+        
     
-    # must first create a NN with the same architecture as the
-    # on I want to load
-    with open(filename, 'r') as infile:
-        
-        # read number of nodes and layers
-        words = infile.readline().split()
-        nNodes = int(words[-3][:-1])
-        nLayers = int(words[-1])
-        print "Number of nodes: ", nNodes
-        print "Number of layers: ", nLayers
-        
-        # read activation function
-        words = infile.readline().split()
-        activation = words[5][:-1]
-        print "Activation: ", activation
-        if activation == 'sigmoid':
-            activation = tf.nn.sigmoid
-        elif activation == 'tanh':
-            activation = tf.nn.tanh
-        else:
-            print activation, " is not a valid activation"
-            
-        # read inputs, outputs and lammps sample folder
-        words = infile.readline().split()
-        inputs = int(words[1][:-1])
-        outputs = int(words[3][:-1])
-        lammpsDir = words[-1]
-        print "Inputs: ", inputs
-        print "Outputs: ", outputs
-        print "Lammps folder: ", lammpsDir
-        
-        return nNodes, nLayers, activation, inputs, outputs, lammpsDir
-        
-        
-def readForces(filename, numberOfAtoms, numberOfTimeSteps):
+class Analyze:
     
-    with open(filename, 'r') as infile:
+    def __init__(self, energy, forces, configSpace, numberOfAtoms, klargerj, tags, forceFile, \
+                 plotEnergy=True, plotForces=True, plotConfigSpace=True):
         
-        timeStep = 0
-        atom = 1
-        FxNN = np.zeros(numberOfTimeSteps)
-        FyNN = np.zeros(numberOfTimeSteps) 
-        FzNN = np.zeros(numberOfTimeSteps)
-        for line in infile:
-            words = line.split()
+        self.energy             = energy
+        self.forces             = forces
+        self.configSpace        = configSpace       
+        self.numberOfAtoms      = numberOfAtoms
+        self.klargerj           = klargerj
+        self.tags               = tags
+        self.forceFile          = forceFile
+        self.plotEnergy         = plotEnergy
+        self.plotForces         = plotForces
+        self.plotConfigSpace    = plotConfigSpace
+        
+        self.startSession()
+        
+        
+    def startSession(self):
+        
+        # read meta file
+        metaFile = loadDir + '/meta.dat'
+        nNodes, nLayers, activation, self.inputs, outputs, self.lammpsDir = self.readMetaFile(metaFile)
+        
+        # begin session
+        with tf.Session() as sess:
+                
+            # construct random NN of same architecture as the one I load
+            with tf.name_scope('input'):
+               self.x = tf.placeholder('float', [None, self.inputs],  name='x-input')
+               self.y = tf.placeholder('float', [None, outputs], name='y-input')
+    
+            neuralNetwork = nn.neuralNetwork(nNodes, nLayers, activation,
+                                             inputs=self.inputs, outputs=outputs)
+            makeNetwork = lambda data : neuralNetwork.model(self.x)
+            self.prediction = makeNetwork(self.x)
             
-            if len(words) != 6:
-                continue
+            # restore weights and biases from file
+            saver = tf.train.Saver()
+            saver.restore(sess, loadFileName)
+            print 
+            print 'Model restored: ', loadFileName 
             
-            if atom == 1:
-                atom += 1
-                continue
+            # read symmetry input values to reconstruct training set
+            if self.klargerj:
+                symmetryFileName = self.lammpsDir + '/symmetryBehlerklargerj.txt'
+                print 'Using k > j symmetry vectors'
             else:
-                FxNN[timeStep] += float(words[0])
-                FyNN[timeStep] += float(words[1])
-                FzNN[timeStep] += float(words[2])
-                            
-                if atom == numberOfAtoms:  
-                    timeStep += 1
-                    atom = 1
-                    continue
-                atom += 1
-                
-    print map(prettyfloat, FxNN[:1])
-    print map(prettyfloat, FyNN[:1])
-    print map(prettyfloat, FzNN[:1])
-                
-    return FxNN, FyNN, FzNN
+                symmetryFileName = self.lammpsDir + '/symmetryBehlerkunequalj.txt'
+                print 'Using k != j symmetry vectors'
             
+            if os.path.isfile(symmetryFileName):
+                print "Reading symmetrized Behler data"
+                self.inputData = lammps.readSymmetryData(symmetryFileName)
+            else: 
+                print "Symmetry values file does not exist, has to be made"
+                exit(1)
+                
+            self.numberOfSamples = len(self.inputData)
+            self.numberOfTimeSteps = self.numberOfSamples/self.numberOfAtoms
+            print "Number of samples: ", self.numberOfSamples
+            print "Number of time steps: ", self.numberOfTimeSteps
     
+            # read energy forces
+            neighbourLists = self.lammpsDir + "/neighbours.txt"
+            if self.tags:
+                print "Reading forces and tags"
+                x0, y0, z0, r0, E, Fx, Fy, Fz, tags = lammps.readNeighbourDataForceTag(neighbourLists)
+            else:
+                print "Reading forces without tags"
+                x0, y0, z0, r0, E, Fx, Fy, Fz = lammps.readNeighbourDataForce(neighbourLists)
+             
+            self.x0 = x0
+            self.y0 = y0
+            self.z0 = z0
+            self.r0 = r0
+            self.E = np.array(E)
+            self.Fx = np.array(Fx)
+            self.Fy = np.array(Fy)
+            self.Fz = np.array(Fz)
 
-
-def analyze():
-    
-    # read meta file
-    metaFile = loadDir + '/meta.dat'
-    nNodes, nLayers, activation, inputs, outputs, lammpsDir = readMetaFile(metaFile)
-    
-    # begin session
-    with tf.Session() as sess:
-            
-        # construct random NN of same architecture as the one I load
-        with tf.name_scope('input'):
-           x = tf.placeholder('float', [None, inputs],  name='x-input')
-           y = tf.placeholder('float', [None, outputs], name='y-input')
-
-        neuralNetwork = nn.neuralNetwork(nNodes, nLayers, activation,
-                                         inputs=inputs, outputs=outputs)
-        makeNetwork = lambda data : neuralNetwork.model(x)
-        prediction = makeNetwork(x)
-        
-        # restore weights and biases from file
-        saver = tf.train.Saver()
-        saver.restore(sess, loadFileName)
-        print 
-        print 'Model restored: ', loadFileName 
-        
-        # read symmetry input values to reconstruct training set
-        symmetryFileName = lammpsDir + '/symmetryBehlerkunequalj.txt'
-        if os.path.isfile(symmetryFileName):
-            print "Reading symmetrized Behler data"
-            inputData = lammps.readSymmetryData(symmetryFileName)
-        else: 
-            print "Symmetry values file does not exist, has to be made"
-            exit(1)
-        numberOfSamples = len(inputData)
-        numberOfTimeSteps = numberOfSamples/3
-        print "Number of samples: ", numberOfSamples
-        print "Number of time steps: ", numberOfTimeSteps
-
-        # read energy and eventual forces
-        if forces:
-            x0, y0, z0, r0, E, Fx, Fy, Fz = lammps.readNeighbourDataForce(lammpsDir + "/neighbours.txt")
-            E = np.array(E)
-            Fx = np.array(Fx)
-            Fy = np.array(Fy)
-            Fz = np.array(Fz)
-            numberOfAtoms = len(x0[0]) + 1
-            print "Number of atoms: ", numberOfAtoms
+            print "Number of atoms: ", self.numberOfAtoms
             print "Forces is supplied"
-        else:
-            E = lammps.readEnergy(lammpsDir + "/neighbours.txt")
+              
+            # define cost functions
+            with tf.name_scope('L2Norm'):
+                self.cost = tf.div( tf.nn.l2_loss( tf.subtract(self.prediction, self.y) ), self.numberOfSamples, name='/trainCost')
+                tf.summary.scalar('L2Norm', self.cost/self.numberOfSamples)
+                
+            with tf.name_scope('MAD'):
+                MAD = tf.reduce_sum( tf.abs( tf.subtract(self.prediction, self.y) ) )
+              
+            with tf.name_scope('networkGradient'):
+                self.networkGradient = tf.gradients(neuralNetwork.allActivations[-1], self.x)
+                
+            with tf.name_scope('L2Force'):
+                CFDATrain = tf.nn.l2_loss( tf.subtract(self.networkGradient, self.inputData) ) 
+                
+            tf.global_variables_initializer()
             
-        # define cost functions
-        with tf.name_scope('L2Norm'):
-            cost = tf.div( tf.nn.l2_loss( tf.subtract(prediction, y) ), numberOfSamples, name='/trainCost')
-            tf.summary.scalar('L2Norm', cost/numberOfSamples)
+            if self.energy:
+                self.analyzeEnergy(sess)
+                
+            if self.forces:
+                self.analyzeForces(sess)
+                
+            if self.configSpace:
+                self.analyzeConfigSpace()
             
-        with tf.name_scope('MAD'):
-            MAD = tf.reduce_sum( tf.abs( tf.subtract(prediction, y) ) )
-          
-        with tf.name_scope('networkGradient'):
-            networkGradient = tf.gradients(neuralNetwork.allActivations[-1], x)
             
-        with tf.name_scope('L2Force'):
-            CFDATrain = tf.nn.l2_loss( tf.subtract(networkGradient, inputData) ) 
+            
+    def analyzeEnergy(self, sess):
         
+        x               = self.x
+        y               = self.y
+        inputData       = self.inputData
+        E               = self.E
+        numberOfSamples = self.numberOfSamples
+        prediction      = self.prediction
+        cost            = self.cost
+        inputs          = self.inputs
+    
         # calculate RMSE of this NN
         RMSE = np.sqrt( 2*sess.run(cost, feed_dict={x: inputData, y: E}) )
         print "RMSE/atom: ", RMSE
@@ -193,36 +181,46 @@ def analyze():
         aveError = np.sum(energyError) / len(energyError)
         print "Average error: ", aveError
         
-        """plt.subplot(2,1,1)
-        plt.plot(energyNN, 'b-', energySW, 'g-')
-        plt.legend([r'$E_{NN}$', r'$E_{SW}$'])
-        plt.subplot(2,1,2)
-        plt.plot(energyError)
-        plt.xlabel('Timestep')
-        plt.legend(r'$E_{NN} - E_{SW}$')      
-        plt.show()"""   
-              
-        tf.global_variables_initializer()
+        if self.plotEnergy:
+            plt.subplot(2,1,1)
+            plt.plot(energyNN, 'b-', energySW, 'g-')
+            plt.legend([r'$E_{NN}$', r'$E_{SW}$'])
+            plt.subplot(2,1,2)
+            plt.plot(energyError)
+            plt.xlabel('Timestep')
+            plt.legend(r'$E_{NN} - E_{SW}$')      
+            plt.show() 
+    
         
-        # calculate deriviative of NN
-        dEdG = sess.run(networkGradient, feed_dict={x: inputData})
-        dEdG = np.array(dEdG).reshape([numberOfSamples, inputs])
-                
-        parameters = []
-        with open(loadDir + "/parameters.dat", 'r') as infile:
-            infile.readline()
-            for line in infile:
-                param = []
-                words = line.split()
-                for word in words:
-                    param.append(float(word))
-                parameters.append(param)
-                    
+        
+    def analyzeForces(self, sess):
+        
+        x                   = self.x
+        networkGradient     = self.networkGradient 
+        numberOfSamples     = self.numberOfSamples
+        numberOfTimeSteps   = self.numberOfTimeSteps
+        numberOfAtoms       = self.numberOfAtoms
+        inputs              = self.inputs         
+        inputData           = self.inputData
+        x0                  = self.x0
+        y0                  = self.y0
+        z0                  = self.z0
+        r0                  = self.r0
+        Fx                  = self.Fx
+        Fy                  = self.Fy
+        Fz                  = self.Fz
+        
+        # read parameters
+        parameters = self.readParameters(loadDir + "/parameters.dat")
+                   
         # calculate/read forces for each time step
-        forceFile = loadDir + '/forceskunequaljplus2.txt'
+        forceFile = loadDir + '/' + self.forceFile
         print "Force file: ", forceFile
         if not os.path.isfile(forceFile):
             # calculate forces if not done already
+            # calculate deriviative of NN
+            dEdG = sess.run(networkGradient, feed_dict={x: inputData})
+            dEdG = np.array(dEdG).reshape([numberOfSamples, inputs])
             symmetries.calculateForces(x0, y0, z0, r0, parameters, forceFile, dEdG)
             print
             print "Forces are written to file"
@@ -234,11 +232,11 @@ def analyze():
             FyNN = -forcesNN[:,1].reshape([numberOfSamples,1])
             FzNN = -forcesNN[:,2].reshape([numberOfSamples,1])
         else:
-            FxNN, FyNN, FzNN = readForces(forceFile, numberOfAtoms, numberOfTimeSteps)
+            FxNN, FyNN, FzNN = self.readForces(forceFile)
             
-        Fx = Fx[np.arange(0,numberOfSamples,3)].reshape(numberOfTimeSteps)
-        Fy = Fy[np.arange(0,numberOfSamples,3)].reshape(numberOfTimeSteps)
-        Fz = Fz[np.arange(0,numberOfSamples,3)].reshape(numberOfTimeSteps)
+        Fx = Fx[np.arange(0,numberOfSamples,numberOfAtoms)].reshape(numberOfTimeSteps)
+        Fy = Fy[np.arange(0,numberOfSamples,numberOfAtoms)].reshape(numberOfTimeSteps)
+        Fz = Fz[np.arange(0,numberOfSamples,numberOfAtoms)].reshape(numberOfTimeSteps)
         
         Fsw = np.sqrt(Fx**2 + Fy**2 + Fz**2)
         Fnn = np.sqrt(FxNN**2 + FyNN**2 + Fz**2)
@@ -260,57 +258,199 @@ def analyze():
         
         print 'x0NN - x0SW:', FxNN[:10]/Fx[:10]
         print 'y0NN - y0SW:', FyNN[:10]/Fy[:10]
-        print 'z0NN - z0SW:', #FzNN[0]/Fz[0]
         
-        # set parameters
-        plt.rc('lines', linewidth=1.5)
-        #plt.rc('axes', prop_cycle=(cycler('color', ['g', 'k', 'y', 'b', 'r', 'c', 'm']) ))
-        plt.rc('xtick', labelsize=20)
-        plt.rc('ytick', labelsize=20)
-        plt.rc('axes', labelsize=25)
+        if self.plotForces:
         
-        plt.figure()
+            plt.figure()
+            
+            plt.subplot(4,2,1)
+            plt.plot(FxNN, 'b-', Fx, 'g-')
+            plt.legend([r'$F_x^{NN}$', r'$F_x^{SW}$'])
+            
+            plt.subplot(4,2,3)
+            plt.plot(FyNN, 'b-', Fy, 'g-')
+            plt.legend([r'$F_y^{NN}$', r'$F_y^{SW}$'])   
+            
+            plt.subplot(4,2,5)        
+            plt.plot(FzNN, 'b-', Fz, 'g-')
+            plt.legend([r'$F_z^{NN}$', r'$F_z^{SW}$'])
+            
+            plt.subplot(4,2,7)       
+            plt.plot(Fnn, 'b-', Fsw, 'g-')
+            plt.xlabel('Timestep')
+            plt.legend([r'$|F|^{NN}$', r'$|F|^{SW}$'])
+            
+            plt.subplot(4,2,2)
+            plt.plot(xError)
+            plt.ylabel(r'$\Delta F_x$')
+            
+            plt.subplot(4,2,4)
+            plt.plot(yError)
+            plt.ylabel(r'$\Delta F_y$')     
+            
+            plt.subplot(4,2,6)        
+            plt.plot(zError)
+            plt.ylabel(r'$\Delta F_z$')
+            
+            plt.subplot(4,2,8)       
+            plt.plot(absError)
+            plt.xlabel('Timestep')
+            plt.ylabel(r'$\Delta F$')
+            
+            plt.show()
+
+
+          
+    def analyzeConfigSpace(self):  
+
+        x0 = self.x0
+        y0 = self.y0
+        z0 = self.z0
+        r0 = self.r0          
+            
+        # gather all r in sample
+        allX = []; allY = []; allZ = []
+        allR = []
+        for i in xrange(len(r0)):
+            for j in xrange(len(r0[i])):
+                allX.append(x0[i][j])
+                allY.append(y0[i][j])
+                allZ.append(z0[i][j])
+                allR.append(r0[i][j])
+              
+        # sort arrays
+        allR = np.array(allR)
+        allX = np.array(allX); allY = np.array(allY); allZ = np.array(allZ)
+        allR = np.sqrt(allR)        
+        """p = allR.argsort()
+        allR = allR[p]     
+        allX = allX[p]
+        allY = allY[p]
+        allZ = allZ[p]"""
         
-        plt.subplot(4,2,1)
-        plt.plot(FxNN, 'b-', Fx, 'g-')
-        plt.legend([r'$F_x^{NN}$', r'$F_x^{SW}$'])
+        if self.plotConfigSpace:
+            plt.hist(allR, bins=100)
+            plt.show()
+            plt.figure()
+            plt.hist(allX, bins=100)
+            plt.show()
+            plt.figure()
+            plt.hist(allY, bins=100) 
+            plt.show()
+            plt.figure()
+            plt.hist(allZ, bins=100)
+            plt.show()
+            
+        # 
         
-        plt.subplot(4,2,3)
-        plt.plot(FyNN, 'b-', Fy, 'g-')
-        plt.legend([r'$F_y^{NN}$', r'$F_y^{SW}$'])   
         
-        plt.subplot(4,2,5)        
-        plt.plot(FzNN, 'b-', Fz, 'g-')
-        plt.legend([r'$F_z^{NN}$', r'$F_z^{SW}$'])
+    def readMetaFile(self, filename):
         
-        plt.subplot(4,2,7)       
-        plt.plot(Fnn, 'b-', Fsw, 'g-')
-        plt.xlabel('Timestep')
-        plt.legend([r'$|F|^{NN}$', r'$|F|^{SW}$'])
+        # must first create a NN with the same architecture as the
+        # on I want to load
+        with open(filename, 'r') as infile:
+            
+            # read number of nodes and layers
+            words = infile.readline().split()
+            nNodes = int(words[-3][:-1])
+            nLayers = int(words[-1])
+            print "Number of nodes: ", nNodes
+            print "Number of layers: ", nLayers
+            
+            # read activation function
+            words = infile.readline().split()
+            activation = words[5][:-1]
+            print "Activation: ", activation
+            if activation == 'sigmoid':
+                activation = tf.nn.sigmoid
+            elif activation == 'tanh':
+                activation = tf.nn.tanh
+            else:
+                print activation, " is not a valid activation"
+                
+            # read inputs, outputs and lammps sample folder
+            words = infile.readline().split()
+            inputs = int(words[1][:-1])
+            outputs = int(words[3][:-1])
+            lammpsDir = words[-1]
+            print "Inputs: ", inputs
+            print "Outputs: ", outputs
+            print "Lammps folder: ", lammpsDir
+            
+            return nNodes, nLayers, activation, inputs, outputs, lammpsDir
         
-        plt.subplot(4,2,2)
-        plt.plot(xError)
-        plt.ylabel(r'$\Delta F_x$')
         
-        plt.subplot(4,2,4)
-        plt.plot(yError)
-        plt.ylabel(r'$\Delta F_y$')     
+    def readForces(self, filename):
         
-        plt.subplot(4,2,6)        
-        plt.plot(zError)
-        plt.ylabel(r'$\Delta F_z$')
+        numberOfAtoms       = self.numberOfAtoms
+        numberOfTimeSteps   = self.numberOfTimeSteps
         
-        plt.subplot(4,2,8)       
-        plt.plot(absError)
-        plt.xlabel('Timestep')
-        plt.ylabel(r'$\Delta F$')
+        with open(filename, 'r') as infile:
+            
+            timeStep = 0
+            atom = 1
+            FxNN = np.zeros(numberOfTimeSteps)
+            FyNN = np.zeros(numberOfTimeSteps) 
+            FzNN = np.zeros(numberOfTimeSteps)
+            for line in infile:
+                words = line.split()
+                
+                if len(words) != 6:
+                    continue
+                
+                if atom == 1:
+                    atom += 1
+                    continue
+                else:
+                    FxNN[timeStep] += float(words[0])
+                    FyNN[timeStep] += float(words[1])
+                    FzNN[timeStep] += float(words[2])
+                                
+                    if atom == numberOfAtoms:  
+                        timeStep += 1
+                        atom = 1
+                        continue
+                    atom += 1
+                    
+        print map(Prettyfloat, FxNN[:1])
+        print map(Prettyfloat, FyNN[:1])
+        print map(Prettyfloat, FzNN[:1])
+                    
+        return FxNN, FyNN, FzNN
+    
+    
+    def readParameters(self, filename):
         
-        plt.show()
+        parameters = []
+        with open(filename, 'r') as infile:
+            infile.readline()
+            for line in infile:
+                param = []
+                words = line.split()
+                for word in words:
+                    param.append(float(word))
+                parameters.append(param)
+                
+        return parameters
+        
      
      
   
     
 ##### main #####
-analyze()
+
+# energy, forces, configSpace, numberOfAtoms, klargerj, tags, forceFile,
+# plotEnergy=True, plotForces=True, plotConfigSpace=True
+
+Analyze(False, False, True, 8, False, True, 'forceskunequaljplus.txt', \
+        plotEnergy=True, plotForces=True, plotConfigSpace=True)
+
+    
+    
+    
+    
+    
+    
+    
 
  
