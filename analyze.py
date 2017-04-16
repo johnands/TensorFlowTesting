@@ -102,6 +102,9 @@ class Analyze:
             else: 
                 print "Symmetry values file does not exist, has to be made"
                 exit(1)
+             
+            print "Min symm. value: ", np.min(self.inputData)
+            print "Max symm. value: ", np.max(self.inputData)
                 
             self.numberOfSamples = len(self.inputData)
             self.numberOfTimeSteps = self.numberOfSamples/self.numberOfAtoms
@@ -142,8 +145,6 @@ class Analyze:
                 
             with tf.name_scope('L2Force'):
                 CFDATrain = tf.nn.l2_loss( tf.subtract(self.networkGradient, self.inputData) ) 
-                
-            tf.global_variables_initializer()
             
             if self.energy:
                 self.analyzeEnergy(sess)
@@ -180,6 +181,7 @@ class Analyze:
         energyError = energyNN - energySW
         aveError = np.sum(energyError) / len(energyError)
         print "Average error: ", aveError
+        print "First 5 energies: ", energyNN[:20]
         
         if self.plotEnergy:
             plt.subplot(2,1,1)
@@ -442,7 +444,7 @@ class Analyze:
 # energy, forces, configSpace, numberOfAtoms, klargerj, tags, forceFile,
 # plotEnergy=True, plotForces=True, plotConfigSpace=True
 
-Analyze(False, False, True, 8, False, True, 'forceskunequaljplus.txt', \
+Analyze(True, False, False, 8, False, True, 'forceskunequaljplus.txt', \
         plotEnergy=True, plotForces=True, plotConfigSpace=True)
 
     
