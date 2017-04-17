@@ -60,7 +60,6 @@ saveMetaName        = ''
 saveMetaFlag        = False
 saveParametersFlag  = False
 plotFlag            = False
-testFlag            = False
 
 now             = time.datetime.now().strftime("%d.%m-%H.%M.%S")
 trainingDir     = 'TrainingData' + '/' + now
@@ -95,6 +94,7 @@ if len(sys.argv) > 1:
             i += 1
             
             # find latest checkpoint
+            loadDir = 'TrainingData/' + loadDir
             checkpointFile = loadDir + "/Checkpoints/checkpoint_state"
             with open(checkpointFile, 'r') as infile:
                 line = infile.readline()
@@ -118,7 +118,7 @@ if len(sys.argv) > 1:
             saveDirName 	= trainingDir + '/Checkpoints'
             os.mkdir(saveDirName)
 
-            # Copy the python source code used to run the training, to preserve
+            # copy the python source code used to run the training, to preserve
             # the tf graph (which is not saved by tf.nn.Saver.save()).
             shutil.copy2(sys.argv[0], saveDirName + '/')
 
@@ -148,17 +148,18 @@ if len(sys.argv) > 1:
             i += 1
             plotFlag = True
 
-        elif sys.argv[i] == '--test':
-            i += 1
-            testFlag = True
-
         else:
             i += 1
+            
+# copy readme file
+if saveFlag and loadFlag:
+    os.system("cp " + loadDir + "/README.txt " + trainingDir)
+    
 
 class Regression:
 
     def __init__(self, function, trainSize, batchSize, testSize, inputs, outputs,
-                 functionDerivative=False):
+                 functionDerivative=False, learningRate=0.001, RMSEtol=1e-10):
 
         self.trainSize = trainSize
         self.batchSize = batchSize
@@ -167,6 +168,8 @@ class Regression:
         self.inputs    = inputs
         self.outputs   = outputs
         self.functionDerivative = functionDerivative
+        self.learningRate = learningRate
+        self.RMSEtol = RMSEtol
         
         # save output to terminal
         if saveFlag or saveGraphFlag:
@@ -305,6 +308,7 @@ class Regression:
         print "Test set size: ", self.testSize
         print "Batch size: ", self.batchSize
         print "Number of batches: ", self.numberOfBatches
+        print "Learning rate: ", self.learningRate
             
 
 
@@ -355,6 +359,7 @@ class Regression:
         y               = self.y
         nNodes          = self.nNodes
         nLayers         = self.nLayers
+        learningRate    = self.learningRate
 
         # begin session
         with tf.Session() as sess:
@@ -371,7 +376,7 @@ class Regression:
                 MAD = tf.reduce_sum( tf.abs( tf.subtract(prediction, y) ) )
 
             with tf.name_scope('train'):
-                trainStep = tf.train.AdamOptimizer(learning_rate=0.001).minimize(trainCost)
+                trainStep = tf.train.AdamOptimizer(learning_rate=learningRate).minimize(trainCost)
               
             with tf.name_scope('networkGradient'):
                 networkGradient = tf.gradients(self.neuralNetwork.allActivations[-1], x)
@@ -380,7 +385,7 @@ class Regression:
                 CFDATrain = tf.nn.l2_loss( tf.subtract(networkGradient, xTrain) )
 
             # initialize variables or restore from file
-            saver = tf.train.Saver()
+            saver = tf.train.Saver(keep_checkpoint_every_n_hours=1)
             sess.run(tf.global_variables_initializer())
             if loadFlag:
                 saver.restore(sess, loadFileName)
@@ -457,10 +462,11 @@ class Regression:
                         with open(saveMetaName, 'w') as outFile:
                             outStr = '# epochs: %d train: %d, test: %d, batch: %d, nodes: %d, layers: %d \n' \
                                      % (numberOfEpochs, trainSize, testSize, batchSize, nNodes, nLayers)
-                            outStr += 'a: %1.1f, b: %1.1f, activation: %s, wInit: %s, bInit: %s' % \
-                                       (self.a, self.b, self.activation.__name__, self.wInit, self.bInit)
+                            outStr += 'a: %1.1f, b: %1.1f, activation: %s, wInit: %s, bInit: %s, learnRate: %g' % \
+                                       (self.a, self.b, self.activation.__name__, self.wInit, self.bInit, self.learningRate)
                             outFile.write(outStr + '\n')
-                            outStr = 'Inputs: %d, outputs: %d, sampled: %s \n' % (self.inputs, self.outputs, self.samplesDir)
+                            outStr = 'Inputs: %d, outputs: %d, loaded: %s, sampled: %s \n' %  \
+                                     (self.inputs, self.outputs, loadDir, self.samplesDir)
                             outFile.write(outStr)
                             outStr = '%d %g %g' % \
                                      (epoch, trainRMSE, testRMSE)
@@ -475,18 +481,14 @@ class Regression:
                 if saveFlag or saveGraphProtoFlag:
                     if not epoch % every:
                         saveFileName = saveDirName + '/' 'ckpt'
-                        saver.save(sess, saveFileName, global_step=saveEpochNumber,
+                        saver.save(sess, saveFileName, global_step=epoch,
                                    latest_filename="checkpoint_state")
-                        saveEpochNumber += 1
                         
-                """print xBatch
-                print yBatch
-                grad = sess.run(networkGradient, feed_dict={x: xBatch, y: yBatch})
-                print grad
-                grad = np.array(grad)
-                grad = grad.reshape([batchSize, 48])
-                print grad.shape
-                exit(1)"""
+                # finish training if RMSE of test set is below tolerance
+                if testRMSE < self.RMSEtol:
+                    print "Reached RMSE tolerance"
+                    break
+                        
                         
                         
             # elapsed time

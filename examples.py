@@ -225,7 +225,7 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     
 def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, dataFolder, outputs=1, activation=tf.nn.sigmoid, 
                      useFunction=False, forces=False, batch=5, Behler=True, 
-                     klargerj=False, tags=False):
+                     klargerj=False, tags=False, learningRate=0.001, RMSEtol=1e-10):
     """
     Use neighbour data and energies from lammps with sw-potential 
     as input and output training data respectively
@@ -233,20 +233,21 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, dataFolder, outputs
                
     # get energies from sw lammps  
     if useFunction: 
-        #function, _, _ = getStillingerWeber()
-        function, _, _ = getTwoBodySW()
+        function, _, _ = getStillingerWeber()
+        #function, _, _ = getTwoBodySW()
     else:
         function = None    
   
     # these are sampled from lammps
     trainSize = batchSize = testSize = inputs = low = high = 0
                        
-    regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs)
+    regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs, \
+                                    learningRate=learningRate, RMSEtol=RMSEtol)
     regress.generateData(low, high, 'lammps', 
                          symmFuncType=symmFuncType, dataFolder=dataFolder, forces=forces, batch=batch, \
                          Behler=Behler, klargerj=klargerj, tags=tags)
     regress.constructNetwork(nLayers, nNodes, activation=activation, \
-                             wInit='xavier', bInit='zeros')
+                             wInit='xavier', bInit='constant')
     regress.train(nEpochs)
     
     
@@ -303,7 +304,7 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, dataFolder, outputs=1, activation
 lammpsTrainingSi(1, 5, int(1e5), 'G5', \
                  "../LAMMPS_test/Silicon/Data/14.04-19.09.37/", \
                  activation=tf.nn.sigmoid, useFunction=False, forces=True, batch=5, Behler=True, 
-                 klargerj=False, tags=True)
+                 klargerj=True, tags=True, learningRate=0.01, RMSEtol=0.00378389)
                         
                         
                         

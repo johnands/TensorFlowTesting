@@ -310,7 +310,11 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=T
     # check whether symmetrized Behler coordinates alreadly exist
     sampleDir = filename[:-14]
     if Behler:
-        symmetryFileName = sampleDir + 'symmetryBehlerkunequalj.txt'
+        if klargerj:
+            symmetryFileName = sampleDir + 'symmetryBehlerklargerj.txt'
+        else:
+            symmetryFileName = sampleDir + 'symmetryBehlerkunequalj.txt'
+            
         if os.path.isfile(symmetryFileName):
             print "Reading symmetrized Behler input data"
             inputData = readSymmetryData(symmetryFileName)
