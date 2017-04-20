@@ -301,10 +301,10 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, dataFolder, outputs=1, activation
 #                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-lammpsTrainingSi(1, 5, int(1e5), 'G5', \
-                 "../LAMMPS_test/Silicon/Data/14.04-19.09.37/", \
-                 activation=tf.nn.sigmoid, useFunction=False, forces=True, batch=5, Behler=True, 
-                 klargerj=True, tags=True, learningRate=0.01, RMSEtol=0.00378389)
+lammpsTrainingSi(2, 10, int(1e5), 'G5', \
+                 "../LAMMPS_test/Silicon/Data/20.04-21.27.56/", \
+                 activation=tf.nn.sigmoid, useFunction=False, forces=False, batch=5, Behler=True, 
+                 klargerj=True, tags=False, learningRate=0.001, RMSEtol=0.003)
                         
                         
                         

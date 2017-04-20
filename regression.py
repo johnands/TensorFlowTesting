@@ -47,6 +47,7 @@ from time import clock as timer
 
 
 loadFlag            = False
+loadDir             = ''
 loadFileName        = ''
 saveFlag            = False
 saveDirName         = ''
