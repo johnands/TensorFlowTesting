@@ -69,6 +69,11 @@ class Analyze:
         metaFile = loadDir + '/meta.dat'
         nNodes, nLayers, activation, self.inputs, outputs, self.lammpsDir = self.readMetaFile(metaFile)
         
+        # read parameters
+        self.parameters = self.readParameters(loadDir + "/parameters.dat")
+        self.numberOfSymmFunc = len(self.parameters)
+        print "Number of symmetry functions: ", self.numberOfSymmFunc
+        
         # begin session
         with tf.Session() as sess:
                 
@@ -153,7 +158,7 @@ class Analyze:
                 self.analyzeForces(sess)
                 
             if self.configSpace:
-                self.analyzeConfigSpace()
+                self.analyzeConfigSpace(sess)
             
             
             
@@ -211,9 +216,6 @@ class Analyze:
         Fx                  = self.Fx
         Fy                  = self.Fy
         Fz                  = self.Fz
-        
-        # read parameters
-        parameters = self.readParameters(loadDir + "/parameters.dat")
                    
         # calculate/read forces for each time step
         forceFile = loadDir + '/' + self.forceFile
@@ -300,88 +302,8 @@ class Analyze:
             plt.ylabel(r'$\Delta F$')
             
             plt.show()
-
-
-          
-    def analyzeConfigSpace(self):  
-
-        x0 = self.x0
-        y0 = self.y0
-        z0 = self.z0
-        r0 = self.r0          
             
-        # gather all r in sample
-        allX = []; allY = []; allZ = []
-        allR = []
-        for i in xrange(len(r0)):
-            for j in xrange(len(r0[i])):
-                allX.append(x0[i][j])
-                allY.append(y0[i][j])
-                allZ.append(z0[i][j])
-                allR.append(r0[i][j])
-              
-        # sort arrays
-        allR = np.array(allR)
-        allX = np.array(allX); allY = np.array(allY); allZ = np.array(allZ)
-        allR = np.sqrt(allR)        
-        """p = allR.argsort()
-        allR = allR[p]     
-        allX = allX[p]
-        allY = allY[p]
-        allZ = allZ[p]"""
-        
-        if self.plotConfigSpace:
-            plt.hist(allR, bins=100)
-            plt.show()
-            plt.figure()
-            plt.hist(allX, bins=100)
-            plt.show()
-            plt.figure()
-            plt.hist(allY, bins=100) 
-            plt.show()
-            plt.figure()
-            plt.hist(allZ, bins=100)
-            plt.show()
             
-        # 
-        
-        
-    def readMetaFile(self, filename):
-        
-        # must first create a NN with the same architecture as the
-        # on I want to load
-        with open(filename, 'r') as infile:
-            
-            # read number of nodes and layers
-            words = infile.readline().split()
-            nNodes = int(words[-3][:-1])
-            nLayers = int(words[-1])
-            print "Number of nodes: ", nNodes
-            print "Number of layers: ", nLayers
-            
-            # read activation function
-            words = infile.readline().split()
-            activation = words[5][:-1]
-            print "Activation: ", activation
-            if activation == 'sigmoid':
-                activation = tf.nn.sigmoid
-            elif activation == 'tanh':
-                activation = tf.nn.tanh
-            else:
-                print activation, " is not a valid activation"
-                
-            # read inputs, outputs and lammps sample folder
-            words = infile.readline().split()
-            inputs = int(words[1][:-1])
-            outputs = int(words[3][:-1])
-            lammpsDir = words[-1]
-            print "Inputs: ", inputs
-            print "Outputs: ", outputs
-            print "Lammps folder: ", lammpsDir
-            
-            return nNodes, nLayers, activation, inputs, outputs, lammpsDir
-        
-        
     def readForces(self, filename):
         
         numberOfAtoms       = self.numberOfAtoms
@@ -435,7 +357,116 @@ class Analyze:
                 
         return parameters
         
-     
+        
+    def readMetaFile(self, filename):
+        
+        # must first create a NN with the same architecture as the
+        # on I want to load
+        with open(filename, 'r') as infile:
+            
+            # read number of nodes and layers
+            words = infile.readline().split()
+            nNodes = int(words[-3][:-1])
+            nLayers = int(words[-1])
+            print "Number of nodes: ", nNodes
+            print "Number of layers: ", nLayers
+            
+            # read activation function
+            words = infile.readline().split()
+            activation = words[5][:-1]
+            print "Activation: ", activation
+            if activation == 'sigmoid':
+                activation = tf.nn.sigmoid
+            elif activation == 'tanh':
+                activation = tf.nn.tanh
+            else:
+                print activation, " is not a valid activation"
+                
+            # read inputs, outputs and lammps sample folder
+            words = infile.readline().split()
+            inputs = int(words[1][:-1])
+            outputs = int(words[3][:-1])
+            lammpsDir = words[-1]
+            print "Inputs: ", inputs
+            print "Outputs: ", outputs
+            print "Lammps folder: ", lammpsDir
+            
+            return nNodes, nLayers, activation, inputs, outputs, lammpsDir
+
+          
+    def analyzeConfigSpace(self, sess):  
+
+        x0 = self.x0
+        y0 = self.y0
+        z0 = self.z0
+        r0 = self.r0     
+        x = self.x
+        y = self.y
+        cost = self.cost
+        inputData = self.inputData
+        E = self.E
+        numberOfSymmFunc = self.numberOfSymmFunc
+            
+        # gather all r in sample
+        allX = []; allY = []; allZ = []
+        allR = []
+        for i in xrange(len(r0)):
+            for j in xrange(len(r0[i])):
+                allX.append(x0[i][j])
+                allY.append(y0[i][j])
+                allZ.append(z0[i][j])
+                allR.append(r0[i][j])
+              
+        # sort arrays
+        allR = np.array(allR)
+        allX = np.array(allX); allY = np.array(allY); allZ = np.array(allZ)
+        allR = np.sqrt(allR)        
+        p = allR.argsort()
+        allR = allR[p]   
+        allX = allX[p]
+        allY = allY[p]
+        allZ = allZ[p]
+        
+        nPoints = len(allR)
+        
+        Rik = np.zeros(nPoints) + 2.5
+        data = np.hstack((allR,Rik))#.reshape([nPoints,2])
+        print data.shape
+        print data[4000]
+        exit(1)
+        
+        # find cost as function of r
+        errors = np.zeros(len(allR))
+        for i in xrange(len(allR)):
+            errors[i] = sess.run(cost, feed_dict={x : inputData[i].reshape([1,numberOfSymmFunc]), \
+                                                  y : outputData[i].reshape([1,1])})
+        
+        if self.plotConfigSpace:
+            plt.hist(allR, bins=100)
+            plt.show()
+            plt.figure()
+            plt.hist(allX, bins=100)
+            plt.show()
+            plt.figure()
+            plt.hist(allY, bins=100) 
+            plt.show()
+            plt.figure()
+            plt.hist(allZ, bins=100)
+            plt.show()
+        
+        plt.plot(allR, errors)
+        plt.show()
+            
+        # evaluate error for all r in set
+        
+        
+            
+        
+        
+   
+        
+        
+
      
   
     
@@ -444,8 +475,8 @@ class Analyze:
 # energy, forces, configSpace, numberOfAtoms, klargerj, tags, forceFile,
 # plotEnergy=True, plotForces=True, plotConfigSpace=True
 
-Analyze(True, False, False, 8, False, True, 'forceskunequaljplus.txt', \
-        plotEnergy=True, plotForces=True, plotConfigSpace=True)
+Analyze(False, False, True, 2, True, False, 'forceskunequaljplus.txt', \
+        plotEnergy=False, plotForces=False, plotConfigSpace=False)
 
     
     
