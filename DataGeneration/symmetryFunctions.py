@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
-def cutoffFunction(R, Rc, cut=False):   
+def cutoffFunction(R, Rc, cut=True):   
     
     value = 0.5 * (np.cos(np.pi*R / Rc) + 1)
 
@@ -9,8 +9,11 @@ def cutoffFunction(R, Rc, cut=False):
     if cut:
         if isinstance(R, np.ndarray):
             value[np.where(R > Rc)[0]] = 0
+            if len(np.where(R > Rc)[0]) > 0:
+                print 'cutting'
         else:
             if R > Rc:
+                print 'cutting'
                 value = 0
         
     return value

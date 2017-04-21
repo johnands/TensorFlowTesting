@@ -223,8 +223,9 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
     regress.train(nEpochs)
     
     
-def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, dataFolder, outputs=1, activation=tf.nn.sigmoid, 
-                     useFunction=False, forces=False, batch=5, Behler=True, 
+def lammpsTrainingSi(nLayers=2, nNodes=35, nEpochs=int(1e5), symmFuncType='G5', \
+                     lammpsDir='', outputs=1, activation=tf.nn.sigmoid, \
+                     useFunction=False, forces=False, batch=5, Behler=True, \
                      klargerj=False, tags=False, learningRate=0.001, RMSEtol=1e-10):
     """
     Use neighbour data and energies from lammps with sw-potential 
@@ -244,7 +245,7 @@ def lammpsTrainingSi(nLayers, nNodes, nEpochs, symmFuncType, dataFolder, outputs
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs, \
                                     learningRate=learningRate, RMSEtol=RMSEtol)
     regress.generateData(low, high, 'lammps', 
-                         symmFuncType=symmFuncType, dataFolder=dataFolder, forces=forces, batch=batch, \
+                         symmFuncType=symmFuncType, dataFolder=lammpsDir, forces=forces, batch=batch, \
                          Behler=Behler, klargerj=klargerj, tags=tags)
     regress.constructNetwork(nLayers, nNodes, activation=activation, \
                              wInit='xavier', bInit='constant')
@@ -301,10 +302,11 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, dataFolder, outputs=1, activation
 #                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-lammpsTrainingSi(2, 10, int(1e5), 'G5', \
-                 "../LAMMPS_test/Silicon/Data/20.04-21.27.56/", \
-                 activation=tf.nn.sigmoid, useFunction=False, forces=False, batch=5, Behler=True, 
-                 klargerj=True, tags=False, learningRate=0.001, RMSEtol=0.003)
+lammpsTrainingSi(nLayers=2, nNodes=10, nEpochs=int(1e5), activation=tf.nn.sigmoid, \
+                 symmFuncType='G5', \
+                 lammpsDir="../LAMMPS_test/Silicon/Data/20.04-14.03.17/", \
+                 Behler=False, klargerj=True, useFunction=False, forces=False, tags=False, \
+                 batch=5, learningRate=0.001, RMSEtol=0.003)
                         
                         
                         

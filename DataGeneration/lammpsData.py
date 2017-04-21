@@ -251,6 +251,61 @@ def parametersBehler():
             parameters.append([eta, cutoff, zeta, inversion])  
             
     return parameters
+    
+
+def parametersCustomized():
+    
+    # make nested list of all symmetry function parameters
+    # parameters from Behler
+    parameters = []    
+    
+    # type1
+    center = 0.0
+    cutoff = 6.0
+    for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
+        parameters.append([eta, cutoff, center])
+    
+    # type2
+    zeta = 1.0
+    inversion = 1.0
+    eta = 0.01
+    for cutoff in [6.0, 5.5, 5.0, 4.5, 4.0, 3.8]:
+        parameters.append([eta, cutoff, zeta, inversion])
+        
+    # type 3
+    cutoff = 6.0
+    eta = 4.0
+    for center in [5.5, 5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0]:
+        parameters.append([eta, cutoff, center])
+        
+        
+    eta = 0.01
+    
+    # type 4
+    zeta = 1.0
+    inversion = -1.0    
+    for cutoff in [6.0, 5.5, 5.0, 4.5, 4.0, 3.8]:
+        parameters.append([eta, cutoff, zeta, inversion])
+        
+    # type 5 and 6
+    zeta = 2.0
+    for inversion in [1.0, -1.0]:
+        for cutoff in [6.0, 5.0, 4.0, 3.8]:
+            parameters.append([eta, cutoff, zeta, inversion])
+        
+    # type 7 and 8
+    zeta = 4.0
+    for inversion in [1.0, -1.0]:
+        for cutoff in [6.0, 5.0, 4.0, 3.8]:
+            parameters.append([eta, cutoff, zeta, inversion])
+    
+    # type 9 and 10
+    zeta = 16.0
+    for inversion in [1.0, -1.0]:
+        for cutoff in [6.0, 4.0]:
+            parameters.append([eta, cutoff, zeta, inversion])  
+            
+    return parameters
             
     
     
@@ -301,31 +356,46 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=T
         print "Using Behler parameters"
         parameters = parametersBehler()
     else:
-        print "Other parameters than Behler are used. These must be supplied" 
-        exit(1)
+        parameters = parametersCustomized()
+        print
+        print "Using customized parameters" 
                     
     numberOfSymmFunc = len(parameters)
     outputs = 1
     
-    # check whether symmetrized Behler coordinates alreadly exist
+    # decide on which symmetry parameters set to use
     sampleDir = filename[:-14]
     if Behler:
         if klargerj:
-            symmetryFileName = sampleDir + 'symmetryBehlerklargerj.txt'
+            print "k > j"
+            symmetryFileName = sampleDir + 'symmetryBehlerklargerjcut.txt'
         else:
-            symmetryFileName = sampleDir + 'symmetryBehlerkunequalj.txt'
+            print "k != j"
+            symmetryFileName = sampleDir + 'symmetryBehlerkunequaljcut.txt'
             
-        if os.path.isfile(symmetryFileName):
-            print "Reading symmetrized Behler input data"
-            inputData = readSymmetryData(symmetryFileName)
-            outputData = np.array(E)
-            print "Energy is supplied from lammps"
-        else: 
-            # apply symmetry transformastion
-            inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, \
-                                                                      function=function, E=E, sampleName=symmetryFileName, 
-                                                                      forces=forces, klargerj=klargerj)
-                                                                        
+    else:
+        if klargerj:
+            print "k > j"
+            symmetryFileName = sampleDir + 'symmetryCustomklargerj.txt'
+        else:
+            print "k != j"
+            symmetryFileName = sampleDir + 'symmetryCustomkunequalj.txt'
+        print "Using customized symmetry parameters"
+            
+    # apply symmetry or read already existing file
+    if os.path.isfile(symmetryFileName):
+        print "Reading symmetrized input data"
+        inputData = readSymmetryData(symmetryFileName)
+        outputData = np.array(E)
+        print "Energy is supplied from lammps"
+    else: 
+        # apply symmetry transformastion
+        inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, \
+                                                                  function=function, E=E, sampleName=symmetryFileName, 
+                                                                  forces=forces, klargerj=klargerj)
+        print 'Applying symmetry transformation'
+        
+        
     # split in training set and test set randomly
     totalSize       = len(inputData)
     if len(inputData) < 10:

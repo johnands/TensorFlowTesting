@@ -46,14 +46,27 @@ class Prettyfloat(float):
     
 class Analyze:
     
-    def __init__(self, energy, forces, configSpace, numberOfAtoms, klargerj, tags, forceFile, \
-                 plotEnergy=True, plotForces=True, plotConfigSpace=True):
+    def __init__(self, \
+                 energy = False, \
+                 forces = False, \
+                 configSpace = False, \
+                 symmetry = False, \
+                 numberOfAtoms = 3, \
+                 klargerj = True, \
+                 cut = False, \
+                 tags = False, \
+                 forceFile = 'forcesklargerjplus.txt', \
+                 plotEnergy=True, \
+                 plotForces=True, \
+                 plotConfigSpace=True):
         
         self.energy             = energy
         self.forces             = forces
-        self.configSpace        = configSpace       
+        self.configSpace        = configSpace
+        self.symmetry           = symmetry
         self.numberOfAtoms      = numberOfAtoms
         self.klargerj           = klargerj
+        self.cut                = cut
         self.tags               = tags
         self.forceFile          = forceFile
         self.plotEnergy         = plotEnergy
@@ -95,10 +108,16 @@ class Analyze:
             
             # read symmetry input values to reconstruct training set
             if self.klargerj:
-                symmetryFileName = self.lammpsDir + '/symmetryBehlerklargerj.txt'
+                if self.cut:
+                    symmetryFileName = self.lammpsDir + 'symmetryBehlerklargerjcut.txt'
+                else:
+                    symmetryFileName = self.lammpsDir + '/symmetryBehlerklargerj.txt'
                 print 'Using k > j symmetry vectors'
             else:
-                symmetryFileName = self.lammpsDir + '/symmetryBehlerkunequalj.txt'
+                if self.cut:
+                    symmetryFileName = self.lammpsDir + '/symmetryBehlerkunequaljcut.txt'
+                else:
+                    symmetryFileName = self.lammpsDir + '/symmetryBehlerkunequalj.txt'
                 print 'Using k != j symmetry vectors'
             
             if os.path.isfile(symmetryFileName):
@@ -159,6 +178,9 @@ class Analyze:
                 
             if self.configSpace:
                 self.analyzeConfigSpace(sess)
+                
+            if self.symmetry:
+                self.analyzeSymmetry(sess)
             
             
             
@@ -433,6 +455,7 @@ class Analyze:
         data = np.hstack((allR,Rik))#.reshape([nPoints,2])
         print data.shape
         print data[4000]
+        print self.parameters
         exit(1)
         
         # find cost as function of r
@@ -458,6 +481,22 @@ class Analyze:
         plt.show()
             
         # evaluate error for all r in set
+            
+    
+    def analyzeSymmetry(self, sess):
+        
+        inputData = self.inputData.flatten()
+        N = len(inputData)
+        
+        print "Average symmetry value: ", np.average(inputData)
+        print "Max symmetry value: ", np.max(inputData)
+        print "Min symmetry value: ", np.min(inputData)
+        print "Fraction of zeros: ", len(np.where(inputData == 0)[0]) / float(N)
+        
+        plt.hist(inputData, bins=100)
+        plt.show()
+        
+        
         
         
             
@@ -474,9 +513,19 @@ class Analyze:
 
 # energy, forces, configSpace, numberOfAtoms, klargerj, tags, forceFile,
 # plotEnergy=True, plotForces=True, plotConfigSpace=True
-
-Analyze(False, False, True, 2, True, False, 'forceskunequaljplus.txt', \
-        plotEnergy=False, plotForces=False, plotConfigSpace=False)
+         
+Analyze(energy = False, \
+        forces = False, \
+        configSpace = False, \
+        symmetry = True, \
+        numberOfAtoms = 3, \
+        klargerj = True, \
+        cut = False, \
+        tags = False, \
+        forceFile = '',\
+        plotEnergy=True, \
+        plotForces=True, \
+        plotConfigSpace=True)
 
     
     
