@@ -3,6 +3,8 @@ import tensorflow as tf
 import DataGeneration.symmetries as symmetry
 import DataGeneration.lammpsData as data
 
+np.set_printoptions(precision=17)
+
 def func(x):
 
     return np.sum(x**2)
@@ -61,34 +63,57 @@ def diffG(symmFunc):
     
     with tf.Session() as sess:
     
-        xij = tf.placeholder('float', [None, 1])
-        yij = tf.placeholder('float', [None, 1])
-        zij = tf.placeholder('float', [None, 1])
+        xij = tf.placeholder(tf.float64, [None, 1])
+        yij = tf.placeholder(tf.float64, [None, 1])
+        zij = tf.placeholder(tf.float64, [None, 1])
         
         # read neighbour data of 3-body system
-        filename = "../LAMMPS_test/Silicon/Data/04.04-22.54.07/neighbours.txt"
+        """filename = "../LAMMPS_test/Silicon/Data/04.04-22.54.07/neighbours.txt"
         x, y, z, r, E = data.readNeighbourData(filename)
         
         # pick a neighbour list
         x = np.array(x[0])
         y = np.array(y[0])
         z = np.array(z[0])
-        r = np.array(r[0])
-              
+        r = np.array(r[0])"""
+        
+        #SYMPY
+        x = np.array([-0.91896682256363427, 2.0826629648807895], dtype=np.float64)
+        y = np.array([2.1921140878397303, 1.5837593262221485], dtype=np.float64)
+        z = np.array([-1.7435088849268254, -1.3373479771171457], dtype=np.float64)
+        #r = np.sqrt(x**2 + y**2 + z**2).reshape([1,2])
+        
+        #MY
+        x = np.array([-1.9764998905005626, -3.0037058858664203], dtype=np.float64)
+        y = np.array([-1.9856022327838954, -0.0067597060741313442], dtype=np.float64)
+        z = np.array([-0.72145430056577986, -0.7553782648996421], dtype=np.float64)
+        
+        #SYMPY
+        #drij: -0.91896682256363427 2.1921140878397303 -1.7435088849268254
+        #drik: 2.0826629648807895 1.5837593262221485 -1.3373479771171457
+        
+        #MY
+        #drij: -1.9764998905005626 -1.9856022327838954 -0.72145430056577986
+        #drik: -3.0037058858664203 -0.0067597060741313442 -0.7553782648996421
+
+            
         print "x: ", x
         print "y: ", y
         print "z: ", z
-        print "r: ", r
+        #print "r: ", r
+        print np.arange(len(x[:]))
         
         # pick j as first element of list, k is the rest
-        k = np.arange(len(r[:])) > 0
+        k = np.arange(len(x[:])) > 0
+        print k
         
         # number of True elements in k is the number of triplets
         nTriplets = np.sum(k)
+        print nTriplets
         
-        xik = tf.placeholder('float', [None, nTriplets])
-        yik = tf.placeholder('float', [None, nTriplets])
-        zik = tf.placeholder('float', [None, nTriplets])
+        xik = tf.placeholder(tf.float64, [None, nTriplets])
+        yik = tf.placeholder(tf.float64, [None, nTriplets])
+        zik = tf.placeholder(tf.float64, [None, nTriplets])
             
         eta = 0.01
         Rc = 6
