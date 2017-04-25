@@ -376,7 +376,7 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=T
     else:
         if klargerj:
             print "k > j"
-            symmetryFileName = sampleDir + 'symmetryCustomklargerj.txt'
+            symmetryFileName = sampleDir + 'symmetryCustomklargerjG4.txt'
         else:
             print "k != j"
             symmetryFileName = sampleDir + 'symmetryCustomkunequalj.txt'
