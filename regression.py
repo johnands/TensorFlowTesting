@@ -189,6 +189,7 @@ class Regression:
         self.forces = forces
         global saveParametersFlag
         self.samplesDir = dataFolder
+        self.symmFuncType = symmFuncType
 
         if method == 'twoBody':
             print "method=twoBody: Generating random, radial 1-neighbour data..."
@@ -463,8 +464,8 @@ class Regression:
                         with open(saveMetaName, 'w') as outFile:
                             outStr = '# epochs: %d train: %d, test: %d, batch: %d, nodes: %d, layers: %d \n' \
                                      % (numberOfEpochs, trainSize, testSize, batchSize, nNodes, nLayers)
-                            outStr += 'a: %1.1f, b: %1.1f, activation: %s, wInit: %s, bInit: %s, learnRate: %g' % \
-                                       (self.a, self.b, self.activation.__name__, self.wInit, self.bInit, self.learningRate)
+                            outStr += 'a: %1.1f, b: %1.1f, activation: %s, wInit: %s, bInit: %s, learnRate: %g, symm: %s' % \
+                                       (self.a, self.b, self.activation.__name__, self.wInit, self.bInit, self.learningRate, self.symmFuncType)
                             outFile.write(outStr + '\n')
                             outStr = 'Inputs: %d, outputs: %d, loaded: %s, sampled: %s \n' %  \
                                      (self.inputs, self.outputs, loadDir, self.samplesDir)

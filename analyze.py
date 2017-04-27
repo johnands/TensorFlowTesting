@@ -15,6 +15,7 @@ import os
 import neuralNetwork as nn
 import DataGeneration.lammpsData as lammps
 import DataGeneration.symmetries as symmetries
+import DataGeneration.readers as readers
 
 
 # find latest checkpoint
@@ -80,10 +81,10 @@ class Analyze:
         
         # read meta file
         metaFile = loadDir + '/meta.dat'
-        nNodes, nLayers, activation, self.inputs, outputs, self.lammpsDir = self.readMetaFile(metaFile)
+        nNodes, nLayers, activation, self.inputs, outputs, self.lammpsDir = readers.readMetaFile(metaFile)
         
         # read parameters
-        self.parameters = self.readParameters(loadDir + "/parameters.dat")
+        self.parameters = readers.readParameters(loadDir + "/parameters.dat")
         self.numberOfSymmFunc = len(self.parameters)
         print "Number of symmetry functions: ", self.numberOfSymmFunc
         
@@ -122,7 +123,7 @@ class Analyze:
             
             if os.path.isfile(symmetryFileName):
                 print "Reading symmetrized Behler data"
-                self.inputData = lammps.readSymmetryData(symmetryFileName)
+                self.inputData = readers.readSymmetryData(symmetryFileName)
             else: 
                 print "Symmetry values file does not exist, has to be made"
                 exit(1)
@@ -139,10 +140,10 @@ class Analyze:
             neighbourLists = self.lammpsDir + "/neighbours.txt"
             if self.tags:
                 print "Reading forces and tags"
-                x0, y0, z0, r0, E, Fx, Fy, Fz, tags = lammps.readNeighbourDataForceTag(neighbourLists)
+                x0, y0, z0, r0, E, Fx, Fy, Fz, tags = readers.readNeighbourDataForceTag(neighbourLists)
             else:
                 print "Reading forces without tags"
-                x0, y0, z0, r0, E, Fx, Fy, Fz = lammps.readNeighbourDataForce(neighbourLists)
+                x0, y0, z0, r0, E, Fx, Fy, Fz = readers.readNeighbourDataForce(neighbourLists)
              
             self.x0 = x0
             self.y0 = y0
@@ -363,57 +364,7 @@ class Analyze:
         print map(Prettyfloat, FzNN[:1])
                     
         return FxNN, FyNN, FzNN
-    
-    
-    def readParameters(self, filename):
-        
-        parameters = []
-        with open(filename, 'r') as infile:
-            infile.readline()
-            for line in infile:
-                param = []
-                words = line.split()
-                for word in words:
-                    param.append(float(word))
-                parameters.append(param)
-                
-        return parameters
-        
-        
-    def readMetaFile(self, filename):
-        
-        # must first create a NN with the same architecture as the
-        # on I want to load
-        with open(filename, 'r') as infile:
-            
-            # read number of nodes and layers
-            words = infile.readline().split()
-            nNodes = int(words[-3][:-1])
-            nLayers = int(words[-1])
-            print "Number of nodes: ", nNodes
-            print "Number of layers: ", nLayers
-            
-            # read activation function
-            words = infile.readline().split()
-            activation = words[5][:-1]
-            print "Activation: ", activation
-            if activation == 'sigmoid':
-                activation = tf.nn.sigmoid
-            elif activation == 'tanh':
-                activation = tf.nn.tanh
-            else:
-                print activation, " is not a valid activation"
-                
-            # read inputs, outputs and lammps sample folder
-            words = infile.readline().split()
-            inputs = int(words[1][:-1])
-            outputs = int(words[3][:-1])
-            lammpsDir = words[-1]
-            print "Inputs: ", inputs
-            print "Outputs: ", outputs
-            print "Lammps folder: ", lammpsDir
-            
-            return nNodes, nLayers, activation, inputs, outputs, lammpsDir
+
 
           
     def analyzeConfigSpace(self, sess):  
