@@ -231,6 +231,8 @@ def lammpsTrainingSi(nLayers=2, nNodes=35, nEpochs=int(1e5), symmFuncType='G5', 
     Use neighbour data and energies from lammps with sw-potential 
     as input and output training data respectively
     """
+    
+    lammpsDir = "../LAMMPS_test/Silicon/Data/" + lammpsDir + '/'
                
     # get energies from sw lammps  
     if useFunction: 
@@ -302,11 +304,20 @@ def lammpsTrainsSiO2(nLayers, nNodes, nEpochs, dataFolder, outputs=1, activation
 #                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-lammpsTrainingSi(nLayers=2, nNodes=10, nEpochs=int(1e5), activation=tf.nn.sigmoid, \
-                 symmFuncType='G4', \
-                 lammpsDir="../LAMMPS_test/Silicon/Data/20.04-14.03.17/", \
-                 Behler=False, klargerj=True, useFunction=False, forces=False, tags=False, \
-                 batch=5, learningRate=0.001, RMSEtol=0.003)
+lammpsTrainingSi( nLayers       = 2, 
+                  nNodes        = 10, 
+                  nEpochs       = int(1e5), 
+                  activation    = tf.nn.sigmoid, 
+                  symmFuncType  = 'G4', 
+                  lammpsDir     = '20.04-14.03.17', 
+                  Behler        = False, 
+                  klargerj      = True, 
+                  useFunction   = False, 
+                  forces        = False, 
+                  tags          = False, 
+                  batch         = 5, 
+                  learningRate  = 0.001, 
+                  RMSEtol       = 0.003 )
                         
                         
                         
