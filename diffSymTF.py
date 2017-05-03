@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
-import DataGeneration.lammpsData as data
 import DataGeneration.symmetryFunctions as symmFuncs
+import DataGeneration.readers as readers
 
 np.set_printoptions(precision=18)
            
@@ -52,22 +52,6 @@ def readDerivatives(filename):
                 
     return np.array(dGj), np.array(dGk)
                      
-    
-    
-def readParameters(filename):
-    
-    parameters = []
-    with open(filename, 'r') as infile:
-        infile.readline()
-        for line in infile:
-            param = []
-            words = line.split()
-            for word in words:
-                param.append(float(word))
-            parameters.append(param)
-            
-    return parameters
-        
               
            
 def diffG(symmFunc, sympy):
@@ -84,11 +68,19 @@ def diffG(symmFunc, sympy):
         The derivatives are only summed up for ONE rij, i.e. when l=0 in the triplet force loop
         """
         if sympy:
-            filenameConfigs = "../LAMMPS_test/TestNN/Tests/Gderivative/sympyConfigs.txt"
-            filenameDerivatives = "../LAMMPS_test/TestNN/Tests/Gderivative/sympyDerivatives.txt"
+            if symmFunc == 'G5':
+                filenameConfigs     = "../LAMMPS_test/TestNN/Tests/Gderivative/sympyConfigs.txt"
+                filenameDerivatives = "../LAMMPS_test/TestNN/Tests/Gderivative/sympyDerivatives.txt"
+            else:
+                filenameConfigs     = "../LAMMPS_test/TestNN/Tests/Gderivative/sympyConfigsG4.txt"
+                filenameDerivatives = "../LAMMPS_test/TestNN/Tests/Gderivative/sympyDerivativesG4.txt"
         else:
-            filenameConfigs = "../LAMMPS_test/TestNN/Tests/Gderivative/myConfigs.txt"
-            filenameDerivatives = "../LAMMPS_test/TestNN/Tests/Gderivative/myDerivatives.txt"
+            if symmFunc == 'G5':
+                filenameConfigs     = "../LAMMPS_test/TestNN/Tests/Gderivative/myConfigs.txt"
+                filenameDerivatives = "../LAMMPS_test/TestNN/Tests/Gderivative/myDerivatives.txt"
+            else: 
+                filenameConfigs     = "../LAMMPS_test/TestNN/Tests/Gderivative/myConfigsG4.txt"
+                filenameDerivatives = "../LAMMPS_test/TestNN/Tests/Gderivative/myDerivativesG4.txt"
       
         x, y, z = readCoordinates(filenameConfigs)
         dGj, dGk = readDerivatives(filenameDerivatives)
@@ -96,7 +88,7 @@ def diffG(symmFunc, sympy):
         nSamples = len(x)
         print "Number of samples: ", nSamples
             
-        parameters = readParameters("TrainingData/21.04-19.05.10/parameters.dat")
+        parameters = readers.readParameters("TrainingData/25.04-18.27.52/parameters.dat")
         
         # loop through all configs and find sum of derivative for all symm funcs
         derivativesj = np.zeros((nSamples, 3))
@@ -141,18 +133,24 @@ def diffG(symmFunc, sympy):
         
                 gradient = tf.gradients(func, [xij, yij, zij, xik, yik, zik])
               
-                yes  = sess.run(gradient, feed_dict=feed_dict)
-                derivativesj[i,0] += yes[0][0]
-                derivativesj[i,1] += yes[1][0]
-                derivativesj[i,2] += yes[2][0]
+                gradTF  = sess.run(gradient, feed_dict=feed_dict)
+
+                derivativesj[i,0] += gradTF[0][0]
+                derivativesj[i,1] += gradTF[1][0]
+                derivativesj[i,2] += gradTF[2][0]
                 
-                dkx = np.array(yes[3])
-                dky = np.array(yes[4])
-                dkz = np.array(yes[5])
+                dkx = np.array(gradTF[3])
+                dky = np.array(gradTF[4])
+                dkz = np.array(gradTF[5])
                 
                 derivativesk[i,0] += np.sum(dkx)
                 derivativesk[i,1] += np.sum(dky)
                 derivativesk[i,2] += np.sum(dkz)
+                
+    print 'TF dij:', derivativesj
+    print 'My dij:', dGj
+    print 'TF dik:', derivativesk
+    print 'My dik:', dGk
     
     diffxj = derivativesj[:][0] - dGj[:][0]
     diffyj = derivativesj[:][1] - dGj[:][1]
@@ -189,7 +187,7 @@ def diffG(symmFunc, sympy):
     
 
     
-diffG('G5', True)
+diffG('G4', True)
 
 
 
