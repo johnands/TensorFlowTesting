@@ -35,7 +35,7 @@ Rj, Rk, Rjk, Rj2, Rk2, Rjk2, RjDotRk, CosTheta, Fcj, Fck, Fcjk, dFcj, dFck, dFcj
 
 rj = sqrt(xj**2 + yj**2 + zj**2)
 rk = sqrt(xk**2 + yk**2 + zk**2)
-rjk = sqrt((xj-xk)**2 + (yj-yk)**2 + (zj-zk)**2)
+rjk = sqrt((xk-xj)**2 + (yk-yj)**2 + (zk-zj)**2)
 
 fcj = 0.5*cos(pi*rj/Rc) + 0.5
 fck = 0.5*cos(pi*rk/Rc) + 0.5
@@ -53,7 +53,7 @@ G4 = F1*F2*F3
 dG4dxj = diff(G4, xj)
 dG4dxj = dG4dxj.subs(xj**2 + yj**2 + zj**2, Rj2)
 dG4dxj = dG4dxj.subs(xk**2 + yk**2 + zk**2, Rk2)
-dG4dxj = dG4dxj.subs((xj-xk)**2 + (yj-yk)**2 + (zj-zk)**2, Rjk2)
+dG4dxj = dG4dxj.subs((xk-xj)**2 + (yk-yj)**2 + (zk-zj)**2, Rjk2)
 dG4dxj = dG4dxj.subs(sqrt(Rj2), Rj)
 dG4dxj = dG4dxj.subs(sqrt(Rk2), Rk)
 dG4dxj = dG4dxj.subs(sqrt(Rjk2), Rjk)
@@ -85,7 +85,7 @@ dG4dyj = dG4dyj.subs(sin(pi*Rjk/Rc)/(Rc), -2*dFcjk/pi)
 dG4dxk = diff(G4, xk)
 dG4dxk = dG4dxk.subs(xj**2 + yj**2 + zj**2, Rj2)
 dG4dxk = dG4dxk.subs(xk**2 + yk**2 + zk**2, Rk2)
-dG4dxk = dG4dxk.subs((xj-xk)**2 + (yj-yk)**2 + (zj-zk)**2, Rjk2)
+dG4dxk = dG4dxk.subs((xk-xj)**2 + (yk-yj)**2 + (zk-zj)**2, Rjk2)
 dG4dxk = dG4dxk.subs(sqrt(Rj2), Rj)
 dG4dxk = dG4dxk.subs(sqrt(Rk2), Rk)
 dG4dxk = dG4dxk.subs(sqrt(Rjk2), Rjk)
