@@ -232,7 +232,7 @@ def lammpsTrainingSi(nLayers=2, nNodes=35, nEpochs=int(1e5), symmFuncType='G5', 
     as input and output training data respectively
     """
     
-    lammpsDir = "../LAMMPS_test/Silicon/Data/" + lammpsDir + '/'
+    lammpsDir = "../LAMMPS_test/Silicon/Data/TrainingData/" + lammpsDir + '/'
                
     # get energies from sw lammps  
     if useFunction: 
@@ -308,9 +308,9 @@ lammpsTrainingSi( nLayers       = 2,
                   nNodes        = 10, 
                   nEpochs       = int(1e5), 
                   activation    = tf.nn.sigmoid, 
-                  symmFuncType  = 'G4', 
-                  lammpsDir     = '20.04-14.03.17', 
-                  Behler        = False, 
+                  symmFuncType  = 'G5', 
+                  lammpsDir     = '4Atoms/T1e3N1e4', 
+                  Behler        = True, 
                   klargerj      = True, 
                   useFunction   = False, 
                   forces        = False, 

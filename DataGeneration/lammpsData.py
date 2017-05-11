@@ -162,10 +162,10 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=T
     if Behler:
         if klargerj:
             print "k > j"
-            symmetryFileName = sampleDir + 'symmetryBehlerklargerjcut.txt'
+            symmetryFileName = sampleDir + 'symmetryBehlerklargerj.txt'
         else:
             print "k != j"
-            symmetryFileName = sampleDir + 'symmetryBehlerkunequaljcut.txt'
+            symmetryFileName = sampleDir + 'symmetryBehlerkunequalj.txt'
             
     else:
         if klargerj:
