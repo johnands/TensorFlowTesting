@@ -80,6 +80,10 @@ def readXYZ(filename, cut):
     
     
 def readNeighbourData(filename):
+    """
+    Ordinary neighbour file:
+    x1 y1 z1 r1 x2 y2 z2 r2 ... xN yN zN E
+    """
     
     with open(filename, 'r') as inFile:
         
@@ -104,7 +108,45 @@ def readNeighbourData(filename):
                       
     return x, y, z, r, E
     
+    
+def readNeighbourDataMultiType(filename):
+    """
+    Ordinary neighbour file:
+    x1 y1 z1 r1 type1 x2 y2 z2 r2 type2 ... xN yN zN typeN E
+    """
+    
+    with open(filename, 'r') as inFile:
+        
+        x = []; y = []; z = []
+        r = []; E = []
+        types = []
+        for line in inFile:
+            words = line.split()
+            N = (len(words) - 1) / 5
+            xi = []; yi = []; zi = [];
+            ri = [];
+            typesi = [];
+            for i in xrange(N):
+                xi.append(float(words[4*i]))
+                yi.append(float(words[4*i+1]))
+                zi.append(float(words[4*i+2]))
+                ri.append(float(words[4*i+3]))
+                typesi.append(float(words[4*i+4]))
+                
+            x.append(xi)
+            y.append(yi)
+            z.append(zi)
+            r.append(ri)
+            types.append(typesi)
+            E.append([float(words[-1])])  
+                      
+    return x, y, z, r, types, E
+    
+    
 def readEnergy(filename):
+    """
+    Read energy only
+    """
     
     with open(filename, 'r') as inFile:
         
@@ -117,6 +159,10 @@ def readEnergy(filename):
     
 
 def readNeighbourDataForce(filename):
+    """
+    Ordinary neighbour file:
+    x1 y1 z1 r1 x2 y2 z2 r2 ... xN yN zN E Fx Fy Fz
+    """
     
     with open(filename, 'r') as inFile:
         
@@ -147,6 +193,10 @@ def readNeighbourDataForce(filename):
     
 
 def readNeighbourDataForceTag(filename):
+    """
+    Ordinary neighbour file:
+    tag1 x1 y1 z1 r1 tag2 x2 y2 z2 r2 ... tagN xN yN zN E Fx Fy Fz
+    """   
     
     with open(filename, 'r') as inFile:
         
@@ -182,6 +232,9 @@ def readNeighbourDataForceTag(filename):
     
     
 def readEnergyAndForce(filename):
+    """
+    Read energy and force only
+    """
     
     with open(filename, 'r') as inFile:
         

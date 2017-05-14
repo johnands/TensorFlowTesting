@@ -143,7 +143,7 @@ def calculateForces(x, y, z, r, parameters, forceFile, dEdG):
       
            
 def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, E=None, forces=False,
-                           sampleName='', klargerj=False):
+                           sampleName='', klargerj=True):
     """
     Transform input coordinates with 2- and 3-body symmetry functions
     Input coordinates can be random or sampled from lammps
@@ -238,7 +238,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
             rij = ri[j]
             xij = xi[j]; yij = yi[j]; zij = zi[j]
             
-            # all k != i,j OR I > J
+            # all k != i,j OR k > j
             if klargerj:
                 k = np.arange(len(ri[:])) > j
             else:
@@ -380,22 +380,240 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
         C = np.sum(inputData**2, axis=0) / float(size)
         print C
         print "Decorrelating input..."
-          
-    """print "New input data:"
+       
+       
+    if normalizeFlag or shiftMeanFlag or scaleCovarianceFlag or decorrelateFlag:
+        print "New input data:"
+        maxInput = np.max(inputData)
+        minInput = np.min(inputData)
+        print "Max: ", maxInput
+        print "Min: ", minInput
+        print "Mean: ", np.mean(inputData)
+        print
+        
+        print "New output data:"
+        maxOutput = np.max(outputData)
+        minOutput = np.min(outputData)
+        print "Max: ", maxOutput
+        print "Min: ", minOutput
+        print "Mean: ", np.mean(outputData)
+        print
+    
+    return inputData, outputData
+    
+    
+    
+def applyThreeBodySymmetryMultiType(x, y, z, r, types, parameters, symmFuncType, E=None, forces=False,
+                                    sampleName='', klargerj=True):
+    """
+    Transform input coordinates with 2- and 3-body symmetry functions
+    Input coordinates can be random or sampled from lammps
+    Output data can be supplied with an array E or be generated
+    using the optional function argument
+    """
+    
+    if symmFuncType == 'G4':
+        print 
+        print 'Using G4'
+    elif symmFuncType == 'G5':
+        print 
+        print 'Using G5'
+    else:
+        print 'Not valid triplet symmetry function'
+        exit(1)
+        
+    if klargerj:
+        print 
+        print "Using k > j when training"
+    else:
+        print
+        print "Using k != j when training"
+    
+    size = len(x)
+    numberOfSymmFunc = len(parameters)
+    
+    inputData  = np.zeros((size,numberOfSymmFunc)) 
+       
+    outputData = np.zeros((size, 1))
+    print "Energy is generated with user-supplied function"
+    
+    # loop through each data vector, i.e. each atomic environment
+    fractionOfNonZeros = 0.0
+    fractionOfInputVectorsOnlyZeros = 0.0
+    meanNeighbours = 0.0
+    rjkMin = 100.0
+    rjkMax = 0.0
+    for i in xrange(size):  
+    
+        # neighbour coordinates for atom i
+        xi = np.array(x[i][:])
+        yi = np.array(y[i][:])
+        zi = np.array(z[i][:])
+        ri = np.array(r[i][:])
+        typesi = np.array(types[i])
+        ri = np.sqrt(ri)
+        numberOfNeighbours = len(xi)
+        
+        # count mean number of neighbours
+        meanNeighbours += numberOfNeighbours
+        
+        # sum over all neighbours k for each neighbour j
+        # this loop takes care of both 2-body and 3-body configs   
+        for j in xrange(numberOfNeighbours):
+                      
+            # atom j
+            rij = ri[j]
+            xij = xi[j]; yij = yi[j]; zij = zi[j]
+            typej = typesi[j]
+            
+            # all k != i,j OR k > j
+            if klargerj:
+                triplets = np.arange(len(ri[:])) > j
+            else:
+                triplets = np.arange(len(ri[:])) != j  
+            
+            # must deal with one triplet at a time
+            for k in triplets:
+                              
+                rik = ri[k] 
+                xik = xi[k]; yik = yi[k]; zik = zi[k]
+                typek = typesi[k]
+                
+                # compute cos(theta_ijk) and rjk
+                cosTheta = (xij*xik + yij*yik + zij*zik) / (rij*rik) 
+                
+                # floating-point error can yield an argument outside of arccos range
+                if not (np.abs(cosTheta) <= 1).all():
+                    for l, arg in enumerate(cosTheta):
+                        if arg < -1:
+                            cosTheta[l] = -1
+                            print "Warning: %.14f has been replaced by %d" % (arg, cosTheta[l])
+                        if arg > 1:
+                            cosTheta[l] = 1
+                            print "Warning: %.14f has been replaced by %d" % (arg, cosTheta[l])
+                
+                if symmFuncType == 'G4':
+                    xjk = xik - xij
+                    yjk = yik - yij
+                    zjk = zik - zij
+                    rjk = np.sqrt(xjk*xjk + yjk*yjk + zjk*zjk)
+                              
+                    if rjk.size > 0:            
+                        minR = np.min(rjk)
+                        maxR = np.max(rjk)
+                        if minR < rjkMin:
+                            rjkMin = minR
+                        if maxR > rjkMax:
+                            rjkMax = maxR
+                
+                # find value of each symmetry function for this triplet
+                # need a way to find the correct parameters based on types
+                for s, p in enumerate(parameters):
+                    if len(p) == 3:
+                        inputData[i,s] += symmetryFunctions.G2(rij, p[0], p[1], p[2])
+                    else:
+                        if symmFuncType == 'G4':
+                            inputData[i,s] += symmetryFunctions.G4(rij, rik, rjk, cosTheta,
+                                                                   p[0], p[1], p[2], p[3])
+                        else:
+                            inputData[i,s] += symmetryFunctions.G5(rij, rik, cosTheta,
+                                                                   p[0], p[1], p[2], p[3])           
+        
+        # count zeros
+        fractionOfNonZeros += np.count_nonzero(inputData[i,:]) / float(numberOfSymmFunc)
+        if not np.any(inputData[i,:]):
+            fractionOfInputVectorsOnlyZeros += 1
+            print i
+            
+        # show progress
+        sys.stdout.write("\r%2d %% complete" % ((float(i)/size)*100))
+        sys.stdout.flush()
+        
+        
+    if sampleName:
+        print 
+        print "Writing symmetrized input data to file"
+        with open(sampleName, 'w') as outfile:
+            for vector in inputData:
+                for symmValue in vector:
+                    outfile.write('%g ' % symmValue)
+                outfile.write('\n')
+                  
+    fractionOfZeros = 1 - fractionOfNonZeros / float(size)
+    fractionOfInputVectorsOnlyZeros /= float(size)
+    print "Fraction of zeros: ", fractionOfZeros
+    print "Fraction of input vectors with only zeros: ", fractionOfInputVectorsOnlyZeros
+    print
+    
+    meanNeighbours /= float(size)
+    print "Mean number of neighbours: ", meanNeighbours
+    print
+    
+    print "min(Rjk) ", rjkMin
+    print "max(Rjk) ", rjkMax
+    print
+    
+    print "Input data:"
     maxInput = np.max(inputData)
     minInput = np.min(inputData)
     print "Max: ", maxInput
     print "Min: ", minInput
-    print "Mean: ", np.mean(inputData)
-    print
+    print "Mean: ", np.mean(inputData,)
+    print 
     
-    print "New output data:"
+    print "Output data:"
     maxOutput = np.max(outputData)
     minOutput = np.min(outputData)
     print "Max: ", maxOutput
     print "Min: ", minOutput
     print "Mean: ", np.mean(outputData)
-    print"""  
+    print
+    
+    # normalize to [-1,1]
+    if normalizeFlag:
+        inputData = 2 * (inputData - minInput) / (maxInput - minInput) - 1 
+        outputData = 2 * (outputData - minOutput) / (maxOutput - minOutput) - 1    
+        print "Normalizing input..."
+    
+    if shiftMeanFlag:
+        # shift inputs so that average is zero
+        inputData  -= np.mean(inputData, axis=0)
+        # shift outputs so that average is zero
+        outputData -= np.mean(outputData, axis=0)
+        print "Shifting input mean..."
+    
+    # scale the covariance
+    if scaleCovarianceFlag:
+        C = np.sum(inputData**2, axis=0) / float(size)
+        print C
+        print "Scaling input covariance..."
+    
+    if decorrelateFlag:     
+        # decorrelate data
+        cov = np.dot(inputData.T, inputData) / inputData.shape[0] # get the data covariance matrix
+        U,S,V = np.linalg.svd(cov)
+        inputData = np.dot(inputData, U) # decorrelate the data
+        C = np.sum(inputData**2, axis=0) / float(size)
+        print C
+        print "Decorrelating input..."
+       
+       
+    if normalizeFlag or shiftMeanFlag or scaleCovarianceFlag or decorrelateFlag:
+        print "New input data:"
+        maxInput = np.max(inputData)
+        minInput = np.min(inputData)
+        print "Max: ", maxInput
+        print "Min: ", minInput
+        print "Mean: ", np.mean(inputData)
+        print
+        
+        print "New output data:"
+        maxOutput = np.max(outputData)
+        minOutput = np.min(outputData)
+        print "Max: ", maxOutput
+        print "Min: ", minOutput
+        print "Mean: ", np.mean(outputData)
+        print
     
     return inputData, outputData
     

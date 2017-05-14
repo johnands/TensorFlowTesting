@@ -182,7 +182,7 @@ class Regression:
     def generateData(self, a, b, method, numberOfSymmFunc=10, neighbours=80, \
                      symmFuncType='G4', dataFolder='', batch=5, 
                      varyingNeigh=True, forces=False, Behler=True, 
-                     klargerj=False, tags=False):
+                     klargerj=True, tags=False, atomType=0):
 
         self.a, self.b = a, b
         self.neighbours = neighbours
@@ -247,7 +247,7 @@ class Regression:
             if saveMetaFlag:              
                 saveParametersFlag = True
 
-        elif method == 'lammps':
+        elif method == 'lammpsSi' or method == 'lammpsSiO2':
             if self.function == None:
                 print "method=lammps: Reading data from lammps simulations, including energies..."
             else:
@@ -257,8 +257,6 @@ class Regression:
                 print "Path to folder where data is stored must be supplied"
                 
             self.samplesDir = dataFolder
-                
-            filename = dataFolder + "neighbours.txt"
             
             # write content of README file to terminal
             print
@@ -266,11 +264,18 @@ class Regression:
             command = "cat " + dataFolder + "README.txt"
             os.system(command)
             print 
-                
-            self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs, self.parameters, \
-            self.Ftrain, self.Ftest = \
-                lammps.SiTrainingData(filename, symmFuncType, function=self.function, forces=forces, Behler=Behler, 
-                                      klargerj=klargerj, tags=tags)
+                 
+            if method == 'lammpsSi':  
+                print 'Training Si'
+                self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs, self.parameters, \
+                self.Ftrain, self.Ftest = \
+                    lammps.SiTrainingData(dataFolder, symmFuncType, function=self.function, forces=forces, Behler=Behler, 
+                                          klargerj=klargerj, tags=tags)
+            else:
+                print 'Training SiO2'
+                self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs, self.parameters, \
+                self.Ftrain, self.Ftest = \
+                    lammps.SiO2TrainingData(dataFolder, symmFuncType, atomType, forces=forces)
             
             # set different sizes based on lammps data
             self.trainSize = self.xTrain.shape[0]

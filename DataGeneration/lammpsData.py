@@ -4,126 +4,19 @@ import numpy as np
 import sys
 import symmetries
 import readers
+import symmetryParameters
 import os
- 
-    
-def parametersBehler():
-    
-    # make nested list of all symmetry function parameters
-    # parameters from Behler
-    parameters = []    
-    
-    # type1
-    center = 0.0
-    cutoff = 6.0
-    for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
-        parameters.append([eta, cutoff, center])
-    
-    # type2
-    zeta = 1.0
-    inversion = 1.0
-    eta = 0.01
-    for cutoff in [6.0, 5.5, 5.0, 4.5, 4.0, 3.5]:
-        parameters.append([eta, cutoff, zeta, inversion])
-        
-    # type 3
-    cutoff = 6.0
-    eta = 4.0
-    for center in [5.5, 5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0]:
-        parameters.append([eta, cutoff, center])
-        
-        
-    eta = 0.01
-    
-    # type 4
-    zeta = 1.0
-    inversion = -1.0    
-    for cutoff in [6.0, 5.5, 5.0, 4.5, 4.0, 3.5]:
-        parameters.append([eta, cutoff, zeta, inversion])
-        
-    # type 5 and 6
-    zeta = 2.0
-    for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 5.0, 4.0, 3.0]:
-            parameters.append([eta, cutoff, zeta, inversion])
-        
-    # type 7 and 8
-    zeta = 4.0
-    for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 5.0, 4.0, 3.0]:
-            parameters.append([eta, cutoff, zeta, inversion])
-    
-    # type 9 and 10
-    zeta = 16.0
-    for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 4.0]:
-            parameters.append([eta, cutoff, zeta, inversion])  
-            
-    return parameters
-    
-
-def parametersCustomized():
-    
-    # make nested list of all symmetry function parameters
-    # parameters from Behler
-    parameters = []    
-    
-    # type1
-    center = 0.0
-    cutoff = 3.77118
-    for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
-        parameters.append([eta, cutoff, center])
-    
-    # type2
-    zeta = 1.0
-    inversion = 1.0
-    eta = 0.01
-    for cutoff in [6.0, 5.5, 5.0, 4.5, 4.0, 3.8]:
-        parameters.append([eta, cutoff, zeta, inversion])
-        
-    # type 3
-    cutoff = 6.0
-    eta = 4.0
-    for center in [5.5, 5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0]:
-        parameters.append([eta, cutoff, center])
-        
-        
-    eta = 0.01
-    
-    # type 4
-    zeta = 1.0
-    inversion = -1.0    
-    for cutoff in [6.0, 5.5, 5.0, 4.5, 4.0, 3.8]:
-        parameters.append([eta, cutoff, zeta, inversion])
-        
-    # type 5 and 6
-    zeta = 2.0
-    for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 5.0, 4.0, 3.8]:
-            parameters.append([eta, cutoff, zeta, inversion])
-        
-    # type 7 and 8
-    zeta = 4.0
-    for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 5.0, 4.0, 3.8]:
-            parameters.append([eta, cutoff, zeta, inversion])
-    
-    # type 9 and 10
-    zeta = 16.0
-    for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 4.0]:
-            parameters.append([eta, cutoff, zeta, inversion])  
-            
-    return parameters
     
 
 
-def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=True, 
+def SiTrainingData(dataFolder, symmFuncType, function=None, forces=False, Behler=True, 
                    klargerj=False, tags=True):
     """ 
     Coordinates and energies of neighbours is sampled from lammps
     Angular symmtry funcitons are used to transform input data  
     """
+    
+    filename = dataFolder + "neighbours.txt"
      
     # read file
     if forces:
@@ -148,9 +41,9 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=T
     if Behler:
         print 
         print "Using Behler parameters"
-        parameters = parametersBehler()
+        parameters = symmetryParameters.SiBehler()
     else:
-        parameters = parametersCustomized()
+        parameters = symmetryParameters.SiBulkCustom()
         print
         print "Using customized parameters" 
                     
@@ -246,71 +139,36 @@ def SiTrainingData(filename, symmFuncType, function=None, forces=False, Behler=T
     return inputTraining, outputTraining, inputTest, outputTest, numberOfSymmFunc, outputs, parameters, Ftrain, Ftest 
     
 
-def SiO2TrainingData(filename, symmFuncType, function=None):
+def SiO2TrainingData(dataFolder, symmFuncType, atomType, forces=False):
     """ 
     Coordinates and energies of neighbours is sampled from lammps
     Angular symmtry funcitons are used to transform input data  
     """
     
-    # read file
-    x, y, z, r, E = readers.readNeighbourData(filename)
-    print "File is read..."
-
-    # make nested list of all symetry function parameters
-    # parameters from Behler
-    parameters = []    
+    # read files
+    if forces:
+        print 'Forces included in lammps training data not implemented for SiO2'
+        exit(1)
+    else:
+        print 'Forces are not included in lammps training data'
+        if atomType == 0:
+            print 'Training atom type Si'
+            x, y, z, r, types, E = readers.readNeighbourDataMultiType(dataFolder + 'neighbours0.txt')
+        else:
+            print 'Training atom type O'
+            x, y, z, r, types, E = readers.readNeighbourDataMultiType(dataFolder + 'neighbours1.txt')
+    print "Lammps data is read..."
     
-    # type1
-    center = 0.0
-    cutoff = 6.0
-    for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
-        parameters.append([eta, cutoff, center])
+    parameters, elem2param = symmetryParameters.SiO2type0()
     
-    # type2
-    zeta = 1.0
-    inversion = 1.0
-    eta = 0.01
-    for cutoff in [6.0, 5.5, 5.0, 4.5, 4.0, 3.5]:
-        parameters.append([eta, cutoff, zeta, inversion])
-        
-    # type 3
-    cutoff = 6.0
-    eta = 4.0
-    for center in [5.5, 5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0]:
-        parameters.append([eta, cutoff, center])
-        
-        
-    eta = 0.01
-    
-    # type 4
-    zeta = 1.0
-    inversion = -1.0    
-    for cutoff in [6.0, 5.5, 5.0, 4.5, 4.0, 3.5]:
-        parameters.append([eta, cutoff, zeta, inversion])
-        
-    # type 5 and 6
-    zeta = 2.0
-    for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 5.0, 4.0, 3.0]:
-            parameters.append([eta, cutoff, zeta, inversion])
-        
-    # type 7 and 8
-    zeta = 4.0
-    for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 5.0, 4.0, 3.0]:
-            parameters.append([eta, cutoff, zeta, inversion])
-    
-    # type 9 and 10
-    zeta = 16.0
-    for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 4.0]:
-            parameters.append([eta, cutoff, zeta, inversion])   
+    print elem2param[(0,1,1)]
+    exit(1)
                     
     numberOfSymmFunc = len(parameters)
     outputs = 1
                    
     # apply symmetry transformastion
-    inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=function, E=E)
+    inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, E=E)
     
     # split in training set and test set randomly
     totalSize       = len(inputData)
@@ -326,7 +184,7 @@ def SiO2TrainingData(filename, symmFuncType, function=None):
         
         
 if __name__ == '__main__':
-    readXYZ("../../LAMMPS_test/Silicon/Data/Si1000.xyz")
+    pass
     
     
     
