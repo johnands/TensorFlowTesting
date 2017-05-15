@@ -1,23 +1,18 @@
 import numpy as np
 import tensorflow as tf
 
-def cutoffFunction(R, Rc, cut=True):   
+def cutoffFunction(R, Rc):   
     
     value = 0.5 * (np.cos(np.pi*R / Rc) + 1)
 
     # set elements above cutoff to zero so they dont contribute to sum
-    if cut:
-        if isinstance(R, np.ndarray):
-            value[np.where(R > Rc)[0]] = 0
-            if len(np.where(R > Rc)[0]) > 0:
-                print 'cutting'
-        else:
-            if R > Rc:
-                print 'cutting'
-                value = 0
+    if isinstance(R, np.ndarray):
+        value[np.where(R > Rc)[0]] = 0
+    else:
+        if R > Rc:
+            value = 0
         
-    return value
-    
+    return value   
  
     
 def G1(Rij, Rc):
@@ -39,7 +34,7 @@ def G4(Rij, Rik, Rjk, cosTheta, eta, Rc, zeta, Lambda):
     
     return 2**(1-zeta) * np.sum( (1 + Lambda*cosTheta)**zeta * \
            np.exp( -eta*(Rij**2 + Rik**2 + Rjk**2) ) * \
-           cutoffFunction(Rij, Rc) * cutoffFunction(Rik, Rc) * cutoffFunction(Rjk, Rc, cut=True) )
+           cutoffFunction(Rij, Rc) * cutoffFunction(Rik, Rc) * cutoffFunction(Rjk, Rc) )
            
            
 def G5(Rij, Rik, cosTheta, eta, Rc, zeta, Lambda):
@@ -90,7 +85,7 @@ def G4TF(xij, yij, zij, xik, yik, zik, eta, Rc, zeta, Lambda):
     
     return 2**(1-zeta) * tf.reduce_sum( (1 + Lambda*cosTheta)**zeta * \
            tf.exp( -eta*(Rij2 + Rik2 + Rjk*Rjk) ) * \
-           cutoffFunctionTF(Rij, Rc) * cutoffFunctionTF(Rik, Rc) * cutoffFunctionTF(Rjk, Rc, cut=True) )
+           cutoffFunctionTF(Rij, Rc) * cutoffFunctionTF(Rik, Rc) * cutoffFunctionTF(Rjk, Rc) )
            
         
 def G5TF(xij, yij, zij, xik, yik, zik, eta, Rc, zeta, Lambda):

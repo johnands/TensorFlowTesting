@@ -244,19 +244,19 @@ def lammpsTrainingSi(nLayers=2, nNodes=35, nEpochs=int(1e5), symmFuncType='G5', 
     # these are sampled from lammps
     trainSize = batchSize = testSize = inputs = low = high = 0
                        
-    regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs, \
+    regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs,
                                     learningRate=learningRate, RMSEtol=RMSEtol)
     regress.generateData(low, high, 'lammpsSi', 
-                         symmFuncType=symmFuncType, dataFolder=lammpsDir, forces=forces, batch=batch, \
+                         symmFuncType=symmFuncType, dataFolder=lammpsDir, forces=forces, batch=batch, 
                          Behler=Behler, klargerj=klargerj, tags=tags)
-    regress.constructNetwork(nLayers, nNodes, activation=activation, \
+    regress.constructNetwork(nLayers, nNodes, activation=activation,
                              wInit='xavier', bInit='constant')
     regress.train(nEpochs)
     
     
 def lammpsTrainingSiO2(nLayers=2, nNodes=10, nEpochs=int(1e5), symmFuncType='G5', 
                        activation= tf.nn.sigmoid, lammpsDir='4Atoms/T1e3N1e4', forces=False, 
-                       batch=5, learningRate=0.001, RMSEtol=0.003, outputs=1, atomType=0):
+                       batch=5, learningRate=0.001, RMSEtol=0.003, outputs=1, atomType=0, nTypes=2):
     """
     Use neighbour data and energies from lammps with vashista-potential
     as input and output training data respectively
@@ -272,7 +272,7 @@ def lammpsTrainingSiO2(nLayers=2, nNodes=10, nEpochs=int(1e5), symmFuncType='G5'
                                     learningRate=learningRate, RMSEtol=RMSEtol)
     regress.generateData(low, high, 'lammpsSiO2', 
                          symmFuncType=symmFuncType, dataFolder=lammpsDir, forces=forces, batch=batch,
-                         atomType=0)
+                         atomType=atomType, nTypes=nTypes)
     regress.constructNetwork(nLayers, nNodes, activation=activation,
                              wInit='xavier', bInit='constant')
     regress.train(nEpochs)
@@ -331,10 +331,11 @@ lammpsTrainingSiO2( nLayers       = 2,
                     nEpochs       = int(1e5), 
                     activation    = tf.nn.sigmoid, 
                     symmFuncType  = 'G5', 
-                    lammpsDir     = 'Bulk/12.05-16.28.54', 
+                    lammpsDir     = 'Bulk/15.05-12.35.53', 
                     atomType      = 0,
+                    nTypes        = 2,
                     forces        = False, 
-                    batch         = 5, 
+                    batch         = 1, 
                     learningRate  = 0.001, 
                     RMSEtol       = 0.003 )
                         

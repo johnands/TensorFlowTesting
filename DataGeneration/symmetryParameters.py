@@ -329,67 +329,141 @@ def SiO2type1(write=False):
     
     # make nested list of all symetry function parameters
     # parameters from Behler
-    parameters = []
-    parameters.append([])    
+    parameters = []   
     
     # G2
-    # Si-Si, Si-O, O-O and O-Si: customize later
+    # O-O and O-Si: customize later
     # general trend pairs: 
     # number of pair neighbours: 51-62
-    # Si have ca 25 Si and 35 O as neighbours
     # O  have ca 20 Si and 40 O as neighbours 
     
-    # Si: 0, O: 1
-    elem = 1
+    elem2param = {}
+    i = 0
+    iOld = 0  
     
-    # O-Si
-    elem = 1
-    
+    # O-Si: [1,0]
     cutoff = 5.5
     
     center = 0.0  
     for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
         parameters.append([eta, cutoff, center])
+        i += 1
         
     eta = 4.0
     for center in [5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.5]:
         parameters.append([eta, cutoff, center])
-       
-    # O-O
+        i += 1
+        
+    iNew = i
+    elem2param[(1,0)] = (iOld, iNew)
+    iOld = i
+        
+    # O-O: [1,1]
     cutoff = 5.5
     
     center = 0.0  
     for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
         parameters.append([eta, cutoff, center])
+        i += 1
         
     eta = 4.0
     for center in [5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.5]:
         parameters.append([eta, cutoff, center])
+        i += 1
         
-    print parameters
-    exit(1)
-        
-        
+    iNew = i
+    elem2param[(1,1)] = (iOld, iNew)
+    iOld = i
+           
     # G5
     # general trend triplets:
-    # number of triplet neighbours: 2-8 
-    """eta = 0.01
+    # number of triplet neighbours: 2-8
+           
+    # O-Si-Si: [1,0,0]
+    eta = 0.01
     
     zeta = 1.0
     inversion = 1.0
-    for cutoff in [5.0, 3.5, 2.0]:
+    for cutoff in [3.5, 3.0, 2.5]:
         for inversion in [-1.0, 1.0]:
             parameters.append([eta, cutoff, zeta, inversion])  
+            i += 1
             
     zeta = 4.0
     inversion = 1.0
-    for cutoff in [5.0, 3.5, 2.0]:
+    for cutoff in [3.5, 3.0, 2.5]:
         for inversion in [-1.0, 1.0]:
             parameters.append([eta, cutoff, zeta, inversion])  
+            i += 1
             
-    # replicate x 4
-    for i in xrange(4):
-        parameters += parameters[G2end]"""
+    iNew = i
+    elem2param[(1,0,0)] = (iOld, iNew)
+    iOld = i
+            
+    # O-Si-O: [1,0,1]
+    eta = 0.01
+    
+    zeta = 1.0
+    inversion = 1.0
+    for cutoff in [3.5, 3.0, 2.5]:
+        for inversion in [-1.0, 1.0]:
+            parameters.append([eta, cutoff, zeta, inversion])  
+            i += 1
+            
+    zeta = 4.0
+    inversion = 1.0
+    for cutoff in [3.5, 3.0, 2.5]:
+        for inversion in [-1.0, 1.0]:
+            parameters.append([eta, cutoff, zeta, inversion])
+            i += 1
+            
+    iNew = i
+    elem2param[(1,0,1)] = (iOld, iNew)
+    iOld = i
+            
+    # O-O-Si: [1,1,0]
+    eta = 0.01
+    
+    zeta = 1.0
+    inversion = 1.0
+    for cutoff in [3.5, 3.0, 2.5]:
+        for inversion in [-1.0, 1.0]:
+            parameters.append([eta, cutoff, zeta, inversion])  
+            i += 1
+            
+    zeta = 4.0
+    inversion = 1.0
+    for cutoff in [3.5, 3.0, 2.5]:
+        for inversion in [-1.0, 1.0]:
+            parameters.append([eta, cutoff, zeta, inversion])  
+            i += 1
+            
+    iNew = i
+    elem2param[(1,1,0)] = (iOld, iNew)
+    iOld = i
+    
+    # O-O-O: [1,1,1]
+    eta = 0.01
+    
+    zeta = 1.0
+    inversion = 1.0
+    for cutoff in [3.5, 3.0, 2.5]:
+        for inversion in [-1.0, 1.0]:
+            parameters.append([eta, cutoff, zeta, inversion]) 
+            i += 1
+            
+    zeta = 4.0
+    inversion = 1.0
+    for cutoff in [3.5, 3.0, 2.5]:
+        for inversion in [-1.0, 1.0]:
+            parameters.append([eta, cutoff, zeta, inversion]) 
+            i += 1
+        
+    iNew = i
+    elem2param[(1,1,1)] = (iOld, iNew)
+    iOld = i
+            
+    return parameters, elem2param
     
     
     

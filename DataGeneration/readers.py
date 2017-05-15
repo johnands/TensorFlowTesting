@@ -127,11 +127,11 @@ def readNeighbourDataMultiType(filename):
             ri = [];
             typesi = [];
             for i in xrange(N):
-                xi.append(float(words[4*i]))
-                yi.append(float(words[4*i+1]))
-                zi.append(float(words[4*i+2]))
-                ri.append(float(words[4*i+3]))
-                typesi.append(float(words[4*i+4]))
+                xi.append(float(words[5*i]))
+                yi.append(float(words[5*i+1]))
+                zi.append(float(words[5*i+2]))
+                ri.append(float(words[5*i+3]))
+                typesi.append(int(words[5*i+4]))
                 
             x.append(xi)
             y.append(yi)

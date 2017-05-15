@@ -182,7 +182,7 @@ class Regression:
     def generateData(self, a, b, method, numberOfSymmFunc=10, neighbours=80, \
                      symmFuncType='G4', dataFolder='', batch=5, 
                      varyingNeigh=True, forces=False, Behler=True, 
-                     klargerj=True, tags=False, atomType=0):
+                     klargerj=True, tags=False, atomType=0, nTypes=1):
 
         self.a, self.b = a, b
         self.neighbours = neighbours
@@ -273,8 +273,10 @@ class Regression:
                                           klargerj=klargerj, tags=tags)
             else:
                 print 'Training SiO2'
+                self.atomType = atomType
+                self.nTypes = nTypes
                 self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs, self.parameters, \
-                self.Ftrain, self.Ftest = \
+                self.elem2param = \
                     lammps.SiO2TrainingData(dataFolder, symmFuncType, atomType, forces=forces)
             
             # set different sizes based on lammps data
@@ -494,9 +496,9 @@ class Regression:
                 # finish training if RMSE of test set is below tolerance
                 if testRMSE < self.RMSEtol:
                     print "Reached RMSE tolerance"
+                    print sess.run(prediction, feed_dict={x: xBatch})
                     break
-                        
-                        
+                                            
                         
             # elapsed time
             end = timer();
@@ -538,16 +540,41 @@ class Regression:
                 parameters = self.parameters
                 numberOfParameters = len(parameters[0])
                 saveParametersName = trainingDir + '/' + 'parameters.dat'
-                with open(saveParametersName, 'w') as outFile:
-                    # write number of symmfuncs and number of unique parameters
-                    outStr = "%d %d" % (len(parameters), len(parameters[0]))
-                    outFile.write(outStr + '\n')
-                    for symmFunc in range(len(parameters)):
-                        for param in parameters[symmFunc]:
-                            outFile.write("%g" % param)
-                            if numberOfParameters > 1:
-                                outFile.write(" ")
-                        outFile.write("\n")
+                
+                if self.nTypes > 1:
+                    with open(saveParametersName, 'w') as outFile:   
+                        outStr = "%d %d" % (len(parameters), self.atomType)
+                        outFile.write(outStr + '\n')
+                        # G2
+                        for jtype in xrange(self.nTypes):
+                            interval = self.elem2param[(self.atomType,jtype)]
+                            for s, p in enumerate(parameters[interval[0]:interval[1]], interval[0]):
+                                for param in p:
+                                    outFile.write("%g " % param)
+                                outFile.write("\n")
+                            outFile.write("\n")
+                            
+                        # G4/G5
+                        for jtype in xrange(self.nTypes):
+                            for ktype in xrange(self.nTypes):
+                                interval = self.elem2param[(self.atomType,jtype,ktype)]
+                                for s, p in enumerate(parameters[interval[0]:interval[1]], interval[0]):
+                                    for param in p:
+                                        outFile.write("%g " % param)
+                                    outFile.write("\n")
+                                outFile.write("\n")     
+                                    
+                else:
+                    with open(saveParametersName, 'w') as outFile:
+                        # write number of symmfuncs and number of unique parameters
+                        outStr = "%d" % len(parameters)
+                        outFile.write(outStr + '\n')
+                        for symmFunc in range(len(parameters)):
+                            for param in parameters[symmFunc]:
+                                outFile.write("%g" % param)
+                                if numberOfParameters > 1:
+                                    outFile.write(" ")
+                            outFile.write("\n")
 
             # freeze graph
             if saveGraphProtoFlag:

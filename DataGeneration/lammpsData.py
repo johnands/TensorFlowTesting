@@ -152,34 +152,42 @@ def SiO2TrainingData(dataFolder, symmFuncType, atomType, forces=False):
     else:
         print 'Forces are not included in lammps training data'
         if atomType == 0:
-            print 'Training atom type Si'
+            print 'Training atom type 0: Si'
             x, y, z, r, types, E = readers.readNeighbourDataMultiType(dataFolder + 'neighbours0.txt')
         else:
-            print 'Training atom type O'
+            print 'Training atom type 1: O'
             x, y, z, r, types, E = readers.readNeighbourDataMultiType(dataFolder + 'neighbours1.txt')
     print "Lammps data is read..."
     
-    parameters, elem2param = symmetryParameters.SiO2type0()
-    
-    print elem2param[(0,1,1)]
-    exit(1)
+    if atomType == 0:
+        parameters, elem2param = symmetryParameters.SiO2type0()
+    else:
+        parameters, elem2param = symmetryParameters.SiO2type1()
                     
     numberOfSymmFunc = len(parameters)
     outputs = 1
                    
     # apply symmetry transformastion
-    inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, E=E)
+    inputData, outputData = symmetries.applyThreeBodySymmetryMultiType(x, y, z, r, types, atomType,
+                                                                       parameters, elem2param, symmFuncType, E=E)
     
     # split in training set and test set randomly
     totalSize       = len(inputData)
-    testSize        = int(0.1*totalSize) 
+    if len(inputData) < 10:
+        testSize = 1
+    else:
+        testSize        = int(0.1*totalSize) 
     indicies        = np.random.choice(totalSize, testSize, replace=False)
     inputTest       = inputData[indicies]         
     outputTest      = outputData[indicies] 
-    inputTraining   = np.delete(inputData, indicies, axis=0)
-    outputTraining  = np.delete(outputData, indicies, axis=0)
+    if totalSize > 1:
+        inputTraining   = np.delete(inputData, indicies, axis=0)
+        outputTraining  = np.delete(outputData, indicies, axis=0)
+    else:
+        inputTraining = inputTest
+        outputTraining = outputTest
    
-    return inputTraining, outputTraining, inputTest, outputTest, numberOfSymmFunc, outputs, parameters  
+    return inputTraining, outputTraining, inputTest, outputTest, numberOfSymmFunc, outputs, parameters, elem2param
         
         
         

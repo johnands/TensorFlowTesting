@@ -403,7 +403,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
     
     
     
-def applyThreeBodySymmetryMultiType(x, y, z, r, types, parameters, symmFuncType, E=None, forces=False,
+def applyThreeBodySymmetryMultiType(x, y, z, r, types, itype, parameters, elem2param, symmFuncType, E=None, forces=False,
                                     sampleName='', klargerj=True):
     """
     Transform input coordinates with 2- and 3-body symmetry functions
@@ -415,9 +415,11 @@ def applyThreeBodySymmetryMultiType(x, y, z, r, types, parameters, symmFuncType,
     if symmFuncType == 'G4':
         print 
         print 'Using G4'
+        tripletSymmFunc = symmetryFunctions.G4
     elif symmFuncType == 'G5':
         print 
         print 'Using G5'
+        tripletSymmFunc = symmetryFunctions.G5
     else:
         print 'Not valid triplet symmetry function'
         exit(1)
@@ -434,8 +436,8 @@ def applyThreeBodySymmetryMultiType(x, y, z, r, types, parameters, symmFuncType,
     
     inputData  = np.zeros((size,numberOfSymmFunc)) 
        
-    outputData = np.zeros((size, 1))
-    print "Energy is generated with user-supplied function"
+    outputData = np.array(E)
+    print "Energy is supplied from lammps"
     
     # loop through each data vector, i.e. each atomic environment
     fractionOfNonZeros = 0.0
@@ -464,20 +466,22 @@ def applyThreeBodySymmetryMultiType(x, y, z, r, types, parameters, symmFuncType,
             # atom j
             rij = ri[j]
             xij = xi[j]; yij = yi[j]; zij = zi[j]
-            typej = typesi[j]
+            jtype = typesi[j]
             
-            # all k != i,j OR k > j
-            if klargerj:
-                triplets = np.arange(len(ri[:])) > j
-            else:
-                triplets = np.arange(len(ri[:])) != j  
-            
+            # find symmetry values for [itype,jtype]
+            pairRange = elem2param[(itype, jtype)]
+            for s, p in enumerate( parameters[pairRange[0]:pairRange[1]], pairRange[0] ):
+                inputData[i,s] += symmetryFunctions.G2(rij, p[0], p[1], p[2])
+                
+            if rij > 2.6:
+                continue
+                
             # must deal with one triplet at a time
-            for k in triplets:
+            for k in xrange(j+1, numberOfNeighbours, 1):
                               
                 rik = ri[k] 
                 xik = xi[k]; yik = yi[k]; zik = zi[k]
-                typek = typesi[k]
+                ktype = typesi[k]
                 
                 # compute cos(theta_ijk) and rjk
                 cosTheta = (xij*xik + yij*yik + zij*zik) / (rij*rik) 
@@ -506,19 +510,12 @@ def applyThreeBodySymmetryMultiType(x, y, z, r, types, parameters, symmFuncType,
                         if maxR > rjkMax:
                             rjkMax = maxR
                 
-                # find value of each symmetry function for this triplet
-                # need a way to find the correct parameters based on types
-                for s, p in enumerate(parameters):
-                    if len(p) == 3:
-                        inputData[i,s] += symmetryFunctions.G2(rij, p[0], p[1], p[2])
-                    else:
-                        if symmFuncType == 'G4':
-                            inputData[i,s] += symmetryFunctions.G4(rij, rik, rjk, cosTheta,
-                                                                   p[0], p[1], p[2], p[3])
-                        else:
-                            inputData[i,s] += symmetryFunctions.G5(rij, rik, cosTheta,
-                                                                   p[0], p[1], p[2], p[3])           
-        
+                # find symmetry values for [itype,jtype,ktype]
+                tripletRange = elem2param[(itype, jtype, ktype)]
+                for s, p in enumerate( parameters[tripletRange[0]:tripletRange[1]] ):
+                    inputData[i,s] += tripletSymmFunc(rij, rik, cosTheta,
+                                                      p[0], p[1], p[2], p[3])
+          
         # count zeros
         fractionOfNonZeros += np.count_nonzero(inputData[i,:]) / float(numberOfSymmFunc)
         if not np.any(inputData[i,:]):
