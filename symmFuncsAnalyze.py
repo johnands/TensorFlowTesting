@@ -54,7 +54,11 @@ def G5(Rij, Rik, cosTheta, width, cutoff, thetaRange, inversion):
 
 # set parameters
 plt.rc('lines', linewidth=1.5)
-#plt.rc('axes', prop_cycle=(cycler('color', ['g', 'k', 'y', 'b', 'r', 'c', 'm']) ))
+
+numberOfPlots = 10
+colormap = plt.cm.nipy_spectral
+colors = [colormap(i) for i in np.linspace(0, 1,numberOfPlots)]
+plt.rc('axes', prop_cycle=(cycler('color', colors)))
 plt.rc('xtick', labelsize=20)
 plt.rc('ytick', labelsize=20)
 plt.rc('axes', labelsize=25)
@@ -108,7 +112,7 @@ for eta, Rc, Rs in parameters2:
     functionValue = G2(Rij2, eta, Rc, Rs)
     functionValue[np.where(Rij2 > Rc)[0]] = 0
     plt.plot(Rij2, functionValue)
-    legends.append(r'$\eta=%3.2f \, \mathrm{\AA{}}^{-2}, R_c=%1.1f  \, \mathrm{\AA{}}, R_s=%1.1f \, \mathrm{\AA{}}$' % \
+    legends.append(r'$\eta=%1.3f \, \mathrm{\AA{}}^{-2}, R_c=%1.1f  \, \mathrm{\AA{}}, R_s=%1.1f \, \mathrm{\AA{}}$' % \
                    (eta, Rc, Rs) )
     plt.hold('on')
 

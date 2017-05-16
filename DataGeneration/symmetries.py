@@ -483,6 +483,9 @@ def applyThreeBodySymmetryMultiType(x, y, z, r, types, itype, parameters, elem2p
                 xik = xi[k]; yik = yi[k]; zik = zi[k]
                 ktype = typesi[k]
                 
+                if rik > 2.6:
+                    continue
+                
                 # compute cos(theta_ijk) and rjk
                 cosTheta = (xij*xik + yij*yik + zij*zik) / (rij*rik) 
                 
@@ -512,10 +515,11 @@ def applyThreeBodySymmetryMultiType(x, y, z, r, types, itype, parameters, elem2p
                 
                 # find symmetry values for [itype,jtype,ktype]
                 tripletRange = elem2param[(itype, jtype, ktype)]
-                for s, p in enumerate( parameters[tripletRange[0]:tripletRange[1]] ):
+                for s, p in enumerate( parameters[tripletRange[0]:tripletRange[1]], tripletRange[0] ):
                     inputData[i,s] += tripletSymmFunc(rij, rik, cosTheta,
                                                       p[0], p[1], p[2], p[3])
-          
+        
+        
         # count zeros
         fractionOfNonZeros += np.count_nonzero(inputData[i,:]) / float(numberOfSymmFunc)
         if not np.any(inputData[i,:]):

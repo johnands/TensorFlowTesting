@@ -466,14 +466,69 @@ def SiO2type1(write=False):
     return parameters, elem2param
     
     
+def SiO2type02atoms(write=False):
+    
+    # make nested list of all symetry function parameters
+    parameters = []  
+    
+    # G2
+    # Si-Si, Si-O customize later
+    # general trend pairs: 
+    # number of pair neighbours: 51-62
+    # Si have ca 25 Si and 35 O as neighbours
+    
+    elem2param = {}
+    i = 0
+    iOld = 0  
+    
+    # Si-Si: [0,0]
+    """cutoff = 10.0
+    
+    center = 0.0  
+    for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
+        parameters.append([eta, cutoff, center])
+        i += 1
+        
+    eta = 4.0
+    for center in [5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.5]:
+        parameters.append([eta, cutoff, center])
+        i += 1
+        
+    iNew = i
+    elem2param[(0,0)] = (iOld, iNew)
+    iOld = i"""
+        
+    # Si-O: [0,1]
+    cutoff = 10.0
+    
+    center = 0.0  
+    for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
+        parameters.append([eta, cutoff, center])
+        i += 1
+        
+    eta = 0.001
+    center = 0.0
+    for cutoff in [7.0, 5.0, 3.0, 2.0]:
+        parameters.append([eta, cutoff, center])
+        i += 1
+        
+    iNew = i
+    elem2param[(0,1)] = (iOld, iNew)
+    
+    if write:
+        writeParameters(parameters, 'Parameters/SiO2atoms2.dat')
+    
+    return parameters, elem2param
     
     
+
         
     
 if __name__ == '__main__':
     
     #SiBehler(write=False)
-    Si3Atoms(write=True)
+    #Si3Atoms(write=True)
+    SiO2type02atoms(write=True)
         
         
 

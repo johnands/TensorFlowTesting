@@ -390,8 +390,8 @@ class Regression:
             with tf.name_scope('networkGradient'):
                 networkGradient = tf.gradients(self.neuralNetwork.allActivations[-1], x)
                 
-            with tf.name_scope('L2Force'):
-                CFDATrain = tf.nn.l2_loss( tf.subtract(networkGradient, xTrain) )
+            #with tf.name_scope('L2Force'):
+            #    CFDATrain = tf.nn.l2_loss( tf.subtract(networkGradient, xTrain) )
 
             # initialize variables or restore from file
             saver = tf.train.Saver(keep_checkpoint_every_n_hours=1)
@@ -498,7 +498,9 @@ class Regression:
                     print "Reached RMSE tolerance"
                     print sess.run(prediction, feed_dict={x: xBatch})
                     break
-                                            
+                
+            #print '%.16g' % sess.run(prediction, feed_dict={x: xTrain})[0][0]
+            #print  sess.run(networkGradient, feed_dict={x: xTrain})                                           
                         
             # elapsed time
             end = timer();
@@ -516,13 +518,13 @@ class Regression:
                         if i < size-1:
                             for j in range(len(weights)):
                                 for k in range(len(weights[0])):
-                                    outFile.write("%.12g" % weights[j][k])
+                                    outFile.write("%.16g" % weights[j][k])
                                     outFile.write(" ")
                                 outFile.write("\n")
                         else:
                             for j in range(len(weights[0])):
                                 for k in range(len(weights)):
-                                    outFile.write("%.12g" % weights[k][j])
+                                    outFile.write("%.16g" % weights[k][j])
                                     outFile.write(" ")
                                 outFile.write("\n")
 
@@ -531,7 +533,7 @@ class Regression:
                     for biasVariable in self.neuralNetwork.allBiases:
                         biases = sess.run(biasVariable)
                         for j in range(len(biases)):
-                            outFile.write("%.12g" % biases[j])
+                            outFile.write("%.16g" % biases[j])
                             outFile.write(" ")
                         outFile.write("\n")
 

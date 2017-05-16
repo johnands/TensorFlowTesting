@@ -160,16 +160,32 @@ def SiO2TrainingData(dataFolder, symmFuncType, atomType, forces=False):
     print "Lammps data is read..."
     
     if atomType == 0:
-        parameters, elem2param = symmetryParameters.SiO2type0()
+        #parameters, elem2param = symmetryParameters.SiO2type0()
+        parameters, elem2param = symmetryParameters.SiO2type02atoms()
     else:
         parameters, elem2param = symmetryParameters.SiO2type1()
                     
     numberOfSymmFunc = len(parameters)
     outputs = 1
+    
+    symmetryFileName = dataFolder + 'symmetryValues2atoms.txt'
+    
+    # apply symmetry or read already existing file
+    if os.path.isfile(symmetryFileName):
+        print "Reading symmetrized input data"
+        inputData = readers.readSymmetryData(symmetryFileName)
+        outputData = np.array(E)
+        print "Energy is supplied from lammps"
+    else: 
+        # apply symmetry transformastion
+        inputData, outputData = symmetries.applyThreeBodySymmetryMultiType(x, y, z, r, types, atomType,
+                                                                           parameters, elem2param, symmFuncType, E=E, 
+                                                                           sampleName=symmetryFileName)
+        print 'Applying symmetry transformation'
                    
-    # apply symmetry transformastion
-    inputData, outputData = symmetries.applyThreeBodySymmetryMultiType(x, y, z, r, types, atomType,
-                                                                       parameters, elem2param, symmFuncType, E=E)
+    np.set_printoptions(precision=16)                                                                       
+    print inputData
+    print np.average(inputData)
     
     # split in training set and test set randomly
     totalSize       = len(inputData)

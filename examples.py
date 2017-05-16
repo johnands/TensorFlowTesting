@@ -262,7 +262,7 @@ def lammpsTrainingSiO2(nLayers=2, nNodes=10, nEpochs=int(1e5), symmFuncType='G5'
     as input and output training data respectively
     """
     
-    lammpsDir = "../LAMMPS_test/MultiAtom/Data/TrainingData/" + lammpsDir + '/'
+    lammpsDir = "../LAMMPS_test/Quartz/Data/TrainingData/" + lammpsDir + '/'
     
     # these are sampled from lammps
     function = None
@@ -327,15 +327,15 @@ def lammpsTrainingSiO2(nLayers=2, nNodes=10, nEpochs=int(1e5), symmFuncType='G5'
                   
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
 lammpsTrainingSiO2( nLayers       = 2, 
-                    nNodes        = 10, 
+                    nNodes        = 50, 
                     nEpochs       = int(1e5), 
                     activation    = tf.nn.sigmoid, 
                     symmFuncType  = 'G5', 
-                    lammpsDir     = 'Bulk/15.05-12.35.53', 
+                    lammpsDir     = '2atoms/T300N1e4', 
                     atomType      = 0,
                     nTypes        = 2,
                     forces        = False, 
-                    batch         = 1, 
+                    batch         = 5, 
                     learningRate  = 0.001, 
                     RMSEtol       = 0.003 )
                         
