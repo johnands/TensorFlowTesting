@@ -496,7 +496,6 @@ class Regression:
                 # finish training if RMSE of test set is below tolerance
                 if testRMSE < self.RMSEtol:
                     print "Reached RMSE tolerance"
-                    print sess.run(prediction, feed_dict={x: xBatch})
                     break
                 
             #print '%.16g' % sess.run(prediction, feed_dict={x: xTrain})[0][0]
@@ -549,22 +548,26 @@ class Regression:
                         outFile.write(outStr + '\n')
                         # G2
                         for jtype in xrange(self.nTypes):
-                            interval = self.elem2param[(self.atomType,jtype)]
-                            for s, p in enumerate(parameters[interval[0]:interval[1]], interval[0]):
-                                for param in p:
-                                    outFile.write("%g " % param)
-                                outFile.write("\n")
-                            outFile.write("\n")
-                            
-                        # G4/G5
-                        for jtype in xrange(self.nTypes):
-                            for ktype in xrange(self.nTypes):
-                                interval = self.elem2param[(self.atomType,jtype,ktype)]
+                            key = (self.atomType, jtype)
+                            if key in self.elem2param:
+                                interval = self.elem2param[(self.atomType,jtype)]
                                 for s, p in enumerate(parameters[interval[0]:interval[1]], interval[0]):
                                     for param in p:
                                         outFile.write("%g " % param)
                                     outFile.write("\n")
-                                outFile.write("\n")     
+                                outFile.write("\n")
+                            
+                        # G4/G5
+                        for jtype in xrange(self.nTypes):
+                            for ktype in xrange(self.nTypes):
+                                key = (self.atomType, jtype, ktype)
+                                if key in self.elem2param:
+                                    interval = self.elem2param[(self.atomType,jtype,ktype)]
+                                    for s, p in enumerate(parameters[interval[0]:interval[1]], interval[0]):
+                                        for param in p:
+                                            outFile.write("%g " % param)
+                                        outFile.write("\n")
+                                    outFile.write("\n")     
                                     
                 else:
                     with open(saveParametersName, 'w') as outFile:

@@ -160,15 +160,15 @@ def SiO2TrainingData(dataFolder, symmFuncType, atomType, forces=False):
     print "Lammps data is read..."
     
     if atomType == 0:
-        #parameters, elem2param = symmetryParameters.SiO2type0()
-        parameters, elem2param = symmetryParameters.SiO2type02atoms()
+        parameters, elem2param = symmetryParameters.SiO2type0()
     else:
         parameters, elem2param = symmetryParameters.SiO2type1()
                     
     numberOfSymmFunc = len(parameters)
     outputs = 1
     
-    symmetryFileName = dataFolder + 'symmetryValues2atoms.txt'
+    symmetryFileName = 'symmetry%d.txt' % atomType
+    symmetryFileName = dataFolder + symmetryFileName
     
     # apply symmetry or read already existing file
     if os.path.isfile(symmetryFileName):
@@ -182,10 +182,6 @@ def SiO2TrainingData(dataFolder, symmFuncType, atomType, forces=False):
                                                                            parameters, elem2param, symmFuncType, E=E, 
                                                                            sampleName=symmetryFileName)
         print 'Applying symmetry transformation'
-                   
-    np.set_printoptions(precision=16)                                                                       
-    print inputData
-    print np.average(inputData)
     
     # split in training set and test set randomly
     totalSize       = len(inputData)
