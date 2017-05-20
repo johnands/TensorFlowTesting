@@ -7,6 +7,11 @@ compare the error on the configs sampled from lammps
 (not very easy)
 """
 
+import os, sys, inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parentdir = os.path.dirname(currentdir)
+sys.path.insert(0, parentdir) 
+
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,7 +24,7 @@ import DataGeneration.readers as readers
 
 
 # find latest checkpoint
-loadDir = "TrainingData/" + sys.argv[1]
+loadDir = sys.argv[1]
 checkpointFile = loadDir + "/Checkpoints/checkpoint_state"
 with open(checkpointFile, 'r') as infile:
     line = infile.readline()
@@ -120,6 +125,8 @@ class Analyze:
                 else:
                     symmetryFileName = self.lammpsDir + '/symmetryBehlerkunequalj.txt'
                 print 'Using k != j symmetry vectors'
+                
+            symmetryFileName = '../' + self.lammpsDir + 'symmetry0.txt'
             
             if os.path.isfile(symmetryFileName):
                 print "Reading symmetrized Behler data"
@@ -137,22 +144,24 @@ class Analyze:
             print "Number of time steps: ", self.numberOfTimeSteps
     
             # read energy forces
-            neighbourLists = self.lammpsDir + "/neighbours.txt"
-            if self.tags:
+            neighbourLists = '../' + self.lammpsDir + "neighbours0.txt"
+            """if self.tags:
                 print "Reading forces and tags"
                 x0, y0, z0, r0, E, Fx, Fy, Fz, tags = readers.readNeighbourDataForceTag(neighbourLists)
             else:
                 print "Reading forces without tags"
-                x0, y0, z0, r0, E, Fx, Fy, Fz = readers.readNeighbourDataForce(neighbourLists)
+                x0, y0, z0, r0, E, Fx, Fy, Fz = readers.readNeighbourDataForce(neighbourLists)"""
+                
+            x0, y0, z0, r0, types, E = readers.readNeighbourDataMultiType(neighbourLists)
              
             self.x0 = x0
             self.y0 = y0
             self.z0 = z0
             self.r0 = r0
             self.E = np.array(E)
-            self.Fx = np.array(Fx)
-            self.Fy = np.array(Fy)
-            self.Fz = np.array(Fz)
+            #self.Fx = np.array(Fx)
+            #self.Fy = np.array(Fy)
+            #self.Fz = np.array(Fz)
 
             print "Number of atoms: ", self.numberOfAtoms
             print "Forces is supplied"
@@ -439,10 +448,19 @@ class Analyze:
         inputData = self.inputData.flatten()
         N = len(inputData)
         
+        print self.E
+        
         print "Average symmetry value: ", np.average(inputData)
         print "Max symmetry value: ", np.max(inputData)
         print "Min symmetry value: ", np.min(inputData)
         print "Fraction of zeros: ", len(np.where(inputData == 0)[0]) / float(N)
+        
+        energies = sess.run(self.prediction, feed_dict={self.x: self.inputData})
+        print energies
+        error = energies - self.E
+        plt.plot(error)
+        plt.show()
+        
         
         plt.hist(inputData, bins=100)
         plt.show()

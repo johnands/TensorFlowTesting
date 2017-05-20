@@ -377,6 +377,7 @@ class Regression:
             prediction = self.makeNetwork(x)
 
             with tf.name_scope('L2Norm'):
+                # HAVE CHANGED HERE!!!!
                 trainCost = tf.div( tf.nn.l2_loss( tf.subtract(prediction, y) ), batchSize, name='/trainCost')
                 testCost  = tf.div( tf.nn.l2_loss( tf.subtract(prediction, y) ), testSize, name='/testCost')
                 tf.summary.scalar('L2Norm', trainCost/batchSize)
@@ -398,7 +399,7 @@ class Regression:
             sess.run(tf.global_variables_initializer())
             if loadFlag:
                 saver.restore(sess, loadFileName)
-                print 'Model restored'              
+                print 'Model %s restored' % loadFileName             
             
             # merge all the summaries and write them out to training directory
             if summaryFlag:
@@ -429,8 +430,7 @@ class Regression:
                     sess.run(trainStep, feed_dict={x: xBatch, y: yBatch})
                     
                 # online learning
-                else:   
-                    
+                else:                      
                     # loop through whole set, train each iteration
                     for b in xrange(numberOfBatches):
                         batch = indicies[b*batchSize:(b+1)*batchSize]
@@ -449,8 +449,8 @@ class Regression:
                 if not epoch % every:
                     trainError, absErrorTrain = sess.run([trainCost, MAD], feed_dict={x: xBatch, y: yBatch})
                     testError, absErrorTest   = sess.run([testCost, MAD], feed_dict={x: xTest, y: yTest})
-                    trainRMSE = np.sqrt(trainError*2)
-                    testRMSE = np.sqrt(testError*2)
+                    trainRMSE = np.sqrt(2*trainError)
+                    testRMSE = np.sqrt(2*testError)
                     print 'Cost/N train test at epoch %4d: TF: %g %g, RMSE: %g %g, MAD: %g %g' % \
                                                     ( epoch, trainError, testError, \
                                                       trainRMSE, \
@@ -497,9 +497,13 @@ class Regression:
                 if testRMSE < self.RMSEtol:
                     print "Reached RMSE tolerance"
                     break
-                
-            #print '%.16g' % sess.run(prediction, feed_dict={x: xTrain})[0][0]
-            #print  sess.run(networkGradient, feed_dict={x: xTrain})                                           
+            
+            if numberOfEpochs == -1:
+                print sess.run(trainCost, feed_dict={x: xTrain[0].reshape([1,self.inputs]), y: yTrain[0].reshape([1,1])})
+                print xTrain[0]
+                print yTrain[0]
+                print '%.16g' % sess.run(prediction, feed_dict={x: xTrain[0].reshape([1,self.inputs])})
+                print  sess.run(networkGradient, feed_dict={x: xTrain})                                           
                         
             # elapsed time
             end = timer();

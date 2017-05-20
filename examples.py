@@ -328,7 +328,7 @@ def lammpsTrainingSiO2(nLayers=2, nNodes=10, nEpochs=int(1e5), symmFuncType='G5'
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
 lammpsTrainingSiO2( nLayers       = 2, 
                     nNodes        = 50, 
-                    nEpochs       = int(1e5), 
+                    nEpochs       = int(-1), 
                     activation    = tf.nn.sigmoid, 
                     symmFuncType  = 'G5', 
                     lammpsDir     = 'Bulk/T1000N1e4L4', 
@@ -338,6 +338,8 @@ lammpsTrainingSiO2( nLayers       = 2,
                     batch         = 5, 
                     learningRate  = 0.001, 
                     RMSEtol       = 0.003 )
+                    
+# set numberOfEpochs = -1 when loading network to evalute it
                         
                         
                         

@@ -514,6 +514,11 @@ def applyThreeBodySymmetryMultiType(x, y, z, r, types, itype, parameters, elem2p
                             rjkMax = maxR
                 
                 # find symmetry values for [itype,jtype,ktype]
+                #if (itype, jtype, ktype) != (1,0,0):
+                #    continue
+                if not (itype, jtype, ktype) in elem2param:
+                    continue
+                
                 tripletRange = elem2param[(itype, jtype, ktype)]
                 for s, p in enumerate( parameters[tripletRange[0]:tripletRange[1]], tripletRange[0] ):
                     inputData[i,s] += tripletSymmFunc(rij, rik, cosTheta,

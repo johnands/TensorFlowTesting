@@ -238,7 +238,7 @@ def SiO2type0(write=False):
     # number of triplet neighbours: 2-8
            
     # Si-Si-Si: [0,0,0]
-    eta = 0.01
+    """eta = 0.01
     
     zeta = 1.0
     inversion = 1.0
@@ -297,7 +297,7 @@ def SiO2type0(write=False):
             i += 1
             
     iNew = i
-    elem2param[(0,1,0)] = (iOld, iNew)
+    elem2param[(0,1,0)] = (iOld, iNew)"""
     iOld = i
     
     # Si-O-O: [0,1,1]
@@ -401,7 +401,7 @@ def SiO2type1(write=False):
     iOld = i
             
     # O-Si-O: [1,0,1]
-    eta = 0.01
+    """eta = 0.01
     
     zeta = 1.0
     inversion = 1.0
@@ -461,7 +461,7 @@ def SiO2type1(write=False):
         
     iNew = i
     elem2param[(1,1,1)] = (iOld, iNew)
-    iOld = i
+    iOld = i"""
             
     return parameters, elem2param
     

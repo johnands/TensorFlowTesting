@@ -183,6 +183,9 @@ def SiO2TrainingData(dataFolder, symmFuncType, atomType, forces=False):
                                                                            sampleName=symmetryFileName)
         print 'Applying symmetry transformation'
     
+    print inputData
+    print outputData    
+    
     # split in training set and test set randomly
     totalSize       = len(inputData)
     if len(inputData) < 10:
