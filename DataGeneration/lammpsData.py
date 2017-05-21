@@ -139,7 +139,7 @@ def SiTrainingData(dataFolder, symmFuncType, function=None, forces=False, Behler
     return inputTraining, outputTraining, inputTest, outputTest, numberOfSymmFunc, outputs, parameters, Ftrain, Ftest 
     
 
-def SiO2TrainingData(dataFolder, symmFuncType, atomType, forces=False):
+def SiO2TrainingData(dataFolder, symmFuncType, atomType, forces=False, nAtoms=10):
     """ 
     Coordinates and energies of neighbours is sampled from lammps
     Angular symmtry funcitons are used to transform input data  
@@ -159,15 +159,27 @@ def SiO2TrainingData(dataFolder, symmFuncType, atomType, forces=False):
             x, y, z, r, types, E = readers.readNeighbourDataMultiType(dataFolder + 'neighbours1.txt')
     print "Lammps data is read..."
     
-    if atomType == 0:
-        parameters, elem2param = symmetryParameters.SiO2type0()
+    if nAtoms >= 10:
+        print 'Training bulk SiO2'
+        if atomType == 0:
+            parameters, elem2param = symmetryParameters.SiO2type0()
+        else:
+            parameters, elem2param = symmetryParameters.SiO2type1()           
     else:
-        parameters, elem2param = symmetryParameters.SiO2type1()
+        print 'Training %d atoms' % nAtoms
+        if nAtoms == 2:
+            if atomType == 0:
+                parameters, elem2param = symmetryParameters.SiO2atoms2type0()
+            else:
+                parameters, elem2param = symmetryParameters.SiO2atoms2type1()
+        else:
+            'SiO2 symmetry parameters for %d atoms not implemented yet' % nAtoms
+            exit(1)
                     
     numberOfSymmFunc = len(parameters)
     outputs = 1
     
-    symmetryFileName = 'symmetry%d.txt' % atomType
+    symmetryFileName = 'symmetry%dnoZeros.txt' % atomType
     symmetryFileName = dataFolder + symmetryFileName
     
     # apply symmetry or read already existing file

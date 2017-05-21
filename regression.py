@@ -182,7 +182,7 @@ class Regression:
     def generateData(self, a, b, method, numberOfSymmFunc=10, neighbours=80, \
                      symmFuncType='G4', dataFolder='', batch=5, 
                      varyingNeigh=True, forces=False, Behler=True, 
-                     klargerj=True, tags=False, atomType=0, nTypes=1):
+                     klargerj=True, tags=False, atomType=0, nTypes=1, nAtoms=10):
 
         self.a, self.b = a, b
         self.neighbours = neighbours
@@ -277,7 +277,7 @@ class Regression:
                 self.nTypes = nTypes
                 self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs, self.parameters, \
                 self.elem2param = \
-                    lammps.SiO2TrainingData(dataFolder, symmFuncType, atomType, forces=forces)
+                    lammps.SiO2TrainingData(dataFolder, symmFuncType, atomType, forces=forces, nAtoms=nAtoms)
             
             # set different sizes based on lammps data
             self.trainSize = self.xTrain.shape[0]

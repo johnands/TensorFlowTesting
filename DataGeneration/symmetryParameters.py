@@ -238,7 +238,7 @@ def SiO2type0(write=False):
     # number of triplet neighbours: 2-8
            
     # Si-Si-Si: [0,0,0]
-    """eta = 0.01
+    eta = 0.01
     
     zeta = 1.0
     inversion = 1.0
@@ -297,7 +297,7 @@ def SiO2type0(write=False):
             i += 1
             
     iNew = i
-    elem2param[(0,1,0)] = (iOld, iNew)"""
+    elem2param[(0,1,0)] = (iOld, iNew)
     iOld = i
     
     # Si-O-O: [0,1,1]
@@ -401,7 +401,7 @@ def SiO2type1(write=False):
     iOld = i
             
     # O-Si-O: [1,0,1]
-    """eta = 0.01
+    eta = 0.01
     
     zeta = 1.0
     inversion = 1.0
@@ -461,12 +461,12 @@ def SiO2type1(write=False):
         
     iNew = i
     elem2param[(1,1,1)] = (iOld, iNew)
-    iOld = i"""
+    iOld = i
             
     return parameters, elem2param
     
     
-def SiO2type02atoms(write=False):
+def SiO2atoms2type0(write=False):
     
     # make nested list of all symetry function parameters
     parameters = []  
@@ -482,7 +482,7 @@ def SiO2type02atoms(write=False):
     iOld = 0  
     
     # Si-Si: [0,0]
-    """cutoff = 10.0
+    """cutoff = 5.5
     
     center = 0.0  
     for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
@@ -499,27 +499,134 @@ def SiO2type02atoms(write=False):
     iOld = i"""
         
     # Si-O: [0,1]
-    cutoff = 6.0
+    cutoff = 5.5
     
     center = 0.0  
     for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
         parameters.append([eta, cutoff, center])
         i += 1
         
+    eta = 4.0
+    for center in [5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.5]:
+        parameters.append([eta, cutoff, center])
+        i += 1
+        
     iNew = i
     elem2param[(0,1)] = (iOld, iNew)
+    iOld = i
     
     if write:
         writeParameters(parameters, '../Parameters/SiO2atoms2.dat')
     
     return parameters, elem2param
     
+
+def SiO2atoms2type1(write=False):
     
+    # make nested list of all symetry function parameters
+    # parameters from Behler
+    parameters = []   
+    
+    # G2
+    # O-O and O-Si: customize later
+    # general trend pairs: 
+    # number of pair neighbours: 51-62
+    # O  have ca 20 Si and 40 O as neighbours 
+    
+    elem2param = {}
+    i = 0
+    iOld = 0  
+    
+    # O-Si: [1,0]
+    cutoff = 5.5
+    
+    center = 0.0  
+    for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
+        parameters.append([eta, cutoff, center])
+        i += 1
+        
+    eta = 4.0
+    for center in [5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.5]:
+        parameters.append([eta, cutoff, center])
+        i += 1
+        
+    iNew = i
+    elem2param[(1,0)] = (iOld, iNew)
+    iOld = i
+        
+    # O-O: [1,1]
+    """cutoff = 5.5
+    
+    center = 0.0  
+    for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
+        parameters.append([eta, cutoff, center])
+        i += 1
+        
+    eta = 4.0
+    for center in [5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.5]:
+        parameters.append([eta, cutoff, center])
+        i += 1
+        
+    iNew = i
+    elem2param[(1,1)] = (iOld, iNew)
+    iOld = i"""
+    
+    if write:
+        writeParameters(parameters, '../Parameters/SiO2atoms2.dat')
+    
+    return parameters, elem2param
+       
 
         
     
 if __name__ == '__main__':
+        # make nested list of all symetry function parameters
+    # parameters from Behler
+    parameters = []   
     
+    # G2
+    # O-O and O-Si: customize later
+    # general trend pairs: 
+    # number of pair neighbours: 51-62
+    # O  have ca 20 Si and 40 O as neighbours 
+    
+    elem2param = {}
+    i = 0
+    iOld = 0  
+    
+    # O-Si: [1,0]
+    cutoff = 5.5
+    
+    center = 0.0  
+    for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
+        parameters.append([eta, cutoff, center])
+        i += 1
+        
+    eta = 4.0
+    for center in [5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.5]:
+        parameters.append([eta, cutoff, center])
+        i += 1
+        
+    iNew = i
+    elem2param[(1,0)] = (iOld, iNew)
+    iOld = i
+        
+    # O-O: [1,1]
+    cutoff = 5.5
+    
+    center = 0.0  
+    for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
+        parameters.append([eta, cutoff, center])
+        i += 1
+        
+    eta = 4.0
+    for center in [5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.5]:
+        parameters.append([eta, cutoff, center])
+        i += 1
+        
+    iNew = i
+    elem2param[(1,1)] = (iOld, iNew)
+    iOld = i
     #SiBehler(write=False)
     #Si3Atoms(write=True)
     SiO2type02atoms(write=True)

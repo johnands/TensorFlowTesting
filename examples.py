@@ -256,7 +256,7 @@ def lammpsTrainingSi(nLayers=2, nNodes=35, nEpochs=int(1e5), symmFuncType='G5', 
     
 def lammpsTrainingSiO2(nLayers=2, nNodes=10, nEpochs=int(1e5), symmFuncType='G5', 
                        activation= tf.nn.sigmoid, lammpsDir='4Atoms/T1e3N1e4', forces=False, 
-                       batch=5, learningRate=0.001, RMSEtol=0.003, outputs=1, atomType=0, nTypes=2):
+                       batch=5, learningRate=0.001, RMSEtol=0.003, outputs=1, atomType=0, nTypes=2, nAtoms=10):
     """
     Use neighbour data and energies from lammps with vashista-potential
     as input and output training data respectively
@@ -272,7 +272,7 @@ def lammpsTrainingSiO2(nLayers=2, nNodes=10, nEpochs=int(1e5), symmFuncType='G5'
                                     learningRate=learningRate, RMSEtol=RMSEtol)
     regress.generateData(low, high, 'lammpsSiO2', 
                          symmFuncType=symmFuncType, dataFolder=lammpsDir, forces=forces, batch=batch,
-                         atomType=atomType, nTypes=nTypes)
+                         atomType=atomType, nTypes=nTypes, nAtoms=nAtoms)
     regress.constructNetwork(nLayers, nNodes, activation=activation,
                              wInit='xavier', bInit='constant')
     regress.train(nEpochs)
@@ -328,12 +328,13 @@ def lammpsTrainingSiO2(nLayers=2, nNodes=10, nEpochs=int(1e5), symmFuncType='G5'
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
 lammpsTrainingSiO2( nLayers       = 2, 
                     nNodes        = 50, 
-                    nEpochs       = int(-1), 
+                    nEpochs       = int(1e5), 
                     activation    = tf.nn.sigmoid, 
                     symmFuncType  = 'G5', 
-                    lammpsDir     = 'Bulk/T1000N1e4L4', 
+                    lammpsDir     = '2atoms/T1000N1e4', 
                     atomType      = 1,
                     nTypes        = 2,
+                    nAtoms        = 2,
                     forces        = False, 
                     batch         = 5, 
                     learningRate  = 0.001, 
