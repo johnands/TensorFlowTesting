@@ -145,20 +145,19 @@ def SiO2TrainingData(dataFolder, symmFuncType, atomType, forces=False, nAtoms=10
     Angular symmtry funcitons are used to transform input data  
     """
     
-    # read files
+    print 'Training type %d' % atomType
+    neighbourFile = dataFolder + 'neighbours%dFlattened.txt' % atomType
+    
+    # read training data
     if forces:
         print 'Forces included in lammps training data not implemented for SiO2'
         exit(1)
     else:
         print 'Forces are not included in lammps training data'
-        if atomType == 0:
-            print 'Training atom type 0: Si'
-            x, y, z, r, types, E = readers.readNeighbourDataMultiType(dataFolder + 'neighbours0.txt')
-        else:
-            print 'Training atom type 1: O'
-            x, y, z, r, types, E = readers.readNeighbourDataMultiType(dataFolder + 'neighbours1.txt')
-    print "Lammps data is read..."
+        x, y, z, r, types, E = readers.readNeighbourDataMultiType(neighbourFile)
+    print "Lammps data %s is read..." % neighbourFile
     
+    # get symmetry parameters
     if nAtoms >= 10:
         print 'Training bulk SiO2'
         if atomType == 0:
@@ -179,7 +178,7 @@ def SiO2TrainingData(dataFolder, symmFuncType, atomType, forces=False, nAtoms=10
     numberOfSymmFunc = len(parameters)
     outputs = 1
     
-    symmetryFileName = 'symmetry%dnoZeros.txt' % atomType
+    symmetryFileName = 'symmetry%dnoZerosFlattened.txt' % atomType
     symmetryFileName = dataFolder + symmetryFileName
     
     # apply symmetry or read already existing file

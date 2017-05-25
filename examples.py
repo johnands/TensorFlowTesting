@@ -331,16 +331,17 @@ lammpsTrainingSiO2( nLayers       = 2,
                     nEpochs       = int(1e5), 
                     activation    = tf.nn.sigmoid, 
                     symmFuncType  = 'G5', 
-                    lammpsDir     = '2atoms/T1000N1e4', 
+                    lammpsDir     = 'Bulk/L4T1000N1e4Algo', 
                     atomType      = 1,
                     nTypes        = 2,
-                    nAtoms        = 2,
+                    nAtoms        = 100,
                     forces        = False, 
                     batch         = 5, 
                     learningRate  = 0.001, 
                     RMSEtol       = 0.003 )
                     
 # set numberOfEpochs = -1 when loading network to evalute it
+# set nAtoms to 10 or more to signify training of bulk SiO2, i.e. use bulk symmetry parameters
                         
                         
                         
