@@ -10,9 +10,9 @@ sys.path.insert(0, parentdir)
 
 import numpy as np
 import matplotlib.pyplot as plt
-from cycler import cycler
 import DataGeneration.readers as readers
 import sys
+import Tools.matplotlibParameters as pltParams
 
 def cutoffFunction(R, Rc):   
     
@@ -65,14 +65,7 @@ def G4G5angular(theta, zeta, inversion):
 
 
 # set plot parameters
-plt.rc('lines', linewidth=1.5)
-numberOfPlots = 15
-colormap = plt.cm.nipy_spectral
-colors = [colormap(i) for i in np.linspace(0, 1,numberOfPlots)]
-plt.rc('axes', prop_cycle=(cycler('color', colors)))
-plt.rc('xtick', labelsize=20)
-plt.rc('ytick', labelsize=20)
-plt.rc('axes', labelsize=25)
+
 
 # flags
 plotFlag = False
@@ -139,13 +132,17 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
             functionValue = G2(Rij2, eta, Rc, Rs)
             functionValue[np.where(Rij2 > Rc)[0]] = 0
             plt.plot(Rij2, functionValue)
-            legends.append(r'$\eta=%1.3f \, \mathrm{\AA{}}^{-2}, R_c=%1.1f  \, \mathrm{\AA{}}, R_s=%1.1f \, \mathrm{\AA{}}$' % \
-                           (eta, Rc, Rs) )
+            # with units:
+            #legends.append(r'$\eta=%1.3f \, \mathrm{\AA{}}^{-2}, R_c=%1.1f  \, \mathrm{\AA{}}, R_s=%1.1f \, \mathrm{\AA{}}$' % \
+            #               (eta, Rc, Rs) )
+            # without units and Rc:
+            legends.append(r'$\eta=%1.3f, R_s=%1.1f$' % \
+                           (eta, Rs) )              
             plt.hold('on')
         
         plt.legend(legends, prop={'size':20})
         plt.xlabel(r'$R_{ij}$')
-        plt.ylabel('Parameter value')
+        plt.ylabel(r'$G^2_i$')
         plt.tight_layout()
         if saveFlag:
             plt.savefig(saveFileName)
@@ -215,7 +212,10 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
         for eta, Rc, zeta, Lambda in parameters3:
             functionValue = G4(Rij3, Rik, Rjk, cosTheta, eta, Rc, zeta, Lambda)
             plt.plot(thetaAngle, functionValue)
-            legends.append(r'$\eta=%1.3f \, \mathrm{\AA{}}^{-2}, R_c=%1.1f  \, \mathrm{\AA{}}, \zeta=%d \, \lambda=%d$' % 
+            #legends.append(r'$\eta=%1.3f \, \mathrm{\AA{}}^{-2}, R_c=%1.1f  \, \mathrm{\AA{}}, \zeta=%d \, \lambda=%d$' % 
+            #               (eta, Rc, zeta, Lambda) )
+            # without eta:
+            legends.append(r'$R_c=%1.1f  \, \mathrm{\AA{}}, \zeta=%d \, \lambda=%d$' % 
                            (eta, Rc, zeta, Lambda) )
             plt.hold('on')
             
@@ -234,8 +234,11 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
         for eta, Rc, zeta, Lambda in parameters3:
             functionValue = G5(Rij3, Rik, cosTheta, eta, Rc, zeta, Lambda)
             plt.plot(thetaAngle, functionValue)
-            legends.append(r'$\eta=%1.3f \, \mathrm{\AA{}}^{-2}, R_c=%1.1f  \, \mathrm{\AA{}}, \zeta=%d \, \lambda=%d$' % 
-                           (eta, Rc, zeta, Lambda) )
+            #legends.append(r'$\eta=%1.3f \, \mathrm{\AA{}}^{-2}, R_c=%1.1f  \, \mathrm{\AA{}}, \zeta=%d \, \lambda=%d$' % 
+            #               (eta, Rc, zeta, Lambda) )
+            # without eta:
+            legends.append(r'$R_c=%1.1f  \, \mathrm{\AA{}}, \zeta=%d, \, \lambda=%d$' % 
+                           (Rc, zeta, Lambda) )
             plt.hold('on')
             
         plt.legend(legends, prop={'size':20})
@@ -340,11 +343,13 @@ def analyzeInputData(trainingDir, multiType=True, plotCoordsDist=True, plotSymmD
         
 ##### main #####
         
+pltParams.defineColormap(8, plt.cm.jet)
+        
 if plotFlag: 
     plotSymmetryFunctions(parametersName, 
-                          plotG2=True, 
+                          plotG2=False, 
                           plotG4=False,
-                          plotG5=False,
+                          plotG5=True,
                           plotAngular=False)
     
 if analyzeFlag:
