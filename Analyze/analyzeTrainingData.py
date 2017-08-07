@@ -124,6 +124,8 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
     
     Rij2 = np.linspace(0, globalCutoff + 2, 1000)   
     
+    pltParams.defineColormap(len(parameters2), plt.cm.jet)
+    
     ##### G2 plot #####
     
     if plotG2:
@@ -151,6 +153,8 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
     
     
     ##### G4/G5 plot #####
+    
+    pltParams.defineColormap(len(parameters3), plt.cm.jet)
     
     plt.figure()
     
@@ -192,11 +196,11 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
         plt.legend(legends, prop={'size':20})
         plt.xlabel(r'$R_{ij}$')
         plt.ylabel(r'$G_i^5$')
-        if saveFlag:
-            plt.savefig(saveFileName)
-        else: 
-            plt.show()
-            plt.figure()
+        #if saveFlag:
+        #    plt.savefig(saveFileName)
+        #else: 
+        #    plt.show()
+        #    plt.figure()
             
     
     # plot vs theta
@@ -230,20 +234,22 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
             
 
     if plotG5:
+        plt.figure()
         legends = []
         for eta, Rc, zeta, Lambda in parameters3:
             functionValue = G5(Rij3, Rik, cosTheta, eta, Rc, zeta, Lambda)
             plt.plot(thetaAngle, functionValue)
             #legends.append(r'$\eta=%1.3f \, \mathrm{\AA{}}^{-2}, R_c=%1.1f  \, \mathrm{\AA{}}, \zeta=%d \, \lambda=%d$' % 
             #               (eta, Rc, zeta, Lambda) )
-            # without eta:
-            legends.append(r'$R_c=%1.1f  \, \mathrm{\AA{}}, \zeta=%d, \, \lambda=%d$' % 
-                           (Rc, zeta, Lambda) )
+            # without eta and lambda:
+            legends.append(r'$R_c=%1.1f  \, \mathrm{\AA{}}, \zeta=%d$' % 
+                           (Rc, zeta) )
             plt.hold('on')
             
-        plt.legend(legends, prop={'size':20})
-        plt.xlabel(r'$\theta$')
+        plt.legend(legends, prop={'size':18}, loc=9)
+        plt.xlabel(r'$\theta_{jik}$')
         plt.ylabel(r'$G_i^5$')
+        plt.axis([0, 360, 0, 1.3])
         if saveFlag:
             plt.savefig(saveFileName)
         else: 
@@ -273,28 +279,31 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
         else:
             plt.show()
         
-def analyzeInputData(trainingDir, multiType=True, plotCoordsDist=True, plotSymmDist=True, atomType=0):
+def analyzeInputData(trainingDir, multiType=True, plotCoordsDist=True, plotSymmDist=True, atomType=0,
+                     rangeLimit=0.1):
     
         # read meta file for given training session (to load training data)
         nNodes, nLayers, activation, inputs, outputs, lammpsDir = readers.readMetaFile(trainingDir + '/meta.dat')
         lammpsDir = '../' + lammpsDir
         
         # read symmetrized input data for given training session
-        symmetryFileName = lammpsDir + 'symmetry.txt'
-        print symmetryFileName
+        symmetryFileName = lammpsDir + 'symmetryBehlerklargerj.txt'
+        print 'Symmetry filename:', symmetryFileName
         if os.path.isfile(symmetryFileName):
-                print "Reading symmetrizeddata"
+                print "Reading symmetrized data"
                 inputData = readers.readSymmetryData(symmetryFileName)
         else: 
             print "Symmetry values file does not exist, has to be made"
             exit(1)
         
-        filename = "neighbours%d.txt" % atomType
-        neighbourFile = lammpsDir + filename
         if multiType:
+            filename = "neighbours%d.txt" % atomType
+            neighbourFile = lammpsDir + filename
             print "Reading multi-type training data"
             x, y, z, r, types, E = readers.readNeighbourDataMultiType(neighbourFile)
         else:
+            filename = "neighbours.txt"
+            neighbourFile = lammpsDir + filename
             print "Reading single-type training data"
             x, y, z, r, E = readers.readNeighbourData(neighbourFile)
           
@@ -329,33 +338,62 @@ def analyzeInputData(trainingDir, multiType=True, plotCoordsDist=True, plotSymmD
             plt.figure()
         
         if plotSymmDist:
-            inputData = inputData.flatten()
-            N = len(inputData)
+            inputDataFlat = inputData.flatten()
+            N = len(inputDataFlat)
             
-            print "Average symmetry value: ", np.average(inputData)
-            print "Max symmetry value: ", np.max(inputData)
-            print "Min symmetry value: ", np.min(inputData)
-            print "Fraction of zeros: ", len(np.where(inputData == 0)[0]) / float(N)
+            print "Average symmetry value: ", np.average(inputDataFlat)
+            print "Max symmetry value: ", np.max(inputDataFlat)
+            print "Min symmetry value: ", np.min(inputDataFlat)
+            print "Fraction of zeros: ", len(np.where(inputDataFlat == 0)[0]) / float(N)
             
-            plt.hist(inputData, bins=100)
+            #plt.hist(inputDataFlat, bins=100)
+            #plt.show()
+            
+            plt.figure()
+            
+            plt.hist(inputData[:,30], bins=20)
             plt.show()
-        
+            
+            # check for zeros
+            numberOfSymmFuncs = len(inputData[0])
+            numberOfTrainExamples = len(inputData)
+            smallRange = []
+            for i in xrange(numberOfSymmFuncs):
+                symmFunc = inputData[:,i]
+                
+                print
+                print 'Symmetry function', i
+                print 'Fraction of zeros:', 1 - (np.count_nonzero(symmFunc) / float(numberOfTrainExamples))
+                imax = np.max(symmFunc)
+                imin = np.min(symmFunc)
+                irange = imax - imin
+                iave = np.mean(symmFunc)
+                print 'Max:', imax
+                print 'Min:', imin
+                print 'Range:', irange
+                print 'Average:', iave
+                
+                if irange < rangeLimit:
+                    smallRange.append([i,irange])
+
+                
+            print smallRange
+            print np.corrcoef(inputData[:,46], inputData[:,47])
         
 ##### main #####
         
-pltParams.defineColormap(8, plt.cm.jet)
         
 if plotFlag: 
     plotSymmetryFunctions(parametersName, 
-                          plotG2=False, 
+                          plotG2=True, 
                           plotG4=False,
-                          plotG5=True,
+                          plotG5=False,
                           plotAngular=False)
     
 if analyzeFlag:
     analyzeInputData(trainingDir,
-                     multiType=True, 
-                     plotCoordsDist=True, 
+                     multiType=False, 
+                     plotCoordsDist=False, 
                      plotSymmDist=True)
         
     
