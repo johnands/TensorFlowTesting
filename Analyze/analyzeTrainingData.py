@@ -279,8 +279,8 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
         else:
             plt.show()
         
-def analyzeInputData(trainingDir, multiType=True, plotCoordsDist=True, plotSymmDist=True, atomType=0,
-                     rangeLimit=0.1):
+def analyzeInputData(trainingDir, multiType=False, plotCoordsDist=False, plotSymmDist=False, atomType=0,
+                     rangeLimit=0.1, plotSingleSymmDist=False, corrLimit=0.9, plotCorr=False):
     
         # read meta file for given training session (to load training data)
         nNodes, nLayers, activation, inputs, outputs, lammpsDir = readers.readMetaFile(trainingDir + '/meta.dat')
@@ -337,6 +337,7 @@ def analyzeInputData(trainingDir, multiType=True, plotCoordsDist=True, plotSymmD
             plt.show()
             plt.figure()
         
+        # plot complete distribution of all symmetry functions
         if plotSymmDist:
             inputDataFlat = inputData.flatten()
             N = len(inputDataFlat)
@@ -346,39 +347,67 @@ def analyzeInputData(trainingDir, multiType=True, plotCoordsDist=True, plotSymmD
             print "Min symmetry value: ", np.min(inputDataFlat)
             print "Fraction of zeros: ", len(np.where(inputDataFlat == 0)[0]) / float(N)
             
-            #plt.hist(inputDataFlat, bins=100)
-            #plt.show()
+            plt.hist(inputDataFlat, bins=100)
+            plt.show()
             
             plt.figure()
             
+        
+        # plote distribution of a single symmetry function
+        if plotSingleSymmDist:
             plt.hist(inputData[:,30], bins=20)
             plt.show()
+            plt.figure()
             
-            # check for zeros
-            numberOfSymmFuncs = len(inputData[0])
-            numberOfTrainExamples = len(inputData)
-            smallRange = []
-            for i in xrange(numberOfSymmFuncs):
-                symmFunc = inputData[:,i]
-                
-                print
-                print 'Symmetry function', i
-                print 'Fraction of zeros:', 1 - (np.count_nonzero(symmFunc) / float(numberOfTrainExamples))
-                imax = np.max(symmFunc)
-                imin = np.min(symmFunc)
-                irange = imax - imin
-                iave = np.mean(symmFunc)
-                print 'Max:', imax
-                print 'Min:', imin
-                print 'Range:', irange
-                print 'Average:', iave
-                
-                if irange < rangeLimit:
-                    smallRange.append([i,irange])
+        # find range of each symmetry function
+        numberOfSymmFuncs = len(inputData[0])
+        numberOfTrainExamples = len(inputData)
+        smallRange = []
+        for i in xrange(numberOfSymmFuncs):
+            symmFunc = inputData[:,i]
+            
+            print
+            print 'Symmetry function', i
+            print 'Fraction of zeros:', 1 - (np.count_nonzero(symmFunc) / float(numberOfTrainExamples))
+            imax = np.max(symmFunc)
+            imin = np.min(symmFunc)
+            irange = imax - imin
+            iave = np.mean(symmFunc)
+            print 'Max:', imax
+            print 'Min:', imin
+            print 'Range:', irange
+            print 'Average:', iave
+            
+            # identify functions with small range
+            if irange < rangeLimit:
+                smallRange.append([i,irange])
 
-                
+            print
+            print 'Symm funcs with a range smaller than', rangeLimit, ':'
             print smallRange
-            print np.corrcoef(inputData[:,46], inputData[:,47])
+            
+        
+        # find correlation coefficient matrix and identify functions which have 
+        # a strong correlation
+        corrMatrix = np.corrcoef(np.transpose(inputData))
+        corrMatrix = np.corrcoef(inputData)
+        
+        correlations = []
+        
+        if (corrMatrix == np.transpose(corrMatrix)).all:
+            print 'Symmetric correlation coefficient matrix'
+        
+        for i in xrange(numberOfTrainExamples):
+            for j in xrange(i+1,numberOfSymmFuncs):
+                correlations.append(corrMatrix[i,j])
+                if corrMatrix[i,j] > corrLimit:
+                    print '(%d,%d): %1.3f' % (i, j, corrMatrix[i,j])
+                    
+               
+        # histogram of correlations
+        if plotCorr:
+            plt.hist(correlations, bins=20)
+            plt.show()
         
 ##### main #####
         
@@ -394,7 +423,9 @@ if analyzeFlag:
     analyzeInputData(trainingDir,
                      multiType=False, 
                      plotCoordsDist=False, 
-                     plotSymmDist=True)
+                     plotSymmDist=True,
+                     plotSingleSymmDist=False,
+                     plotCorr=True)
         
     
 
