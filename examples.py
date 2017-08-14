@@ -310,12 +310,12 @@ def lammpsTrainingSiO2(nLayers=2, nNodes=10, nEpochs=int(1e5), symmFuncType='G5'
 #                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-"""lammpsTrainingSi( nLayers       = 2, 
+lammpsTrainingSi( nLayers       = 2, 
                   nNodes        = 10, 
                   nEpochs       = int(1e5), 
                   activation    = tf.nn.sigmoid, 
                   symmFuncType  = 'G5', 
-                  lammpsDir     = '4Atoms/T1e3N1e4', 
+                  lammpsDir     = 'Bulk/L4T1000N2000Algo', 
                   Behler        = True, 
                   klargerj      = True, 
                   useFunction   = False, 
@@ -323,10 +323,10 @@ def lammpsTrainingSiO2(nLayers=2, nNodes=10, nEpochs=int(1e5), symmFuncType='G5'
                   tags          = False, 
                   batch         = 5, 
                   learningRate  = 0.001, 
-                  RMSEtol       = 0.003 )"""
+                  RMSEtol       = 0.003 )
                   
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-lammpsTrainingSiO2( nLayers       = 2, 
+"""lammpsTrainingSiO2( nLayers       = 2, 
                     nNodes        = 50, 
                     nEpochs       = int(1e5), 
                     activation    = tf.nn.sigmoid, 
@@ -338,7 +338,7 @@ lammpsTrainingSiO2( nLayers       = 2,
                     forces        = False, 
                     batch         = 5, 
                     learningRate  = 0.001, 
-                    RMSEtol       = 0.003 )
+                    RMSEtol       = 0.003 )"""
                     
 # set numberOfEpochs = -1 when loading network to evalute it
 # set nAtoms to 9 or more to signify training of bulk SiO2, i.e. use bulk symmetry parameters

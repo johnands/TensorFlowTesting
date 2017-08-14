@@ -31,8 +31,9 @@ def SiTrainingData(dataFolder, symmFuncType, function=None, forces=False, Behler
         Fx = np.array(Fx)
         Fy = np.array(Fy)
         Fz = np.array(Fz)
-        print "Forces is applied"
+        print "Forces are applied"
     else:
+        print 'Forces are not included'
         x, y, z, r, E = readers.readNeighbourData(filename)
     print "Neighbour list file is read..."
 

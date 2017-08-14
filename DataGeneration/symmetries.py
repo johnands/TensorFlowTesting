@@ -313,15 +313,6 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
         sys.stdout.write("\r%2d %% complete" % ((float(i)/size)*100))
         sys.stdout.flush()
         
-        
-    if sampleName:
-        print 
-        print "Writing symmetrized input data to file"
-        with open(sampleName, 'w') as outfile:
-            for vector in inputData:
-                for symmValue in vector:
-                    outfile.write('%g ' % symmValue)
-                outfile.write('\n')
                   
     fractionOfZeros = 1 - fractionOfNonZeros / float(size)
     fractionOfInputVectorsOnlyZeros /= float(size)
@@ -355,16 +346,23 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
     
     # normalize to [-1,1]
     if normalizeFlag:
-        inputData = 2 * (inputData - minInput) / (maxInput - minInput) - 1 
-        outputData = 2 * (outputData - minOutput) / (maxOutput - minOutput) - 1    
-        print "Normalizing input..."
+        for s in xrange(numberOfSymmFunc):
+            smax = np.max(inputData[:,s])
+            smin = np.min(inputData[:,s])
+            inputData[:,s] = 2 * (inputData[:,s] - smin) / (smax - smin) - 1
+         
+        smax = np.max(outputData[:,0])
+        smin = np.min(outputData[:,0])
+        outputData[:,0] = 2 * (outputData[:,0] - smin) / (smax - smin) - 1            
+        print "Normalizing input and output..."
     
-    if shiftMeanFlag:
-        # shift inputs so that average is zero
-        inputData  -= np.mean(inputData, axis=0)
-        # shift outputs so that average is zero
-        outputData -= np.mean(outputData, axis=0)
-        print "Shifting input mean..."
+    # shift so that average of each symm func is zero over whole training set
+    if shiftMeanFlag:       
+        for s in xrange(numberOfSymmFunc):
+            inputData[:,s] -= np.mean(inputData[:,s])
+            
+        outputData[:,0] -= np.mean(outputData[:,0])
+        print "Shifting input and output mean..."
     
     # scale the covariance
     if scaleCovarianceFlag:
@@ -398,6 +396,15 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
         print "Min: ", minOutput
         print "Mean: ", np.mean(outputData)
         print
+        
+    if sampleName:
+        print 
+        print "Writing symmetrized input data to file"
+        with open(sampleName, 'w') as outfile:
+            for vector in inputData:
+                for symmValue in vector:
+                    outfile.write('%g ' % symmValue)
+                outfile.write('\n')
     
     return inputData, outputData
     
@@ -623,8 +630,8 @@ def applyThreeBodySymmetryMultiType(x, y, z, r, types, itype, parameters, elem2p
     
     
     
-normalizeFlag       = False    
-shiftMeanFlag       = False
+shiftMeanFlag       = True
+normalizeFlag       = True    
 scaleCovarianceFlag = False
 decorrelateFlag     = False
 

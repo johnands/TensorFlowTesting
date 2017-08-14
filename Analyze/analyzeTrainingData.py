@@ -390,7 +390,6 @@ def analyzeInputData(trainingDir, multiType=False, plotCoordsDist=False, plotSym
         # find correlation coefficient matrix and identify functions which have 
         # a strong correlation
         corrMatrix = np.corrcoef(np.transpose(inputData))
-        corrMatrix = np.corrcoef(inputData)
         
         correlations = []
         
