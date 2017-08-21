@@ -143,7 +143,7 @@ def calculateForces(x, y, z, r, parameters, forceFile, dEdG):
       
            
 def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, E=None, forces=False,
-                           sampleName='', klargerj=True):
+                           sampleName='', klargerj=True, shiftMean=False, normalize=False):
     """
     Transform input coordinates with 2- and 3-body symmetry functions
     Input coordinates can be random or sampled from lammps
@@ -345,7 +345,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
     print
     
     # normalize to [-1,1]
-    if normalizeFlag:
+    if normalize:
         for s in xrange(numberOfSymmFunc):
             smax = np.max(inputData[:,s])
             smin = np.min(inputData[:,s])
@@ -357,7 +357,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
         print "Normalizing input and output..."
     
     # shift so that average of each symm func is zero over whole training set
-    if shiftMeanFlag:       
+    if shiftMean:       
         for s in xrange(numberOfSymmFunc):
             inputData[:,s] -= np.mean(inputData[:,s])
             
@@ -380,7 +380,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
         print "Decorrelating input..."
        
        
-    if normalizeFlag or shiftMeanFlag or scaleCovarianceFlag or decorrelateFlag:
+    if normalize or shiftMean or scaleCovarianceFlag or decorrelateFlag:
         print "New input data:"
         maxInput = np.max(inputData)
         minInput = np.min(inputData)
@@ -399,7 +399,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
         
     if sampleName:
         print 
-        print "Writing symmetrized input data to file"
+        print "Writing symmetrized input data to file:", sampleName
         with open(sampleName, 'w') as outfile:
             for vector in inputData:
                 for symmValue in vector:
@@ -411,7 +411,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
     
     
 def applyThreeBodySymmetryMultiType(x, y, z, r, types, itype, parameters, elem2param, symmFuncType, E=None, forces=False,
-                                    sampleName='', klargerj=True):
+                                    sampleName='', klargerj=True, shiftMeanFlag=False, normalizeFlag=False):
     """
     Transform input coordinates with 2- and 3-body symmetry functions
     Input coordinates can be random or sampled from lammps
@@ -609,7 +609,7 @@ def applyThreeBodySymmetryMultiType(x, y, z, r, types, itype, parameters, elem2p
         print "Decorrelating input..."
        
        
-    if normalizeFlag or shiftMeanFlag or scaleCovarianceFlag or decorrelateFlag:
+    if normalize or shiftMean or scaleCovarianceFlag or decorrelateFlag:
         print "New input data:"
         maxInput = np.max(inputData)
         minInput = np.min(inputData)
@@ -630,8 +630,6 @@ def applyThreeBodySymmetryMultiType(x, y, z, r, types, itype, parameters, elem2p
     
     
     
-shiftMeanFlag       = True
-normalizeFlag       = True    
 scaleCovarianceFlag = False
 decorrelateFlag     = False
 

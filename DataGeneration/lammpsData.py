@@ -10,7 +10,7 @@ import os
 
 
 def SiTrainingData(dataFolder, symmFuncType, function=None, forces=False, Behler=True, 
-                   klargerj=False, tags=True):
+                   klargerj=False, tags=True, normalize=False, shiftMean=False):
     """ 
     Coordinates and energies of neighbours is sampled from lammps
     Angular symmtry funcitons are used to transform input data  
@@ -53,26 +53,31 @@ def SiTrainingData(dataFolder, symmFuncType, function=None, forces=False, Behler
     
     # decide on which symmetry parameters set to use
     sampleDir = filename[:-14]
+    symmetryFileName = sampleDir + 'symmetry'
     if Behler:
+        symmetryFileName += 'Behler'
         if klargerj:
-            print "k > j"
-            symmetryFileName = sampleDir + 'symmetryBehlerklargerj.txt'
-        else:
-            print "k != j"
-            symmetryFileName = sampleDir + 'symmetryBehlerkunequalj.txt'
+            print 'k > j'
+            if normalize:
+                symmetryFileName += 'Scaled'
+                if shiftMean:
+                    symmetryFileName += 'Shifted'
+        symmetryFileName += '.txt'
             
     else:
+        symmetryFileName += 'Custom'
         if klargerj:
-            print "k > j"
-            symmetryFileName = sampleDir + 'symmetryCustomklargerjG4.txt'
-        else:
-            print "k != j"
-            symmetryFileName = sampleDir + 'symmetryCustomkunequalj.txt'
+            print 'k > j'
+            if normalize:
+                symmetryFileName += 'Scaled'
+                if shiftMean:
+                    symmetryFileName += 'Shifted'
+        symmetryFileName += '.txt'
         print "Using customized symmetry parameters"
             
     # apply symmetry or read already existing file
     if os.path.isfile(symmetryFileName):
-        print "Reading symmetrized input data"
+        print "Reading symmetrized input data:", symmetryFileName
         inputData = readers.readSymmetryData(symmetryFileName)
         outputData = np.array(E)
         print "Energy is supplied from lammps"
@@ -80,7 +85,8 @@ def SiTrainingData(dataFolder, symmFuncType, function=None, forces=False, Behler
         # apply symmetry transformastion
         inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, \
                                                                   function=function, E=E, sampleName=symmetryFileName, 
-                                                                  forces=forces, klargerj=klargerj)
+                                                                  forces=forces, klargerj=klargerj, 
+                                                                  normalize=normalize, shiftMean=shiftMean)
         print 'Applying symmetry transformation'
         
         

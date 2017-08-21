@@ -226,7 +226,8 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
 def lammpsTrainingSi(nLayers=2, nNodes=35, nEpochs=int(1e5), symmFuncType='G5', \
                      lammpsDir='', outputs=1, activation=tf.nn.sigmoid, \
                      useFunction=False, forces=False, batch=5, Behler=True, \
-                     klargerj=False, tags=False, learningRate=0.001, RMSEtol=1e-10):
+                     klargerj=False, tags=False, learningRate=0.001, RMSEtol=1e-10, nTypes=1, 
+                     normalize=False, shiftMean=False):
     """
     Use neighbour data and energies from lammps with sw-potential 
     as input and output training data respectively
@@ -248,7 +249,8 @@ def lammpsTrainingSi(nLayers=2, nNodes=35, nEpochs=int(1e5), symmFuncType='G5', 
                                     learningRate=learningRate, RMSEtol=RMSEtol)
     regress.generateData(low, high, 'lammpsSi', 
                          symmFuncType=symmFuncType, dataFolder=lammpsDir, forces=forces, batch=batch, 
-                         Behler=Behler, klargerj=klargerj, tags=tags)
+                         Behler=Behler, klargerj=klargerj, tags=tags, nTypes=nTypes, 
+                         normalize=normalize, shiftMean=shiftMean)
     regress.constructNetwork(nLayers, nNodes, activation=activation,
                              wInit='xavier', bInit='constant')
     regress.train(nEpochs)
@@ -312,18 +314,20 @@ def lammpsTrainingSiO2(nLayers=2, nNodes=10, nEpochs=int(1e5), symmFuncType='G5'
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
 lammpsTrainingSi( nLayers       = 2, 
                   nNodes        = 10, 
-                  nEpochs       = int(1e5), 
+                  nEpochs       = int(5e4), 
                   activation    = tf.nn.sigmoid, 
                   symmFuncType  = 'G5', 
-                  lammpsDir     = 'Bulk/L4T1000N2000Algo', 
+                  lammpsDir     = 'Bulk/L4T1000N1e4Algo', 
                   Behler        = True, 
                   klargerj      = True, 
                   useFunction   = False, 
                   forces        = False, 
-                  tags          = False, 
-                  batch         = 5, 
+                  tags          = False,
+                  batch         = 1, 
                   learningRate  = 0.001, 
-                  RMSEtol       = 0.003 )
+                  RMSEtol       = 0.0000001, 
+                  normalize     = True, 
+                  shiftMean     = True )
                   
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
 """lammpsTrainingSiO2( nLayers       = 2, 

@@ -44,6 +44,7 @@ import neuralNetwork as nn
 from Tools.inspect_checkpoint import print_tensors_in_checkpoint_file
 from Tools.freeze_graph import freeze_graph
 from time import clock as timer
+import Tools.matplotlibParameters
 
 
 loadFlag            = False
@@ -182,7 +183,8 @@ class Regression:
     def generateData(self, a, b, method, numberOfSymmFunc=10, neighbours=80, \
                      symmFuncType='G4', dataFolder='', batch=5, 
                      varyingNeigh=True, forces=False, Behler=True, 
-                     klargerj=True, tags=False, atomType=0, nTypes=1, nAtoms=10):
+                     klargerj=True, tags=False, atomType=0, nTypes=1, nAtoms=10, 
+                     normalize=False, shiftMean=False):
 
         self.a, self.b = a, b
         self.neighbours = neighbours
@@ -267,10 +269,11 @@ class Regression:
                  
             if method == 'lammpsSi':  
                 print 'Training Si'
+                self.nTypes = nTypes
                 self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs, self.parameters, \
                 self.Ftrain, self.Ftest = \
                     lammps.SiTrainingData(dataFolder, symmFuncType, function=self.function, forces=forces, Behler=Behler, 
-                                          klargerj=klargerj, tags=tags)
+                                          klargerj=klargerj, tags=tags, normalize=normalize, shiftMean=shiftMean)
             else:
                 print 'Training SiO2'
                 self.atomType = atomType
@@ -282,6 +285,10 @@ class Regression:
             # set different sizes based on lammps data
             self.trainSize = self.xTrain.shape[0]
             self.testSize  = self.xTest.shape[0]
+            
+            ############# EDIT EDIT EDIT change set ###############
+            self.xTrain = self.xTrain[:300]
+            self.trainSize = self.xTrain.shape[0]
             
             if batch == 1:
                 print
@@ -409,6 +416,12 @@ class Regression:
                 
             # decide how often to print and store things
             every = 1000/self.numberOfBatches
+            
+            # EDIT EDIT EDIT 
+            every = 10
+            
+            if loadFlag and plotFlag and not saveFlag:
+                numberOfEpochs = -1
 
             # train
             print 
@@ -612,17 +625,17 @@ class Regression:
             if plotFlag:
                 
                 if loadFlag and not saveFlag:
-                    location = loadFileName
+                    location = loadDir + '/meta.dat'
                 else:
                     location = saveMetaName
                 
                 with open(location) as infile:
                     
                     # skip headers
-                    infile.readline(); infile.readline()
+                    infile.readline(); infile.readline(); infile.readline()
                     
                     # read RMSE of train and test
-                    epoch = []; trainError = [], testError = [];
+                    epoch = []; trainError = []; testError = [];
                     for line in infile:
                         words = line.split()
                         epoch.append(float(words[0]))
@@ -630,7 +643,13 @@ class Regression:
                         testError.append(float(words[2]))
                         
                 plt.plot(epoch, trainError, 'b-', epoch, testError, 'g-')
-                plt.xlabel()
+                plt.xlabel('Epoch')
+                plt.ylabel('RMSE')
+                plt.legend(['Training set', 'Test set'], prop={'size':20})
+                plt.axis([0, 20000, 0, 0.1])
+                plt.tight_layout()
+                #plt.savefig('../Oppgaven/Figures/Implementation/overfitting.pdf')
+                plt.show()
 
 
 
