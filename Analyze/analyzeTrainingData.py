@@ -358,6 +358,8 @@ def analyzeInputData(trainingDir, multiType=False, plotCoordsDist=False, plotSym
             plt.hist(inputData[:,30], bins=20)
             plt.show()
             plt.figure()
+            print 'Std. dev.:', np.std(inputData[:,30])
+            
             
         # find range of each symmetry function
         numberOfSymmFuncs = len(inputData[0])
@@ -373,10 +375,12 @@ def analyzeInputData(trainingDir, multiType=False, plotCoordsDist=False, plotSym
             imin = np.min(symmFunc)
             irange = imax - imin
             iave = np.mean(symmFunc)
+            istd = np.std(symmFunc)
             print 'Max:', imax
             print 'Min:', imin
             print 'Range:', irange
             print 'Average:', iave
+            print 'Std. dev.', istd
             
             # identify functions with small range
             if irange < rangeLimit:

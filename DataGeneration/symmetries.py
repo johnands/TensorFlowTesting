@@ -363,6 +363,13 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
             
         outputData[:,0] -= np.mean(outputData[:,0])
         print "Shifting input and output mean..."
+        
+    if True:
+        for s in xrange(numberOfSymmFunc):
+            symmFunc = inputData[:,s]
+            inputData[:,s] = ( symmFunc - np.mean(symmFunc) ) / np.std(symmFunc)
+            print np.mean(inputData[:,s])
+            print np.std(inputData[:,s])
     
     # scale the covariance
     if scaleCovarianceFlag:

@@ -317,7 +317,7 @@ lammpsTrainingSi( nLayers       = 2,
                   nEpochs       = int(5e4), 
                   activation    = tf.nn.sigmoid, 
                   symmFuncType  = 'G5', 
-                  lammpsDir     = 'Bulk/L4T1000N1e4Algo', 
+                  lammpsDir     = 'Bulk/L4T1000N2000NoAlgo', 
                   Behler        = True, 
                   klargerj      = True, 
                   useFunction   = False, 
@@ -326,8 +326,8 @@ lammpsTrainingSi( nLayers       = 2,
                   batch         = 1, 
                   learningRate  = 0.001, 
                   RMSEtol       = 0.0000001, 
-                  normalize     = True, 
-                  shiftMean     = True )
+                  normalize     = False, 
+                  shiftMean     = False )
                   
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
 """lammpsTrainingSiO2( nLayers       = 2, 
