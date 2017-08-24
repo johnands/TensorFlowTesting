@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-np.random.seed(1)
+
 
 class neuralNetwork:
     

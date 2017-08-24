@@ -646,7 +646,7 @@ class Regression:
                 plt.xlabel('Epoch')
                 plt.ylabel('RMSE')
                 plt.legend(['Training set', 'Test set'], prop={'size':20})
-                plt.axis([0, 20000, 0, 0.1])
+                plt.axis([0, 100000, 0, 0.1])
                 plt.tight_layout()
                 #plt.savefig('../Oppgaven/Figures/Implementation/overfitting.pdf')
                 plt.show()
