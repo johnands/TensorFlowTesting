@@ -106,23 +106,23 @@ time = np.array([np.array(ti) for ti in time])
 
 fig = plt.figure()
 
-ax = fig.add_subplot(2,1,1)
+ax = fig.add_subplot(2,2,1)
 plt.scatter(networkSize, time[1]/time[2])
 plt.hold('on')
 plt.plot(networkSize, np.zeros(len(networkSize)) + 1, 'r-', linewidth=1)
 #plt.xlabel(r'System size: $L\cdot N$', fontsize=15)
 plt.ylabel(r'$T_{TFC} / T_{ARMA}$', fontsize=15)
 plt.axis([0, 200, 0, 310])
-#ax.text(0.8, 0.8, 'a)', fontsize=18,
-#        #horizontalalignment='left',
-#        transform=ax.transAxes)
+ax.text(0.8, 0.8, 'a)', fontsize=18,
+        #horizontalalignment='left',
+        transform=ax.transAxes)
 
 ax = fig.add_subplot(2,2,2)
 plt.scatter(networkSize, time[1]/time[2])
 plt.hold('on')
 plt.plot(networkSize, np.zeros(len(networkSize)) + 1, 'r-', linewidth=1)
 plt.axis([0, 200, 0, 50])
-plt.xlabel(r'System size: $L\cdot N$', fontsize=15)
+#plt.xlabel(r'System size: $L\cdot N$', fontsize=15)
 plt.ylabel(r'$T_{TFC} / T_{ARMA}$', fontsize=15)
 ax.text(0.05, 0.2, 'b)', fontsize=18,
         #horizontalalignment='left',
@@ -149,13 +149,13 @@ print time[0].shape
 plt.scatter(networkSize, time[1]/time[0])
 plt.hold('on')
 plt.plot(networkSize, np.zeros(len(networkSize)) + 1, 'r-', linewidth=1)
-#plt.xlabel(r'System size: $L\cdot N$', fontsize=15)
+plt.xlabel(r'System size: $L\cdot N$', fontsize=15)
 plt.ylabel(r'$T_{TFC} / T_{TFP}$', fontsize=15)
 plt.axis([0, 3000, 0, 3])
 ax.text(0.05, 0.8, 'd)', fontsize=18,
         #horizontalalignment='left',
         transform=ax.transAxes)
 plt.tight_layout()
-plt.show()
-#plt.savefig('../../../Oppgaven/Figures/Tests/timeComparisonNetworkNew.pdf')
+#plt.show()
+plt.savefig('../../../Oppgaven/Figures/Tests/timeComparisonNetworkNew.pdf')
 
