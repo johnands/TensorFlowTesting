@@ -668,24 +668,65 @@ class Regression:
                 # evaluate trained network on this interval 
                 energiesNN = sess.run(prediction, feed_dict={x: interval.reshape([N,1])})
                 energiesLJ = self.function(interval)
-                    
-                plt.plot(interval, energiesLJ, 'b-', interval, energiesNN, 'g-')
-                plt.legend(['LJ', 'NN'])
-                plt.show()
                 
+                # read file where NN is evaluated and differentiated in C++
+                Cfile = 'Tests/TrainLennardJones/energyAndDerivativeC.dat'
+                energiesC = []; derivativesC = []
+                with open(Cfile, 'r') as infile:
+                    for line in infile:
+                        words = line.split()
+                        energiesC.append(float(words[0]))
+                        derivativesC.append(float(words[1]))
+                        
+                # plot NN energy and LJ energy together
+                plt.plot(interval, energiesLJ, 'b-', interval, energiesNN, 'g-')
+                plt.legend(['LJ energy', 'NN energy'])
+                #plt.show()
+                
+                # plot energy error
                 energyError = energiesLJ - energiesNN.flatten()
                 print "RMSE: ", np.sqrt(np.sum(energyError**2)/N)
                 plt.figure()
                 plt.plot(interval, energyError)
-                plt.xlabel(r'$r \, [\mathrm{\AA{}}]$')
+                plt.xlabel(r'$R_{ij} \, [\mathrm{\AA{}}]$')
                 plt.ylabel(r'$E_{\mathrm{LJ}} - E_{\mathrm{NN}} \, [eV]$')
                 plt.legend(['Absolute error'], prop={'size':20})
                 plt.tight_layout()
-                plt.savefig('../Oppgaven/Figures/Implementation/LJError.pdf')
+                #plt.savefig('../Oppgaven/Figures/Implementation/LJError.pdf')
+                #plt.show()
+                     
+                # plot NN energy in Python and C++ together to check that they are the same
+                plt.figure()
+                plt.plot(energiesC, energiesNN)
+                plt.xlabel('C++ manual NN energy')
+                plt.ylabel('Python TF API NN energy')
                 #plt.show()
                 
+                
+                ##### derivatives #####
+                
+                # calculate derivative LJ and derivative of NN in Python
+                derivativeLJ = self.functionDerivative(interval)
+                derivativeNN = sess.run(networkGradient, feed_dict={x: interval.reshape([N,1])} )[0]
+                #derivativeNN = derivativeNN
+                
+                # plot NN derivative and LJ derivative together
                 plt.figure()
-                plt.plot(interval, np.abs(energyError))
+                plt.plot(interval, derivativeLJ, 'g-', interval, derivativeNN, 'b-')
+                plt.legend(['Derivative LJ', 'Derivative NN'])
+                #plt.show()
+                
+                # plot derivative error
+                plt.figure()
+                plt.plot(interval, derivativeLJ - derivativeNN.flatten())
+                plt.legend(['Absolute error derivative'])
+                #plt.show()
+                
+                # plot NN derivative in Python and C++ together to check that they are the same
+                plt.figure()
+                plt.plot(derivativesC, derivativeNN)
+                plt.xlabel('C++ manual NN derivative')
+                plt.ylabel('Python TF API derivative')
                 plt.show()
                     
                 

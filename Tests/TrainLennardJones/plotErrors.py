@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 
-inFile = open('errorLJC.dat', 'r')
+inFile = open('errorEnergyDerivativeC.dat', 'r')
 
 energies = []
 derivatives = []

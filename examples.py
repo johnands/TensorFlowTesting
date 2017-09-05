@@ -58,7 +58,7 @@ def testActivations(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, a=
         counter += 1
         
 
-def setUpLJPotential(units, shifted=False):
+def setUpLJPotential(units, shifted=False, derivative=False):
     
     ### metal units ###
     if units == 'metal':
@@ -81,7 +81,10 @@ def setUpLJPotential(units, shifted=False):
     else:
         function = lambda s : 4*epsilon*(sigma**12/s**12 - sigma**6/s**6)
         
-    return function, a, cutoff
+    if derivative:
+        functionDerivative = lambda s: -24*epsilon*(2*(sigma**12/s**13) - (sigma**6/s**7))
+        
+    return function, a, cutoff, functionDerivative
         
 
  
@@ -94,9 +97,10 @@ def LennardJonesExample(trainSize=int(1e5), batchSize=50, testSize=int(1e4),
     This is a 1-dimensional example
     """
 
-    function, a, cutoff = setUpLJPotential('metal')    
+    function, a, cutoff, functionDerivative = setUpLJPotential('metal', derivative=True)    
     
-    regress = regression.Regression(function, trainSize, batchSize, testSize, 1, 1)
+    regress = regression.Regression(function, trainSize, batchSize, testSize, 1, 1, 
+                                    functionDerivative=functionDerivative)
     regress.generateData(a, cutoff, 'twoBody')
     regress.constructNetwork(nLayers, nNodes, activation=activation, \
                              wInit='normal', bInit='normal')
