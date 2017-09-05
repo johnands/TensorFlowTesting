@@ -62,6 +62,7 @@ saveMetaName        = ''
 saveMetaFlag        = False
 saveParametersFlag  = False
 plotFlag            = False
+plotErrorFlag       = False
 
 now             = time.datetime.now().strftime("%d.%m-%H.%M.%S")
 trainingDir     = 'TrainingData' + '/' + now
@@ -149,6 +150,10 @@ if len(sys.argv) > 1:
         elif sys.argv[i] == '--plot':
             i += 1
             plotFlag = True
+            
+        elif sys.argv[i] == '--ploterror':
+            i += 1
+            plotErrorFlag = True
 
         else:
             i += 1
@@ -197,6 +202,8 @@ class Regression:
             print "method=twoBody: Generating random, radial 1-neighbour data..."
             self.xTrain, self.yTrain, self.xTest, self.yTest = \
                 data.twoBodyEnergy(self.function, self.trainSize, self.testSize, a=a, b=b)
+                
+            self.numberOfBatches = self.trainSize/self.batchSize
                 
         elif method == 'neighbourTwoBody':
             if self.functionDerivative:
@@ -420,7 +427,7 @@ class Regression:
             # EDIT EDIT EDIT 
             every = 10
             
-            if loadFlag and plotFlag and not saveFlag:
+            if loadFlag and (plotFlag or plotErrorFlag) and not saveFlag:
                 numberOfEpochs = -1
 
             # train
@@ -646,10 +653,46 @@ class Regression:
                 plt.xlabel('Epoch')
                 plt.ylabel('RMSE')
                 plt.legend(['Training set', 'Test set'], prop={'size':20})
-                plt.axis([0, 100000, 0, 0.1])
+                plt.axis([0, 5000, 0, max(trainError + testError)])
                 plt.tight_layout()
                 #plt.savefig('../Oppgaven/Figures/Implementation/overfitting.pdf')
                 plt.show()
+                
+            # plot error of 1-dim function on interval [a,b]    
+            if plotErrorFlag:
+                
+                # make interval [a,b]
+                N = 2000
+                interval = np.linspace(self.a, self.b, N)
+                
+                # evaluate trained network on this interval 
+                energiesNN = sess.run(prediction, feed_dict={x: interval.reshape([N,1])})
+                energiesLJ = self.function(interval)
+                    
+                plt.plot(interval, energiesLJ, 'b-', interval, energiesNN, 'g-')
+                plt.legend(['LJ', 'NN'])
+                plt.show()
+                
+                energyError = energiesLJ - energiesNN.flatten()
+                print "RMSE: ", np.sqrt(np.sum(energyError**2)/N)
+                plt.figure()
+                plt.plot(interval, energyError)
+                plt.xlabel(r'$r \, [\mathrm{\AA{}}]$')
+                plt.ylabel(r'$E_{\mathrm{LJ}} - E_{\mathrm{NN}} \, [eV]$')
+                plt.legend(['Absolute error'], prop={'size':20})
+                plt.tight_layout()
+                plt.savefig('../Oppgaven/Figures/Implementation/LJError.pdf')
+                #plt.show()
+                
+                plt.figure()
+                plt.plot(interval, np.abs(energyError))
+                plt.show()
+                    
+                
+                
+                    
+                
+                
 
 
 

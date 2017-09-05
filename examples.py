@@ -85,8 +85,9 @@ def setUpLJPotential(units, shifted=False):
         
 
  
-def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, 
-                        units='metal'):
+def LennardJonesExample(trainSize=int(1e5), batchSize=50, testSize=int(1e4), 
+                        nLayers=1, nNodes=10, nEpochs=int(1e5), 
+                        units='metal', activation=tf.nn.sigmoid):
     """
     Train to reproduce shifted L-J potential to 
     verify implementation of network and backpropagation in the MD code
@@ -97,7 +98,7 @@ def LennardJonesExample(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs
     
     regress = regression.Regression(function, trainSize, batchSize, testSize, 1, 1)
     regress.generateData(a, cutoff, 'twoBody')
-    regress.constructNetwork(nLayers, nNodes, activation=tf.nn.sigmoid, \
+    regress.constructNetwork(nLayers, nNodes, activation=activation, \
                              wInit='normal', bInit='normal')
     regress.train(nEpochs)
 
@@ -293,7 +294,13 @@ def lammpsTrainingSiO2(nLayers=2, nNodes=10, nEpochs=int(1e5), symmFuncType='G5'
 """ trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, """
 
 """LJ med en input og en output"""
-#LennardJonesExample(int(1e6), int(1e4), int(1e3), 2, 4, 300000)
+LennardJonesExample( trainSize = int(1e5), 
+                     batchSize = int(200),
+                     testSize  = int(1e3), 
+                     nLayers   = 1, 
+                     nNodes    = 10, 
+                     nEpochs   = int(5e3) )
+
 
 """Lj med flere naboer"""
 #LennardJonesNeighbours(int(1e5), int(1e4), int(1e3), 2, 40, int(1e5), 10)
@@ -312,7 +319,7 @@ def lammpsTrainingSiO2(nLayers=2, nNodes=10, nEpochs=int(1e5), symmFuncType='G5'
 #                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
-lammpsTrainingSi( nLayers       = 2, 
+"""lammpsTrainingSi( nLayers       = 2, 
                   nNodes        = 10, 
                   nEpochs       = int(5e4), 
                   activation    = tf.nn.sigmoid, 
@@ -327,7 +334,7 @@ lammpsTrainingSi( nLayers       = 2,
                   learningRate  = 0.001, 
                   RMSEtol       = 0.0000001, 
                   normalize     = False, 
-                  shiftMean     = False )
+                  shiftMean     = False )"""
                   
 """Lammps Stillinger-Weber kjoeringer gir naboer og energier"""
 """lammpsTrainingSiO2( nLayers       = 2, 
