@@ -143,7 +143,8 @@ def calculateForces(x, y, z, r, parameters, forceFile, dEdG):
       
            
 def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, E=None, forces=False,
-                           sampleName='', klargerj=True, shiftMean=False, normalize=False):
+                           sampleName='', klargerj=True, shiftMean=False, normalize=False, standardize=False, 
+                           trainingDir=''):
     """
     Transform input coordinates with 2- and 3-body symmetry functions
     Input coordinates can be random or sampled from lammps
@@ -353,24 +354,30 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
          
         smax = np.max(outputData[:,0])
         smin = np.min(outputData[:,0])
-        outputData[:,0] = 2 * (outputData[:,0] - smin) / (smax - smin) - 1            
+        outputData[:,0] = 2 * (outputData[:,0] - smin) / (smax - smin) - 1  
         print "Normalizing input and output..."
     
     # shift so that average of each symm func is zero over whole training set
-    if shiftMean:       
+    if shiftMean:   
+        allMeans = []
         for s in xrange(numberOfSymmFunc):
-            inputData[:,s] -= np.mean(inputData[:,s])
+            sMean = np.mean(inputData[:,s])
+            allMeans.append(sMean)
+            inputData[:,s] -= sMean
             
-        outputData[:,0] -= np.mean(outputData[:,0])
+        #outputData[:,0] -= np.mean(outputData[:,0])
         print "Shifting input and output mean..."
         
-    if True:
+    if standardize and not (normalize or shiftMean):
         for s in xrange(numberOfSymmFunc):
             symmFunc = inputData[:,s]
             inputData[:,s] = ( symmFunc - np.mean(symmFunc) ) / np.std(symmFunc)
+            print 'Standardizing'
             print np.mean(inputData[:,s])
             print np.std(inputData[:,s])
     
+    
+    ##### non-functioning #####
     # scale the covariance
     if scaleCovarianceFlag:
         C = np.sum(inputData**2, axis=0) / float(size)
@@ -385,6 +392,8 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
         C = np.sum(inputData**2, axis=0) / float(size)
         print C
         print "Decorrelating input..."
+        
+    ##### non-functioning #####
        
        
     if normalize or shiftMean or scaleCovarianceFlag or decorrelateFlag:
@@ -411,6 +420,14 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
             for vector in inputData:
                 for symmValue in vector:
                     outfile.write('%g ' % symmValue)
+                outfile.write('\n')
+                
+    if trainingDir:
+        print 
+        print "Writing input transformation parameters to file"
+        with open(trainingDir, 'w') as outfile:
+            for i in xrange(numberOfSymmFunc):
+                outfile.write('%g' % allMeans[i])
                 outfile.write('\n')
     
     return inputData, outputData

@@ -186,10 +186,10 @@ class Regression:
 
 
     def generateData(self, a, b, method, numberOfSymmFunc=10, neighbours=80, \
-                     symmFuncType='G4', dataFolder='', batch=5, 
+                     symmFuncType='G4', dataFolder='', batch=50, 
                      varyingNeigh=True, forces=False, Behler=True, 
                      klargerj=True, tags=False, atomType=0, nTypes=1, nAtoms=10, 
-                     normalize=False, shiftMean=False):
+                     normalize=False, shiftMean=False, standardize=False):
 
         self.a, self.b = a, b
         self.neighbours = neighbours
@@ -277,10 +277,17 @@ class Regression:
             if method == 'lammpsSi':  
                 print 'Training Si'
                 self.nTypes = nTypes
+                
+                # save means of all symm funcs if shifting and saving
+                if shiftMean:
+                    saveFolder = self.samplesDir + 'shiftParameters.txt'
+                else:
+                    saveFolder = ''
                 self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs, self.parameters, \
                 self.Ftrain, self.Ftest = \
                     lammps.SiTrainingData(dataFolder, symmFuncType, function=self.function, forces=forces, Behler=Behler, 
-                                          klargerj=klargerj, tags=tags, normalize=normalize, shiftMean=shiftMean)
+                                          klargerj=klargerj, tags=tags, normalize=normalize, shiftMean=shiftMean, 
+                                          standardize=standardize, trainingDir=saveFolder)
             else:
                 print 'Training SiO2'
                 self.atomType = atomType
@@ -294,12 +301,13 @@ class Regression:
             self.testSize  = self.xTest.shape[0]
             
             ############# EDIT EDIT EDIT change set ###############
-            self.xTrain = self.xTrain[:300]
-            self.trainSize = self.xTrain.shape[0]
+            #self.xTrain = self.xTrain[:300]
+            #self.trainSize = self.xTrain.shape[0]
             
-            if batch == 1:
+            if batch is None:
                 print
                 print "Doing offline learning"
+                batch = self.trainSize
             elif batch > 1:
                 print 
                 print "Doing online learning with", batch, "batches"
@@ -311,11 +319,12 @@ class Regression:
             rest = self.trainSize % batch
             if rest != 0:
                 self.trainSize -= rest
-                self.xTrain = self.xTrain[:-rest]
-                self.yTrain = self.yTrain[:-rest]
+                indicies = np.random.choice(self.trainSize, rest)
+                self.xTrain = np.delete(self.xTrain, indicies, axis=0)
+                self.yTrain = np.delete(self.yTrain, indicies, axis=0)
                 
-            self.batchSize = int(self.trainSize/batch)
-            self.numberOfBatches = batch
+            self.batchSize = batch
+            self.numberOfBatches = self.trainSize / batch
             
             if saveMetaFlag:
                 saveParametersFlag = True
@@ -423,9 +432,6 @@ class Regression:
                 
             # decide how often to print and store things
             every = 1000/self.numberOfBatches
-            
-            # EDIT EDIT EDIT 
-            every = 10
             
             if loadFlag and (plotFlag or plotErrorFlag) and not saveFlag:
                 numberOfEpochs = -1
@@ -662,11 +668,12 @@ class Regression:
             if plotErrorFlag:
                 
                 # make interval [a,b]
-                N = 2000
-                interval = np.linspace(self.a, self.b, N)
+                N = 1000
+                #interval = np.linspace(self.a, self.b, N)
+                interval = np.sort(self.xTest, axis=0)
                 
                 # evaluate trained network on this interval 
-                energiesNN = sess.run(prediction, feed_dict={x: interval.reshape([N,1])})
+                energiesNN = sess.run(prediction, feed_dict={x: interval})
                 energiesLJ = self.function(interval)
                 
                 # read file where NN is evaluated and differentiated in C++
@@ -681,25 +688,25 @@ class Regression:
                 # plot NN energy and LJ energy together
                 plt.plot(interval, energiesLJ, 'b-', interval, energiesNN, 'g-')
                 plt.legend(['LJ energy', 'NN energy'])
-                #plt.show()
+                plt.show()
                 
                 # plot energy error
-                energyError = energiesLJ - energiesNN.flatten()
+                energyError = energiesLJ - energiesNN
                 print "RMSE: ", np.sqrt(np.sum(energyError**2)/N)
                 plt.figure()
                 plt.plot(interval, energyError)
                 plt.xlabel(r'$R_{ij} \, [\mathrm{\AA{}}]$')
-                plt.ylabel(r'$E_{\mathrm{LJ}} - E_{\mathrm{NN}} \, [eV]$')
-                plt.legend(['Absolute error'], prop={'size':20})
+                plt.ylabel(r'$\mathrm{Absolute} \; \mathrm{error} \, [\mathrm{eV}]$')
+                plt.legend(['$E_{\mathrm{LJ}} - E_{\mathrm{NN}}$'], prop={'size':20})
                 plt.tight_layout()
                 #plt.savefig('../Oppgaven/Figures/Implementation/LJError.pdf')
                 #plt.show()
                      
                 # plot NN energy in Python and C++ together to check that they are the same
-                plt.figure()
-                plt.plot(energiesC, energiesNN)
-                plt.xlabel('C++ manual NN energy')
-                plt.ylabel('Python TF API NN energy')
+                #plt.figure()
+                #plt.plot(energiesC, energiesNN)
+                #plt.xlabel('C++ manual NN energy')
+                #plt.ylabel('Python TF API NN energy')
                 #plt.show()
                 
                 
@@ -707,7 +714,7 @@ class Regression:
                 
                 # calculate derivative LJ and derivative of NN in Python
                 derivativeLJ = self.functionDerivative(interval)
-                derivativeNN = sess.run(networkGradient, feed_dict={x: interval.reshape([N,1])} )[0]
+                derivativeNN = sess.run(networkGradient, feed_dict={x: interval} )[0]
                 #derivativeNN = derivativeNN
                 
                 # plot NN derivative and LJ derivative together
@@ -717,16 +724,22 @@ class Regression:
                 #plt.show()
                 
                 # plot derivative error
+                derivativeError = derivativeLJ - derivativeNN
+                print 'Derivative RMSE', np.sqrt(np.sum(derivativeError**2)/N)
                 plt.figure()
-                plt.plot(interval, derivativeLJ - derivativeNN.flatten())
-                plt.legend(['Absolute error derivative'])
+                plt.plot(interval, derivativeError)
+                plt.xlabel(r'$R_{ij} \, [\mathrm{\AA{}}]$')
+                plt.ylabel(r'$\mathrm{Absolute} \; \mathrm{error} \, [\mathrm{eV}/\mathrm{\AA{}}]$')
+                plt.legend(['$dE_{\mathrm{LJ}}/dR_{ij} - dE_{\mathrm{NN}}/dR_{ij}$'], prop={'size':20}, loc=4)
+                plt.tight_layout()
+                #plt.savefig('../Oppgaven/Figures/Implementation/LJErrorDerivative.pdf')
                 #plt.show()
                 
                 # plot NN derivative in Python and C++ together to check that they are the same
-                plt.figure()
-                plt.plot(derivativesC, derivativeNN)
-                plt.xlabel('C++ manual NN derivative')
-                plt.ylabel('Python TF API derivative')
+                #plt.figure()
+                #plt.plot(derivativesC, derivativeNN)
+                #plt.xlabel('C++ manual NN derivative')
+                #plt.ylabel('Python TF API derivative')
                 plt.show()
                     
                 

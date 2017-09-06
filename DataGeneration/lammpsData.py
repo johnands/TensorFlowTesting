@@ -10,7 +10,8 @@ import os
 
 
 def SiTrainingData(dataFolder, symmFuncType, function=None, forces=False, Behler=True, 
-                   klargerj=False, tags=True, normalize=False, shiftMean=False):
+                   klargerj=False, tags=True, normalize=False, shiftMean=False, standardize=False, 
+                   trainingDir=''):
     """ 
     Coordinates and energies of neighbours is sampled from lammps
     Angular symmtry funcitons are used to transform input data  
@@ -58,20 +59,24 @@ def SiTrainingData(dataFolder, symmFuncType, function=None, forces=False, Behler
         symmetryFileName += 'Behler'
         if klargerj:
             print 'k > j'
-            if normalize:
-                symmetryFileName += 'Scaled'
-                if shiftMean:
-                    symmetryFileName += 'Shifted'
+        if normalize:
+            symmetryFileName += 'Scaled'
+        if shiftMean:
+            symmetryFileName += 'Shifted'
+        if standardize: 
+            symmetryFileName += 'Standardized'
         symmetryFileName += '.txt'
             
     else:
         symmetryFileName += 'Custom'
         if klargerj:
             print 'k > j'
-            if normalize:
-                symmetryFileName += 'Scaled'
-                if shiftMean:
-                    symmetryFileName += 'Shifted'
+        if normalize:
+            symmetryFileName += 'Scaled'
+        if shiftMean:
+            symmetryFileName += 'Shifted'
+        if standardize: 
+            symmetryFileName += 'Standardized'
         symmetryFileName += '.txt'
         print "Using customized symmetry parameters"
             
@@ -83,11 +88,13 @@ def SiTrainingData(dataFolder, symmFuncType, function=None, forces=False, Behler
         print "Energy is supplied from lammps"
     else: 
         # apply symmetry transformastion
+        print 'Applying symmetry transformations...'
         inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, \
                                                                   function=function, E=E, sampleName=symmetryFileName, 
                                                                   forces=forces, klargerj=klargerj, 
-                                                                  normalize=normalize, shiftMean=shiftMean)
-        print 'Applying symmetry transformation'
+                                                                  normalize=normalize, shiftMean=shiftMean, standardize=standardize, 
+                                                                  trainingDir=trainingDir)
+        
         
         
     # split in training set and test set randomly

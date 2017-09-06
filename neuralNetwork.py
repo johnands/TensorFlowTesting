@@ -31,6 +31,9 @@ class neuralNetwork:
         elif self.weightsInit == 'trunc_normal':
             return tf.Variable( tf.truncated_normal(shape, stddev=self.stdDev) )
             
+        elif self.weightsInit == 'uniform':
+            return tf.Variable( tf.random_uniform(shape, minval=-0.1, maxval=0.1))
+            
         else: #xavier
             fanIn  = shape[0]
             fanOut = shape[1]

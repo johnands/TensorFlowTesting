@@ -94,21 +94,21 @@ def SiBulkCustom(write=False):
     
     # type1
     center = 0.0
-    cutoff = 3.77118
-    for eta in [2.0, 0.5, 0.2, 0.1, 0.04, 0.001]:
+    cutoff = 6.0
+    for eta in [0.3, 0.1, 0.03, 0.005]:
         parameters.append([eta, cutoff, center])
     
     # type2
     zeta = 1.0
     inversion = 1.0
     eta = 0.01
-    for cutoff in [6.0, 5.5, 5.0, 4.5, 4.0, 3.8]:
+    for cutoff in [6.0, 5.0, 4.0, 3.0]:
         parameters.append([eta, cutoff, zeta, inversion])
         
     # type 3
     cutoff = 6.0
-    eta = 4.0
-    for center in [5.5, 5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0]:
+    eta = 5.0
+    for center in [4.2, 3.7, 3.2, 2.7, 2.2, 1.7]:
         parameters.append([eta, cutoff, center])
         
         
@@ -117,19 +117,19 @@ def SiBulkCustom(write=False):
     # type 4
     zeta = 1.0
     inversion = -1.0    
-    for cutoff in [6.0, 5.5, 5.0, 4.5, 4.0, 3.8]:
+    for cutoff in [6.0, 5.0, 4.0, 3.0]:
         parameters.append([eta, cutoff, zeta, inversion])
         
     # type 5 and 6
     zeta = 2.0
     for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 5.0, 4.0, 3.8]:
+        for cutoff in [6.0, 5.0, 4.0, 3.0]:
             parameters.append([eta, cutoff, zeta, inversion])
         
     # type 7 and 8
     zeta = 4.0
     for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 5.0, 4.0, 3.8]:
+        for cutoff in [6.0, 5.0, 4.0, 3.0]:
             parameters.append([eta, cutoff, zeta, inversion])
     
     # type 9 and 10
@@ -137,6 +137,9 @@ def SiBulkCustom(write=False):
     for inversion in [1.0, -1.0]:
         for cutoff in [6.0, 4.0]:
             parameters.append([eta, cutoff, zeta, inversion])  
+            
+    if write:
+        writeParameters(parameters, '../Parameters/SiBulkCustom.dat')
             
     return parameters
         
@@ -326,6 +329,9 @@ def SiO2type0(write=False):
         
         
 def SiO2type1(write=False):
+    
+    
+    
     
     # make nested list of all symetry function parameters
     # parameters from Behler
@@ -580,9 +586,10 @@ def SiO2atoms2type1(write=False):
         
     
 if __name__ == '__main__':
-        # make nested list of all symetry function parameters
+    
+    # make nested list of all symetry function parameters
     # parameters from Behler
-    parameters = []   
+    """parameters = []   
     
     # G2
     # O-O and O-Si: customize later
@@ -626,10 +633,13 @@ if __name__ == '__main__':
         
     iNew = i
     elem2param[(1,1)] = (iOld, iNew)
-    iOld = i
+    iOld = i"""
+    
+    
     #SiBehler(write=False)
     #Si3Atoms(write=True)
-    SiO2type02atoms(write=True)
+    #SiO2type02atoms(write=True)
+    SiBulkCustom(write=True)
         
         
 

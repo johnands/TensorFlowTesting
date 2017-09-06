@@ -101,7 +101,8 @@ if len(sys.argv) > 1:
             i += 1
 
         
-def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=False, plotAngular=False):
+def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=False, plotAngular=False, 
+                          radialDistName=''):
 
     # read parameters
     parameters = readers.readParameters(parametersName)
@@ -126,6 +127,21 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
     
     pltParams.defineColormap(len(parameters2), plt.cm.jet)
     
+    # read radial dist
+    if radialDistName:
+        with open(radialDistName, 'r') as infile:
+            binCenters = []
+            radialDist = []
+            for line in infile:
+                words = line.split()
+                binCenters.append(float(words[0]))
+                radialDist.append(float(words[1]))
+        
+        binCenters = np.array(binCenters)        
+        radialDist = np.array(radialDist)
+    
+        
+    
     ##### G2 plot #####
     
     if plotG2:
@@ -142,6 +158,9 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
                            (eta, Rs) )              
             plt.hold('on')
         
+        
+        plt.plot(binCenters, radialDist/np.max(radialDist), 'k--', linewidth=2)
+        legends.append('Radial distribution')
         plt.legend(legends, prop={'size':20})
         plt.xlabel(r'$R_{ij}$')
         plt.ylabel(r'$G^2_i$')
@@ -279,15 +298,26 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
         else:
             plt.show()
         
-def analyzeInputData(trainingDir, multiType=False, plotCoordsDist=False, plotSymmDist=False, atomType=0,
-                     rangeLimit=0.1, plotSingleSymmDist=False, corrLimit=0.9, plotCorr=False):
+def analyzeInputData(directory, multiType=False, plotCoordsDist=False, plotSymmDist=False, atomType=0,
+                     rangeLimit=0.1, plotSingleSymmDist=False, corrLimit=0.9, plotCorr=False, 
+                     symmetryFile='/symmetryBehler.txt'):
     
         # read meta file for given training session (to load training data)
-        nNodes, nLayers, activation, inputs, outputs, lammpsDir = readers.readMetaFile(trainingDir + '/meta.dat')
-        lammpsDir = '../' + lammpsDir
+        metafile = directory + '/meta.dat'
+        if os.path.isfile(metafile):      
+            print 'Reading meta file', metafile
+            nNodes, nLayers, activation, inputs, outputs, lammpsDir = readers.readMetaFile(metafile)
+            lammpsDir = '../' + lammpsDir
+            symmetryFileName = lammpsDir + symmetryFile
+            
+        # or read neighbour file if meta file does not exist, i.e. no NN has been trained on this data
+        else:
+            lammpsDir = directory
+            symmetryFileName = directory + symmetryFile
+            print 'Reading symmetry file', directory, 'directly'
+            
         
-        # read symmetrized input data for given training session
-        symmetryFileName = lammpsDir + 'symmetryBehlerklargerj.txt'
+        # read symmetrized input data for given training session    
         print 'Symmetry filename:', symmetryFileName
         if os.path.isfile(symmetryFileName):
                 print "Reading symmetrized data"
@@ -347,18 +377,22 @@ def analyzeInputData(trainingDir, multiType=False, plotCoordsDist=False, plotSym
             print "Min symmetry value: ", np.min(inputDataFlat)
             print "Fraction of zeros: ", len(np.where(inputDataFlat == 0)[0]) / float(N)
             
-            plt.hist(inputDataFlat, bins=100)
-            plt.show()
-            
+            nBins = 50
             plt.figure()
+            plt.hist(inputDataFlat, bins=nBins)
+            plt.legend(['Histogram of all symmetry functions, %d bins' % nBins])
+            plt.show()
             
         
         # plote distribution of a single symmetry function
         if plotSingleSymmDist:
-            plt.hist(inputData[:,30], bins=20)
-            plt.show()
+            symmFuncNumber = 30
+            nBins = 30
             plt.figure()
-            print 'Std. dev.:', np.std(inputData[:,30])
+            plt.hist(inputData[:,symmFuncNumber], bins=nBins)
+            plt.legend(['Histogram of symm func %d, %d bins' % (symmFuncNumber, nBins)])
+            plt.show()
+            print 'Std. dev.:', np.std(inputData[:,nBins])
             
             
         # find range of each symmetry function
@@ -409,7 +443,10 @@ def analyzeInputData(trainingDir, multiType=False, plotCoordsDist=False, plotSym
                
         # histogram of correlations
         if plotCorr:
-            plt.hist(correlations, bins=20)
+            plt.figure()
+            nBins = 30
+            plt.hist(correlations, bins=nBins)
+            plt.legend(['Histogram of correlations between symm funcs, %d bins' % nBins])
             plt.show()
         
 ##### main #####
@@ -420,15 +457,17 @@ if plotFlag:
                           plotG2=True, 
                           plotG4=False,
                           plotG5=False,
-                          plotAngular=False)
+                          plotAngular=False, 
+                          radialDistName='../../LAMMPS_test/PostProcessing/tmp/radialDist.txt')
     
 if analyzeFlag:
     analyzeInputData(trainingDir,
                      multiType=False, 
-                     plotCoordsDist=False, 
-                     plotSymmDist=True,
+                     plotCoordsDist=True, 
+                     plotSymmDist=False,
                      plotSingleSymmDist=False,
-                     plotCorr=True)
+                     plotCorr=False,
+                     symmetryFile='/symmetryCustom.txt')
         
     
 
