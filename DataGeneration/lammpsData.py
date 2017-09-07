@@ -89,12 +89,10 @@ def SiTrainingData(dataFolder, symmFuncType, function=None, forces=False, Behler
     else: 
         # apply symmetry transformastion
         print 'Applying symmetry transformations...'
-        inputData, outputData = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, \
+        inputData, outputData, inputParams = symmetries.applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, \
                                                                   function=function, E=E, sampleName=symmetryFileName, 
                                                                   forces=forces, klargerj=klargerj, 
-                                                                  normalize=normalize, shiftMean=shiftMean, standardize=standardize, 
-                                                                  trainingDir=trainingDir)
-        
+                                                                  normalize=normalize, shiftMean=shiftMean, standardize=standardize)
         
         
     # split in training set and test set randomly
@@ -109,6 +107,41 @@ def SiTrainingData(dataFolder, symmFuncType, function=None, forces=False, Behler
     inputTraining   = np.delete(inputData, indicies, axis=0)
     outputTraining  = np.delete(outputData, indicies, axis=0)
     
+    
+    # write input transformation parameters to file
+    if trainingDir:
+        print 'Graph to be saved, writing data to detect extrpolation'
+    
+        # write min and max of each TRANSFORMED symm func to file
+        with open(trainingDir + '/minmax.txt', 'w') as outfile:
+            print 'Writing min and max of each TRANSFORMED symm func to file'
+            for s in xrange(numberOfSymmFunc):
+                smin = np.min(inputTraining[:,s])
+                smax = np.max(inputTraining[:,s])
+                outfile.write('%g %g' % (smin, smax))
+                outfile.write('\n')
+                
+        
+        # if any transformations, read untransformed file to calculate means
+        if shiftMean or normalize or standardize:
+            print 'Reading unshifted symmetry data'
+            originalTrainingData = readers.readSymmetryData(symmetryFileName.rsplit('S',1)[0] + '.txt')
+            print originalTrainingData
+            #exit(1)
+            originalTrainingData = np.delete(originalTrainingData, indicies, axis=0)
+        else:
+            originalTrainingData = inputTraining
+                
+        # save means to file if shiftMean == True
+        if shiftMean:
+            print 'Writing mean of each symm func to file'
+            with open(trainingDir + '/mean.txt', 'w') as outfile:
+                for s in xrange(numberOfSymmFunc):
+                    sMean = np.mean(originalTrainingData[:,s])
+                    outfile.write('%g' % sMean)
+                    outfile.write('\n')
+    
+     
     """with open(sampleDir + 'symmetryBehlerTrain.txt', 'w') as outfile:
         for vector in inputTraining:
             for symmValue in vector:

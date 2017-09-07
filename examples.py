@@ -1,6 +1,7 @@
 import regression
 import numpy as np
 import tensorflow as tf
+import time
 
 def performanceTest(maxEpochs, maxLayers, maxNodes):
     
@@ -105,6 +106,8 @@ def LennardJonesExample(trainSize=int(1e5), batchSize=50, testSize=int(1e4),
     regress.constructNetwork(nLayers, nNodes, activation=activation, \
                              wInit='normal', bInit='normal')
     regress.train(nEpochs)
+    
+    
 
     
 def LennardJonesNeighbours(trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, \
@@ -227,12 +230,39 @@ def StillingerWeberSymmetry(trainSize, batchSize, testSize, nLayers, nNodes, nEp
                              wInit='normal', bInit='normal')
     regress.train(nEpochs)
     
+
+def lammpsTrainingSiO2(nLayers=2, nNodes=10, nEpochs=int(1e5), symmFuncType='G5', 
+                       activation= tf.nn.sigmoid, lammpsDir='4Atoms/T1e3N1e4', forces=False, 
+                       batch=5, learningRate=0.001, RMSEtol=0.003, outputs=1, atomType=0, nTypes=2, nAtoms=10):
+    """
+    Use neighbour data and energies from lammps with vashista-potential
+    as input and output training data respectively
+    """
+    
+    lammpsDir = "../LAMMPS_test/Quartz/Data/TrainingData/" + lammpsDir + '/'
+    
+    # these are sampled from lammps
+    function = None
+    trainSize = batchSize = testSize = inputs = low = high = 0  
+    
+    regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs,
+                                    learningRate=learningRate, RMSEtol=RMSEtol)
+    regress.generateData(low, high, 'lammpsSiO2', 
+                         symmFuncType=symmFuncType, dataFolder=lammpsDir, forces=forces, batch=batch,
+                         atomType=atomType, nTypes=nTypes, nAtoms=nAtoms)
+    regress.constructNetwork(nLayers, nNodes, activation=activation,
+                             wInit='xavier', bInit='constant')
+    regress.train(nEpochs)
+    
+    
+    
     
 def lammpsTrainingSi(nLayers=2, nNodes=35, nEpochs=int(1e5), symmFuncType='G5', \
                      lammpsDir='', outputs=1, activation=tf.nn.sigmoid, \
                      useFunction=False, forces=False, batch=5, Behler=True, \
                      klargerj=False, tags=False, learningRate=0.001, RMSEtol=1e-10, nTypes=1, 
-                     normalize=False, shiftMean=False, standardize=False):
+                     normalize=False, shiftMean=False, standardize=False, 
+                     wInit='uniform', bInit='zeros', constantValue=0.1, stdDev=0.1):
     """
     Use neighbour data and energies from lammps with sw-potential 
     as input and output training data respectively
@@ -257,32 +287,106 @@ def lammpsTrainingSi(nLayers=2, nNodes=35, nEpochs=int(1e5), symmFuncType='G5', 
                          Behler=Behler, klargerj=klargerj, tags=tags, nTypes=nTypes, 
                          normalize=normalize, shiftMean=shiftMean, standardize=standardize)
     regress.constructNetwork(nLayers, nNodes, activation=activation,
-                             wInit='uniform', bInit='zeros')
+                             wInit=wInit, bInit=bInit, constantValue=constantValue, stdDev=stdDev)
     regress.train(nEpochs)
     
     
-def lammpsTrainingSiO2(nLayers=2, nNodes=10, nEpochs=int(1e5), symmFuncType='G5', 
-                       activation= tf.nn.sigmoid, lammpsDir='4Atoms/T1e3N1e4', forces=False, 
-                       batch=5, learningRate=0.001, RMSEtol=0.003, outputs=1, atomType=0, nTypes=2, nAtoms=10):
+    
+def gridSearchSi(maxLayers=3, maxNodes=30, maxEpochs=1e5, symmFuncType='G5', \
+                  lammpsDir='', outputs=1, activation=tf.nn.sigmoid, \
+                  useFunction=False, forces=False, batch=5, Behler=True, \
+                  klargerj=False, tags=False, learningRate=0.001, RMSEtol=1e-10, nTypes=1, 
+                  normalize=False, shiftMean=False, standardize=False,
+                  wInit='uniform', bInit='zeros', constantValue=0.1, stdDev=0.1):
     """
-    Use neighbour data and energies from lammps with vashista-potential
-    as input and output training data respectively
+    Do a grid search to find a suitable NN architecture
     """
     
-    lammpsDir = "../LAMMPS_test/Quartz/Data/TrainingData/" + lammpsDir + '/'
+    lammpsDir = "../LAMMPS_test/Silicon/Data/TrainingData/" + lammpsDir + '/'  
+    function = None
     
     # these are sampled from lammps
-    function = None
-    trainSize = batchSize = testSize = inputs = low = high = 0  
-    
+    trainSize = batchSize = testSize = inputs = low = high = 0
     regress = regression.Regression(function, trainSize, batchSize, testSize, inputs, outputs,
                                     learningRate=learningRate, RMSEtol=RMSEtol)
-    regress.generateData(low, high, 'lammpsSiO2', 
-                         symmFuncType=symmFuncType, dataFolder=lammpsDir, forces=forces, batch=batch,
-                         atomType=atomType, nTypes=nTypes, nAtoms=nAtoms)
-    regress.constructNetwork(nLayers, nNodes, activation=activation,
-                             wInit='xavier', bInit='constant')
-    regress.train(nEpochs)
+    regress.generateData(low, high, 'lammpsSi', 
+                         symmFuncType=symmFuncType, dataFolder=lammpsDir, forces=forces, batch=batch, 
+                         Behler=Behler, klargerj=klargerj, tags=tags, nTypes=nTypes, 
+                         normalize=normalize, shiftMean=shiftMean, standardize=standardize)
+                         
+    # finding optimal value
+    counter = 0
+    for layers in range(1, maxLayers+1):
+        for nodes in range(layers, maxNodes+1):
+            start = time.time()
+            regress.constructNetwork(layers, nodes, activation=activation, 
+                                     wInit='uniform', bInit='zeros')
+            regress.train(maxEpochs)
+            end = time.time()
+            timeElapsed = end - start
+            print "Layers: %2d, nodes: %2d, time = %10g" % (layers, nodes, timeElapsed)
+            print
+    
+            if counter == 0:
+                with open('Tests/timeElapsed.txt', 'w') as outFile:
+                    outStr = "Timing analysis"
+                    outFile.write(outStr + '\n')
+                    
+            with open('Tests/timeElapsed.txt', 'a') as outFile:
+                outStr = "Layers: %2d, nodes: %2d, time = %10g" % (layers, nodes, timeElapsed)
+                outFile.write(outStr + '\n')
+            
+            counter += 1
+            
+        
+"""Lammps Stillinger-Weber gir naboer og energier"""
+lammpsTrainingSi( nLayers       = 1, 
+                  nNodes        = 10, 
+                  nEpochs       = int(1e5), 
+                  activation    = tf.nn.sigmoid, 
+                  symmFuncType  = 'G5', 
+                  lammpsDir     = 'Bulk/SiPotential/Merged2',
+                  Behler        = False, 
+                  klargerj      = True, 
+                  useFunction   = False, 
+                  forces        = False, 
+                  tags          = False,
+                  batch         = 100, 
+                  learningRate  = 0.005, 
+                  RMSEtol       = 0.001,
+                  wInit         = 'uniform',
+                  bInit         = 'zeros',
+                  constantValue = 4.0,
+                  normalize     = False, 
+                  shiftMean     = True, 
+                  standardize   = False )
+    
+
+"""Si grid searh"""
+"""gridSearchSi(     maxLayers     = 2, 
+                  maxNodes      = 5, 
+                  maxEpochs     = int(1e5),
+                  RMSEtol       = 0.001,  
+                  activation    = tf.nn.sigmoid, 
+                  symmFuncType  = 'G5', 
+                  lammpsDir     = 'Bulk/SiPotential/Merged',
+                  Behler        = False, 
+                  klargerj      = True, 
+                  useFunction   = False, 
+                  forces        = False, 
+                  tags          = False,
+                  batch         = 100, 
+                  learningRate  = 0.001, 
+                  wInit         = 'uniform',
+                  bInit         = 'zeros',
+                  normalize     = False, 
+                  shiftMean     = True, 
+                  standardize   = False )"""
+    
+    
+    
+    
+
     
     
 
@@ -322,24 +426,6 @@ def lammpsTrainingSiO2(nLayers=2, nNodes=10, nEpochs=int(1e5), symmFuncType='G5'
 #                        varyingNeigh=False)#, \
 #                        filename="../LAMMPS_test/Silicon/Data/24.02-16.11.12/neighbours.txt")
 
-"""Lammps Stillinger-Weber gir naboer og energier"""
-lammpsTrainingSi( nLayers       = 2, 
-                  nNodes        = 10, 
-                  nEpochs       = int(5000), 
-                  activation    = tf.nn.sigmoid, 
-                  symmFuncType  = 'G5', 
-                  lammpsDir     = 'Bulk/SiPotential/Merged',
-                  Behler        = False, 
-                  klargerj      = True, 
-                  useFunction   = False, 
-                  forces        = False, 
-                  tags          = False,
-                  batch         = 100, 
-                  learningRate  = 0.01, 
-                  RMSEtol       = 0.0000001, 
-                  normalize     = False, 
-                  shiftMean     = True, 
-                  standardize   = False )
                   
 """Lammps Vashishta gir naboer og energier"""
 """lammpsTrainingSiO2( nLayers       = 2, 

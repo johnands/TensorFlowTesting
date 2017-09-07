@@ -143,8 +143,7 @@ def calculateForces(x, y, z, r, parameters, forceFile, dEdG):
       
            
 def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, E=None, forces=False,
-                           sampleName='', klargerj=True, shiftMean=False, normalize=False, standardize=False, 
-                           trainingDir=''):
+                           sampleName='', klargerj=True, shiftMean=False, normalize=False, standardize=False):
     """
     Transform input coordinates with 2- and 3-body symmetry functions
     Input coordinates can be random or sampled from lammps
@@ -345,13 +344,34 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
     print "Mean: ", np.mean(outputData)
     print
     
-    # normalize to [-1,1]
-    if normalize:
-        for s in xrange(numberOfSymmFunc):
-            smax = np.max(inputData[:,s])
-            smin = np.min(inputData[:,s])
+    # write wymmetry data to file before any coordinate transformation
+    # this is to later read the file and save max, min and mean to file
+    if shiftMean or normalize or standardize:
+        originalName = sampleName.rsplit('S',1)[0] + '.txt'
+    else:
+        originalName = ''
+        
+    if originalName:
+        print 
+        print "Writing symmetrized input data to file:", originalName
+        with open(originalName, 'w') as outfile:
+            for vector in inputData:
+                for symmValue in vector:
+                    outfile.write('%g ' % symmValue)
+                outfile.write('\n')
+    
+    # save all max and min values and possibly normalize
+    allMax = []
+    allMin = []
+    for s in xrange(numberOfSymmFunc):
+        smax = np.max(inputData[:,s])
+        smin = np.min(inputData[:,s])
+        allMax.append(smax)
+        allMin.append(smin)
+        if normalize:
             inputData[:,s] = 2 * (inputData[:,s] - smin) / (smax - smin) - 1
          
+    if normalize:
         smax = np.max(outputData[:,0])
         smin = np.min(outputData[:,0])
         outputData[:,0] = 2 * (outputData[:,0] - smin) / (smax - smin) - 1  
@@ -366,7 +386,7 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
             inputData[:,s] -= sMean
             
         #outputData[:,0] -= np.mean(outputData[:,0])
-        print "Shifting input and output mean..."
+        print "Shifting input mean..."
         
     if standardize and not (normalize or shiftMean):
         for s in xrange(numberOfSymmFunc):
@@ -413,24 +433,23 @@ def applyThreeBodySymmetry(x, y, z, r, parameters, symmFuncType, function=None, 
         print "Mean: ", np.mean(outputData)
         print
         
-    if sampleName:
-        print 
-        print "Writing symmetrized input data to file:", sampleName
-        with open(sampleName, 'w') as outfile:
-            for vector in inputData:
-                for symmValue in vector:
-                    outfile.write('%g ' % symmValue)
-                outfile.write('\n')
+        # write symmetry data to file along with max and min of each symmetry function
+        # the latter to issue extrapolation warnings during potential construction
+        if sampleName:
+            print 
+            print "Writing symmetrized input data to file:", sampleName
+            with open(sampleName, 'w') as outfile:
+                for vector in inputData:
+                    for symmValue in vector:
+                        outfile.write('%g ' % symmValue)
+                    outfile.write('\n')
                 
-    if trainingDir:
-        print 
-        print "Writing input transformation parameters to file"
-        with open(trainingDir, 'w') as outfile:
-            for i in xrange(numberOfSymmFunc):
-                outfile.write('%g' % allMeans[i])
-                outfile.write('\n')
+    inputParams = [allMin, allMax]
+    if shiftMean: 
+        inputParams.append(allMeans)
+                   
     
-    return inputData, outputData
+    return inputData, outputData, inputParams
     
     
     

@@ -92,56 +92,50 @@ def SiBulkCustom(write=False):
     # parameters from Behler
     parameters = []    
     
-    # type1
+    ##### G2 #####
+    
+    # different widths
     center = 0.0
     cutoff = 6.0
-    for eta in [0.3, 0.1, 0.03, 0.005]:
+    for eta in [0.3, 0.1, 0.05, 0.005]:
         parameters.append([eta, cutoff, center])
-    
-    # type2
-    zeta = 1.0
-    inversion = 1.0
-    eta = 0.01
-    for cutoff in [6.0, 5.0, 4.0, 3.0]:
-        parameters.append([eta, cutoff, zeta, inversion])
+
         
-    # type 3
+    # different centers
     cutoff = 6.0
     eta = 5.0
-    for center in [4.2, 3.7, 3.2, 2.7, 2.2, 1.7]:
+    for center in [4.2, 3.5, 2.7, 2.0]:
         parameters.append([eta, cutoff, center])
         
         
+    ##### G5 #####
     eta = 0.01
     
-    # type 4
     zeta = 1.0
-    inversion = -1.0    
-    for cutoff in [6.0, 5.0, 4.0, 3.0]:
-        parameters.append([eta, cutoff, zeta, inversion])
+    for inversion in [1.0, -1.0]:
+        for cutoff in [6.0, 3.0]:
+            parameters.append([eta, cutoff, zeta, inversion])
         
-    # type 5 and 6
     zeta = 2.0
     for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 5.0, 4.0, 3.0]:
+        for cutoff in [6.0, 3.0]:
             parameters.append([eta, cutoff, zeta, inversion])
         
-    # type 7 and 8
     zeta = 4.0
     for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 5.0, 4.0, 3.0]:
+        for cutoff in [6.0, 3.0]:
             parameters.append([eta, cutoff, zeta, inversion])
     
-    # type 9 and 10
     zeta = 16.0
     for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 4.0]:
+        for cutoff in [6.0, 3.0]:
             parameters.append([eta, cutoff, zeta, inversion])  
             
     if write:
         writeParameters(parameters, '../Parameters/SiBulkCustom.dat')
             
     return parameters
+    
         
         
 def Si3Atoms(write):

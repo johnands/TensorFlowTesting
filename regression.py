@@ -279,8 +279,8 @@ class Regression:
                 self.nTypes = nTypes
                 
                 # save means of all symm funcs if shifting and saving
-                if shiftMean:
-                    saveFolder = self.samplesDir + 'shiftParameters.txt'
+                if saveFlag:
+                    saveFolder = trainingDir
                 else:
                     saveFolder = ''
                 self.xTrain, self.yTrain, self.xTest, self.yTest, self.inputs, self.outputs, self.parameters, \
@@ -345,7 +345,7 @@ class Regression:
 
 
     def constructNetwork(self, nLayers, nNodes, activation=tf.nn.sigmoid, \
-                         wInit='normal', bInit='normal', stdDev=1.0):
+                         wInit='normal', bInit='normal', stdDev=1.0, constantValue=0.1):
 
         self.nLayers = nLayers
         self.nNodes  = nNodes
@@ -372,7 +372,8 @@ class Regression:
 
         self.neuralNetwork = nn.neuralNetwork(nNodes, nLayers, activation,
                                               weightsInit=wInit, biasesInit=bInit,
-                                              stdDev=stdDev, inputs=self.inputs, outputs=self.outputs)
+                                              stdDev=stdDev, inputs=self.inputs, outputs=self.outputs, 
+                                              constantValue=constantValue)
         self.makeNetwork = lambda data : self.neuralNetwork.model(self.x)
         
 
@@ -471,8 +472,8 @@ class Regression:
                         summary = sess.run(merged, feed_dict={x: xBatch, y: yBatch})
                         train_writer.add_summary(summary, epoch)
 
-                # calculate cost every 1000th epoch
-                if not epoch % every:
+                # calculate cost every every epoch
+                if not epoch % every or epoch == numberOfEpochs:
                     trainError, absErrorTrain = sess.run([trainCost, MAD], feed_dict={x: xBatch, y: yBatch})
                     testError, absErrorTest   = sess.run([testCost, MAD], feed_dict={x: xTest, y: yTest})
                     trainRMSE = np.sqrt(2*trainError)
@@ -484,6 +485,10 @@ class Regression:
                                                       absErrorTrain/float(batchSize), \
                                                       absErrorTest/float(testSize) )
                     sys.stdout.flush()
+                    
+                    if testRMSE / trainRMSE > 10:
+                        print 'Overfitting is occuring, training ends'
+                        break
 
                     if summaryFlag:
                         summary = sess.run(merged, feed_dict={x: xTest, y: yTest})
@@ -523,6 +528,7 @@ class Regression:
                 if testRMSE < self.RMSEtol:
                     print "Reached RMSE tolerance"
                     break
+                
             
             if numberOfEpochs == -1:
                 print sess.run(trainCost, feed_dict={x: xTrain[0].reshape([1,self.inputs]), y: yTrain[0].reshape([1,1])})

@@ -34,12 +34,17 @@ class neuralNetwork:
         elif self.weightsInit == 'uniform':
             return tf.Variable( tf.random_uniform(shape, minval=-0.1, maxval=0.1))
             
-        else: #xavier
+        elif self.weightsInit == 'xavier':
             fanIn  = shape[0]
             fanOut = shape[1]
             low = -np.sqrt(6.0/(fanIn + fanOut)) # {sigmoid:4, tanh:1} 
             high = np.sqrt(6.0/(fanIn + fanOut))
             return tf.Variable( tf.random_uniform(shape, minval=low, maxval=high) )
+            
+        else:
+            print '%s is not a valid weight initialization method' % self.weightsInit
+            exit(1)
+
             
             
     def init_biases(self, shape):
@@ -52,9 +57,13 @@ class neuralNetwork:
             
         elif self.biasesInit == 'constant':
             return tf.Variable( tf.constant(self.constantValue, shape=shape) )
-               
-        else:   # trunc_normal
+            
+        elif self.biasesInit == 'trunc_normal':
             return tf.Variable( tf.truncated_normal(shape, stddev=self.stdDev) )
+               
+        else:
+            print '%s is not a valid weight initialization method' % self.biasesInit
+            exit(1)
         
     
     def variable_summaries(self, var, name):

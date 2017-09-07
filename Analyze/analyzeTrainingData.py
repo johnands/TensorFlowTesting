@@ -102,7 +102,7 @@ if len(sys.argv) > 1:
 
         
 def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=False, plotAngular=False, 
-                          radialDistName=''):
+                          radialDistName='', angularDistName=''):
 
     # read parameters
     parameters = readers.readParameters(parametersName)
@@ -123,22 +123,35 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
     globalCutoff = max(parameters[:][1])
     print "Global cutoff:", globalCutoff
     
-    Rij2 = np.linspace(0, globalCutoff + 2, 1000)   
+    Rij2 = np.linspace(0, globalCutoff, 1000)   
     
     pltParams.defineColormap(len(parameters2), plt.cm.jet)
     
     # read radial dist
     if radialDistName:
         with open(radialDistName, 'r') as infile:
-            binCenters = []
+            binCentersRadial = []
             radialDist = []
             for line in infile:
                 words = line.split()
-                binCenters.append(float(words[0]))
+                binCentersRadial.append(float(words[0]))
                 radialDist.append(float(words[1]))
         
-        binCenters = np.array(binCenters)        
+        binCentersRadial = np.array(binCentersRadial)        
         radialDist = np.array(radialDist)
+        
+    # read angular dist
+    if angularDistName:
+        with open(angularDistName, 'r') as infile:
+            binCentersAngular = []
+            angularDist = []
+            for line in infile:
+                words = line.split()
+                binCentersAngular.append(float(words[0]))
+                angularDist.append(float(words[1]))
+        
+        binCentersAngular = np.array(binCentersAngular)        
+        angularDist = np.array(angularDist)
     
         
     
@@ -158,11 +171,11 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
                            (eta, Rs) )              
             plt.hold('on')
         
-        
-        plt.plot(binCenters, radialDist/np.max(radialDist), 'k--', linewidth=2)
-        legends.append('Radial distribution')
-        plt.legend(legends, prop={'size':20})
-        plt.xlabel(r'$R_{ij}$')
+        if radialDistName:
+            plt.plot(binCentersRadial, radialDist/np.max(radialDist), 'k--', linewidth=2)
+            #legends.append('Radial distribution')
+        #plt.legend(legends, prop={'size':20})
+        plt.xlabel(r'$R_{ij} \; [\mathrm{\AA{}}]$')
         plt.ylabel(r'$G^2_i$')
         plt.tight_layout()
         if saveFlag:
@@ -281,26 +294,40 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
     thetaAngle = theta*180/np.pi
     
     if plotAngular:
+        #fig = plt.figure()
+        ax = plt.subplot(111)
         legends = []
         for _, _, zeta, Lambda in parameters3:
             functionValue = G4G5angular(theta, zeta, Lambda)
-            plt.plot(thetaAngle, functionValue)
+            ax.plot(thetaAngle, functionValue)
             legends.append(r'$\zeta = %d, \, \lambda = %d$' % (zeta, Lambda))
-            plt.hold('on')
+            #plt.hold('on')
             
-        plt.legend(legends, prop={'size':20}, loc=9)
-        plt.xlabel(r'$\theta$')
-        plt.ylabel(r'$G^4/G^5$ angular part')
-        plt.axis([0, 2*180, 0, 2])
+        if angularDistName:
+            ax.plot(binCentersAngular, angularDist, 'k--', linewidth=2)
+            #legends.append('Angular distribution')
+            
+
+        # Shrink current axis by 20%
+        #box = ax.get_position()
+        #ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+        
+        # Put a legend to the right of the current axis
+        #ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            
+        #ax.legend(legends, prop={'size':18}, loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.xlabel(r'$\theta_{jik}$')
+        plt.ylabel(r'$G^5$ angular part')
+        plt.axis([0, 180, 0, 3.8])
         plt.tight_layout()
         if saveFlag:
             plt.savefig(saveFileName)
         else:
             plt.show()
         
-def analyzeInputData(directory, multiType=False, plotCoordsDist=False, plotSymmDist=False, atomType=0,
-                     rangeLimit=0.1, plotSingleSymmDist=False, corrLimit=0.9, plotCorr=False, 
-                     symmetryFile='/symmetryBehler.txt'):
+def analyzeInputData(directory, multiType=False, plotRadialDist=False, plotSymmDist=False, atomType=0,
+                     rangeLimit=0.1, plotSingleSymmDist=False, corrLimit=0.9, plotCorrelations=False, 
+                     plotAngularDist=False, symmetryFile='/symmetryBehler.txt'):
     
         # read meta file for given training session (to load training data)
         metafile = directory + '/meta.dat'
@@ -338,7 +365,7 @@ def analyzeInputData(directory, multiType=False, plotCoordsDist=False, plotSymmD
             x, y, z, r, E = readers.readNeighbourData(neighbourFile)
           
           
-        if plotCoordsDist:
+        if plotRadialDist or plotAngularDist:
             # gather all r in sample
             allX = []; allY = []; allZ = []
             allR = []
@@ -349,6 +376,7 @@ def analyzeInputData(directory, multiType=False, plotCoordsDist=False, plotSymmD
                     allZ.append(z[i][j])
                     allR.append(r[i][j])
         
+        if plotRadialDist:   
             allR = np.sqrt(np.array(allR))
             plt.hist(allR, bins=100)
             plt.legend('r')
@@ -366,6 +394,76 @@ def analyzeInputData(directory, multiType=False, plotCoordsDist=False, plotSymmD
             plt.legend('z')
             plt.show()
             plt.figure()
+        
+        if plotAngularDist:
+            # compute angles
+            angles = []
+            for i in xrange(len(r)):
+            
+                # convert to arrays
+                xi = np.array(x[i][:])
+                yi = np.array(y[i][:])
+                zi = np.array(z[i][:])
+                ri = np.sqrt(np.array(r[i][:]))
+                
+                nNeighbours = len(xi)
+                angleStep = []         
+                # loop over triplets
+                for j in xrange(nNeighbours-1):
+                
+                    # atom j
+                    rij = ri[j]
+                    xij = xi[j]; yij = yi[j]; zij = zi[j]
+                    
+                    # all k > j
+                    k = np.arange(len(ri[:])) > j 
+                    rik = ri[k] 
+                    xik = xi[k]; yik = yi[k]; zik = zi[k]
+                
+                    # compute cos(theta_ijk) and rjk
+                    theta = np.arccos( (xij*xik + yij*yik + zij*zik) / (rij*rik) )
+                    theta *= 180/np.pi
+                
+                    # add to this list of angles for this step
+                    angleStep.append( theta.tolist() )
+                
+                # flatten list    
+                angleStep = [item for sublist in angleStep for item in sublist]
+                
+                # add to total nested list
+                angles.append(angleStep)
+            
+            # make histogram
+            nBins = 50
+            step = 500
+            binEdges = np.linspace(0, 180, nBins+1)
+            dist, _ = np.histogram(angles[step], bins=binEdges)
+            binCenters = (binEdges[1:] + binEdges[:-1]) / 2.0
+            plt.plot(binCenters, dist)
+            plt.legend(['Angular distribution step %d' % step])
+            plt.show()
+            
+            ##### total time-averaged histogram #####
+            cumulativeAngles = np.zeros(nBins)
+            for i in xrange(len(r)):
+                for j in xrange(len(angles[i])):
+                    for k in xrange(nBins):
+                        if angles[i][j] < binEdges[k]:
+                            cumulativeAngles[k] += 1
+                            break
+
+            # normalize
+            cumulativeAngles /= len(r)
+            plt.plot(binCenters, cumulativeAngles, 'g-')
+            plt.legend(['Averaged angular distribution of data set'])
+            plt.show()
+            
+            with open('../../LAMMPS_test/Silicon/Dist/angularDist.txt', 'w') as outfile:
+                for i in xrange(len(binCenters)):
+                    outfile.write('%g %g' % (binCenters[i], cumulativeAngles[i]))
+                    outfile.write('\n')
+            
+            
         
         # plot complete distribution of all symmetry functions
         if plotSymmDist:
@@ -420,9 +518,9 @@ def analyzeInputData(directory, multiType=False, plotCoordsDist=False, plotSymmD
             if irange < rangeLimit:
                 smallRange.append([i,irange])
 
-            print
-            print 'Symm funcs with a range smaller than', rangeLimit, ':'
-            print smallRange
+        print
+        print 'Symm funcs with a range smaller than', rangeLimit, ':'
+        print smallRange
             
         
         # find correlation coefficient matrix and identify functions which have 
@@ -438,11 +536,11 @@ def analyzeInputData(directory, multiType=False, plotCoordsDist=False, plotSymmD
             for j in xrange(i+1,numberOfSymmFuncs):
                 correlations.append(corrMatrix[i,j])
                 if corrMatrix[i,j] > corrLimit:
-                    print '(%d,%d): %1.3f' % (i, j, corrMatrix[i,j])
-                    
+                    #print '(%d,%d): %1.3f' % (i, j, corrMatrix[i,j])
+                    pass
                
         # histogram of correlations
-        if plotCorr:
+        if plotCorrelations:
             plt.figure()
             nBins = 30
             plt.hist(correlations, bins=nBins)
@@ -454,20 +552,22 @@ def analyzeInputData(directory, multiType=False, plotCoordsDist=False, plotSymmD
         
 if plotFlag: 
     plotSymmetryFunctions(parametersName, 
-                          plotG2=True, 
+                          plotG2=False, 
                           plotG4=False,
                           plotG5=False,
-                          plotAngular=False, 
-                          radialDistName='../../LAMMPS_test/PostProcessing/tmp/radialDist.txt')
+                          plotAngular=True, 
+                          radialDistName='../../LAMMPS_test/Silicon/Dist/radialDist.txt', 
+                          angularDistName='../../LAMMPS_test/Silicon/Dist/angularDist.txt')
     
 if analyzeFlag:
     analyzeInputData(trainingDir,
                      multiType=False, 
-                     plotCoordsDist=True, 
+                     plotRadialDist=False,
+                     plotAngularDist=False,
                      plotSymmDist=False,
                      plotSingleSymmDist=False,
-                     plotCorr=False,
-                     symmetryFile='/symmetryCustom.txt')
+                     plotCorrelations=False,
+                     symmetryFile='symmetryCustomShifted.txt')
         
     
 
