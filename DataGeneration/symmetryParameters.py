@@ -113,22 +113,22 @@ def SiBulkCustom(write=False):
     
     zeta = 1.0
     for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 3.0]:
+        for cutoff in [6.0, 4.0]:
             parameters.append([eta, cutoff, zeta, inversion])
         
     zeta = 2.0
     for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 3.0]:
+        for cutoff in [6.0, 4.0]:
             parameters.append([eta, cutoff, zeta, inversion])
         
     zeta = 4.0
     for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 3.0]:
+        for cutoff in [6.0, 4.0]:
             parameters.append([eta, cutoff, zeta, inversion])
     
     zeta = 16.0
     for inversion in [1.0, -1.0]:
-        for cutoff in [6.0, 3.0]:
+        for cutoff in [6.0, 4.0]:
             parameters.append([eta, cutoff, zeta, inversion])  
             
     if write:

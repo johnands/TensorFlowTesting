@@ -458,10 +458,10 @@ def analyzeInputData(directory, multiType=False, plotRadialDist=False, plotSymmD
             plt.legend(['Averaged angular distribution of data set'])
             plt.show()
             
-            with open('../../LAMMPS_test/Silicon/Dist/angularDist.txt', 'w') as outfile:
+            """with open('../../LAMMPS_test/Silicon/Dist/angularDist.txt', 'w') as outfile:
                 for i in xrange(len(binCenters)):
                     outfile.write('%g %g' % (binCenters[i], cumulativeAngles[i]))
-                    outfile.write('\n')
+                    outfile.write('\n')"""
             
             
         
@@ -483,18 +483,20 @@ def analyzeInputData(directory, multiType=False, plotRadialDist=False, plotSymmD
             
         
         # plote distribution of a single symmetry function
+        numberOfSymmFuncs = len(inputData[0])
+        nBins = 30
+        #plt.ion() 
         if plotSingleSymmDist:
-            symmFuncNumber = 30
-            nBins = 30
-            plt.figure()
-            plt.hist(inputData[:,symmFuncNumber], bins=nBins)
-            plt.legend(['Histogram of symm func %d, %d bins' % (symmFuncNumber, nBins)])
-            plt.show()
-            print 'Std. dev.:', np.std(inputData[:,nBins])
+            for s in xrange(numberOfSymmFuncs):
+                plt.figure()
+                plt.hist(inputData[:,s], bins=nBins)
+                plt.legend(['Histogram of symm func %d, %d bins' % (s, nBins)])
+                plt.show()
+                #raw_input('Press Return key to continue: ')
+                print 'Std. dev.:', np.std(inputData[:,s])
             
             
         # find range of each symmetry function
-        numberOfSymmFuncs = len(inputData[0])
         numberOfTrainExamples = len(inputData)
         smallRange = []
         for i in xrange(numberOfSymmFuncs):
@@ -536,7 +538,7 @@ def analyzeInputData(directory, multiType=False, plotRadialDist=False, plotSymmD
             for j in xrange(i+1,numberOfSymmFuncs):
                 correlations.append(corrMatrix[i,j])
                 if corrMatrix[i,j] > corrLimit:
-                    #print '(%d,%d): %1.3f' % (i, j, corrMatrix[i,j])
+                    print '(%d,%d): %1.3f' % (i, j, corrMatrix[i,j])
                     pass
                
         # histogram of correlations
@@ -554,7 +556,7 @@ if plotFlag:
     plotSymmetryFunctions(parametersName, 
                           plotG2=False, 
                           plotG4=False,
-                          plotG5=False,
+                          plotG5=True,
                           plotAngular=True, 
                           radialDistName='../../LAMMPS_test/Silicon/Dist/radialDist.txt', 
                           angularDistName='../../LAMMPS_test/Silicon/Dist/angularDist.txt')
@@ -565,9 +567,10 @@ if analyzeFlag:
                      plotRadialDist=False,
                      plotAngularDist=False,
                      plotSymmDist=False,
-                     plotSingleSymmDist=False,
+                     plotSingleSymmDist=True,
                      plotCorrelations=False,
-                     symmetryFile='symmetryCustomShifted.txt')
+                     symmetryFile='symmetryCustomShifted.txt', 
+                     corrLimit=0.995)
         
     
 
