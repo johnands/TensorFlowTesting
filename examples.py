@@ -292,7 +292,7 @@ def lammpsTrainingSi(nLayers=2, nNodes=35, nEpochs=int(1e5), symmFuncType='G5', 
     
     
     
-def gridSearchSi(maxLayers=3, maxNodes=30, maxEpochs=1e5, symmFuncType='G5', \
+def gridSearchSi(maxLayers=3, minNodes=5, skipNodes=2, maxNodes=30, maxEpochs=1e5, symmFuncType='G5', \
                   lammpsDir='', outputs=1, activation=tf.nn.sigmoid, \
                   useFunction=False, forces=False, batch=5, Behler=True, \
                   klargerj=False, tags=False, learningRate=0.001, RMSEtol=1e-10, nTypes=1, 
@@ -316,15 +316,12 @@ def gridSearchSi(maxLayers=3, maxNodes=30, maxEpochs=1e5, symmFuncType='G5', \
                          
     # finding optimal value
     counter = 0
-    for layers in range(1, maxLayers+1):
-        for nodes in range(layers, maxNodes+1):
-            start = time.time()
+    for layers in xrange(1, maxLayers+1):
+        for nodes in xrange(minNodes, maxNodes+1, skipNodes):
             regress.constructNetwork(layers, nodes, activation=activation, 
                                      wInit='uniform', bInit='zeros')
-            regress.train(maxEpochs)
-            end = time.time()
-            timeElapsed = end - start
-            print "Layers: %2d, nodes: %2d, time = %10g" % (layers, nodes, timeElapsed)
+            testRMSE, epoch, timeElapsed = regress.train(maxEpochs)
+            print "Layers: %2d, nodes: %2d, RMSE = %g, Epoch = %d, time = %10g" % (layers, nodes, testRMSE, epoch, timeElapsed)
             print
     
             if counter == 0:
@@ -333,14 +330,14 @@ def gridSearchSi(maxLayers=3, maxNodes=30, maxEpochs=1e5, symmFuncType='G5', \
                     outFile.write(outStr + '\n')
                     
             with open('Tests/timeElapsed.txt', 'a') as outFile:
-                outStr = "Layers: %2d, nodes: %2d, time = %10g" % (layers, nodes, timeElapsed)
+                outStr = "Layers: %2d, nodes: %2d, RMSE: %g, Epoch: %d, time = %10g" % (layers, nodes, testRMSE, epoch, timeElapsed)
                 outFile.write(outStr + '\n')
             
             counter += 1
             
         
 """Lammps Stillinger-Weber gir naboer og energier"""
-lammpsTrainingSi( nLayers       = 1, 
+"""lammpsTrainingSi( nLayers       = 1, 
                   nNodes        = 10, 
                   nEpochs       = int(1e5), 
                   activation    = tf.nn.sigmoid, 
@@ -353,35 +350,37 @@ lammpsTrainingSi( nLayers       = 1,
                   tags          = False,
                   batch         = 100, 
                   learningRate  = 0.005, 
-                  RMSEtol       = 0.005,
+                  RMSEtol       = 0.0005,
                   wInit         = 'uniform',
                   bInit         = 'zeros',
                   constantValue = 4.0,
                   normalize     = False, 
                   shiftMean     = True, 
-                  standardize   = False )
+                  standardize   = False )"""
     
 
 """Si grid searh"""
-"""gridSearchSi(     maxLayers     = 2, 
-                  maxNodes      = 5, 
-                  maxEpochs     = int(1e5),
-                  RMSEtol       = 0.001,  
+gridSearchSi(     maxLayers     = 2, 
+                  minNodes      = 4,
+                  skipNodes     = 4,
+                  maxNodes      = 32, 
+                  maxEpochs     = int(4e4),
+                  RMSEtol       = 0.000001,  
                   activation    = tf.nn.sigmoid, 
                   symmFuncType  = 'G5', 
-                  lammpsDir     = 'Bulk/SiPotential/Merged',
+                  lammpsDir     = 'Bulk/SiPotential/NNPotentialRun3',
                   Behler        = False, 
                   klargerj      = True, 
                   useFunction   = False, 
                   forces        = False, 
                   tags          = False,
-                  batch         = 100, 
-                  learningRate  = 0.001, 
+                  batch         = 200, 
+                  learningRate  = 0.005, 
                   wInit         = 'uniform',
                   bInit         = 'zeros',
                   normalize     = False, 
                   shiftMean     = True, 
-                  standardize   = False )"""
+                  standardize   = False )
     
     
     

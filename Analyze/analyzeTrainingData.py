@@ -566,8 +566,8 @@ if analyzeFlag:
                      multiType=False, 
                      plotRadialDist=False,
                      plotAngularDist=False,
-                     plotSymmDist=False,
-                     plotSingleSymmDist=True,
+                     plotSymmDist=True,
+                     plotSingleSymmDist=False,
                      plotCorrelations=False,
                      symmetryFile='symmetryCustomShifted.txt', 
                      corrLimit=0.995)

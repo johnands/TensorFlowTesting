@@ -394,6 +394,10 @@ class Regression:
         nLayers         = self.nLayers
         learningRate    = self.learningRate
 
+        testRMSELow = 1.0
+        epochLow = 0
+        timeElapsed = 0
+        
         # begin session
         with tf.Session() as sess:
 
@@ -478,6 +482,12 @@ class Regression:
                     testError, absErrorTest   = sess.run([testCost, MAD], feed_dict={x: xTest, y: yTest})
                     trainRMSE = np.sqrt(2*trainError)
                     testRMSE = np.sqrt(2*testError)
+                    if testRMSE < testRMSELow:
+                        testRMSELow = testRMSE
+                        epochLow = epoch
+                        end = timer()
+                        timeElapsed = end - start
+                        
                     print 'Cost/N train test at epoch %4d: TF: %g %g, RMSE: %g %g, MAD: %g %g' % \
                                                     ( epoch, trainError, testError, \
                                                       trainRMSE, \
@@ -747,6 +757,8 @@ class Regression:
                 #plt.xlabel('C++ manual NN derivative')
                 #plt.ylabel('Python TF API derivative')
                 plt.show()
+                
+        return testRMSELow, epochLow, timeElapsed
                     
                 
                 
