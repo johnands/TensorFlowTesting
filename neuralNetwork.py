@@ -37,8 +37,18 @@ class neuralNetwork:
         elif self.weightsInit == 'xavier':
             fanIn  = shape[0]
             fanOut = shape[1]
-            low = -np.sqrt(6.0/(fanIn + fanOut)) # {sigmoid:4, tanh:1} 
-            high = np.sqrt(6.0/(fanIn + fanOut))
+            low = 0.1
+            high = 0.1
+            if self.activation == tf.nn.sigmoid: 
+                low = -4*np.sqrt(6.0/(fanIn + fanOut))
+                high = 4*np.sqrt(6.0/(fanIn + fanOut))
+            elif self.activation == tf.nn.tanh:
+                low = -np.sqrt(6.0/(fanIn + fanOut)) 
+                high = np.sqrt(6.0/(fanIn + fanOut))
+            else:
+                print 'Activation %s is not for xaver initialization' % self.activation
+                exit(1)
+                
             return tf.Variable( tf.random_uniform(shape, minval=low, maxval=high) )
             
         else:

@@ -337,30 +337,30 @@ def gridSearchSi(maxLayers=3, minNodes=5, skipNodes=2, maxNodes=30, maxEpochs=1e
             
         
 """Lammps Stillinger-Weber gir naboer og energier"""
-"""lammpsTrainingSi( nLayers       = 1, 
+lammpsTrainingSi( nLayers       = 1, 
                   nNodes        = 10, 
-                  nEpochs       = int(1e5), 
+                  nEpochs       = int(2e5), 
                   activation    = tf.nn.sigmoid, 
                   symmFuncType  = 'G5', 
-                  lammpsDir     = 'Bulk/SiPotential/NNPotentialRun3',
+                  lammpsDir     = 'Bulk/SiPotential/NNPotentialMultipleNNP',
                   Behler        = False, 
                   klargerj      = True, 
                   useFunction   = False, 
                   forces        = False, 
                   tags          = False,
-                  batch         = 100, 
-                  learningRate  = 0.005, 
-                  RMSEtol       = 0.0005,
+                  batch         = None, 
+                  learningRate  = 0.01, 
+                  RMSEtol       = 0.000864,
                   wInit         = 'uniform',
                   bInit         = 'zeros',
                   constantValue = 4.0,
                   normalize     = False, 
                   shiftMean     = True, 
-                  standardize   = False )"""
+                  standardize   = False )
     
 
 """Si grid searh"""
-gridSearchSi(     maxLayers     = 2, 
+"""gridSearchSi(     maxLayers     = 2, 
                   minNodes      = 4,
                   skipNodes     = 4,
                   maxNodes      = 32, 
@@ -380,7 +380,7 @@ gridSearchSi(     maxLayers     = 2,
                   bInit         = 'zeros',
                   normalize     = False, 
                   shiftMean     = True, 
-                  standardize   = False )
+                  standardize   = False )"""
     
     
     
