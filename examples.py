@@ -336,8 +336,8 @@ def gridSearchSi(maxLayers=3, minNodes=5, skipNodes=2, maxNodes=30, maxEpochs=1e
             counter += 1
             
         
-"""Lammps Stillinger-Weber gir naboer og energier"""
-lammpsTrainingSi( nLayers       = 1, 
+# Lammps Stillinger-Weber gir naboer og energier
+"""lammpsTrainingSi( nLayers       = 1, 
                   nNodes        = 10, 
                   nEpochs       = int(2e5), 
                   activation    = tf.nn.sigmoid, 
@@ -356,10 +356,10 @@ lammpsTrainingSi( nLayers       = 1,
                   constantValue = 4.0,
                   normalize     = False, 
                   shiftMean     = True, 
-                  standardize   = False )
+                  standardize   = False )"""
     
 
-"""Si grid searh"""
+# Si grid searh
 """gridSearchSi(     maxLayers     = 2, 
                   minNodes      = 4,
                   skipNodes     = 4,
@@ -381,6 +381,16 @@ lammpsTrainingSi( nLayers       = 1,
                   normalize     = False, 
                   shiftMean     = True, 
                   standardize   = False )"""
+                  
+                  
+# LJ med en input og en output
+LennardJonesExample( trainSize = int(1e5), 
+                     batchSize = int(200),
+                     testSize  = int(1e3), 
+                     nLayers   = 1, 
+                     nNodes    = 10, 
+                     nEpochs   = int(5e3) )
+
     
     
     
@@ -400,13 +410,6 @@ lammpsTrainingSi( nLayers       = 1,
 
 """ trainSize, batchSize, testSize, nLayers, nNodes, nEpochs, """
 
-"""LJ med en input og en output"""
-"""LennardJonesExample( trainSize = int(1e5), 
-                     batchSize = int(200),
-                     testSize  = int(1e3), 
-                     nLayers   = 1, 
-                     nNodes    = 10, 
-                     nEpochs   = int(5e3) )"""
 
 
 """Lj med flere naboer"""

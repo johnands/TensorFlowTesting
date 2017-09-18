@@ -124,6 +124,7 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
     print "Global cutoff:", globalCutoff
     
     Rij2 = np.linspace(0, globalCutoff, 1000)   
+    #Rij2 = np.linspace(0, 8, 2000)
     
     pltParams.defineColormap(len(parameters2), plt.cm.jet)
     
@@ -167,7 +168,7 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
             #legends.append(r'$\eta=%1.3f \, \mathrm{\AA{}}^{-2}, R_c=%1.1f  \, \mathrm{\AA{}}, R_s=%1.1f \, \mathrm{\AA{}}$' % \
             #               (eta, Rc, Rs) )
             # without units and Rc:
-            legends.append(r'$\eta=%1.3f, R_s=%1.1f$' % \
+            legends.append(r'$\eta=%1.3f, r_s=%1.1f$' % \
                            (eta, Rs) )              
             plt.hold('on')
         
@@ -175,7 +176,7 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
             plt.plot(binCentersRadial, radialDist/np.max(radialDist), 'k--', linewidth=2)
             #legends.append('Radial distribution')
         #plt.legend(legends, prop={'size':20})
-        plt.xlabel(r'$R_{ij} \; [\mathrm{\AA{}}]$')
+        plt.xlabel(r'$r_{ij} \; [\mathrm{\AA{}}]$')
         plt.ylabel(r'$G^2_i$')
         plt.tight_layout()
         if saveFlag:
@@ -274,11 +275,11 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
             #legends.append(r'$\eta=%1.3f \, \mathrm{\AA{}}^{-2}, R_c=%1.1f  \, \mathrm{\AA{}}, \zeta=%d \, \lambda=%d$' % 
             #               (eta, Rc, zeta, Lambda) )
             # without eta and lambda:
-            legends.append(r'$R_c=%1.1f  \, \mathrm{\AA{}}, \zeta=%d$' % 
+            legends.append(r'$r_c=%1.1f  \, \mathrm{\AA{}}, \zeta=%d$' % 
                            (Rc, zeta) )
             plt.hold('on')
             
-        plt.legend(legends, prop={'size':18}, loc=9)
+        #plt.legend(legends, prop={'size':18}, loc=9)
         plt.xlabel(r'$\theta_{jik}$')
         plt.ylabel(r'$G_i^5$')
         plt.axis([0, 360, 0, 1.3])
@@ -317,7 +318,7 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
             
         #ax.legend(legends, prop={'size':18}, loc='center left', bbox_to_anchor=(1, 0.5))
         plt.xlabel(r'$\theta_{jik}$')
-        plt.ylabel(r'$G^5$ angular part')
+        plt.ylabel(r'$G_i^\theta$')
         plt.axis([0, 180, 0, 3.8])
         plt.tight_layout()
         if saveFlag:
@@ -556,8 +557,8 @@ if plotFlag:
     plotSymmetryFunctions(parametersName, 
                           plotG2=False, 
                           plotG4=False,
-                          plotG5=True,
-                          plotAngular=True, 
+                          plotG5=False,
+                          plotAngular=True,
                           radialDistName='../../LAMMPS_test/Silicon/Dist/radialDist.txt', 
                           angularDistName='../../LAMMPS_test/Silicon/Dist/angularDist.txt')
     

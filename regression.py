@@ -709,9 +709,11 @@ class Regression:
                 # plot energy error
                 energyError = energiesLJ - energiesNN
                 print "RMSE: ", np.sqrt(np.sum(energyError**2)/N)
+                print "RMSE relative: ", np.sqrt(np.sum((energyError/energiesLJ)**2)/N)
+                print "Min E:", np.min(np.abs(energiesLJ))
                 plt.figure()
-                plt.plot(interval, energyError)
-                plt.xlabel(r'$R_{ij} \, [\mathrm{\AA{}}]$')
+                plt.plot(interval, energyError/energiesLJ)
+                plt.xlabel(r'$r_{ij} \, [\mathrm{\AA{}}]$')
                 plt.ylabel(r'$\mathrm{Absolute} \; \mathrm{error} \, [\mathrm{eV}]$')
                 plt.legend(['$E_{\mathrm{LJ}} - E_{\mathrm{NN}}$'], prop={'size':20})
                 plt.tight_layout()
@@ -744,11 +746,11 @@ class Regression:
                 print 'Derivative RMSE', np.sqrt(np.sum(derivativeError**2)/N)
                 plt.figure()
                 plt.plot(interval, derivativeError)
-                plt.xlabel(r'$R_{ij} \, [\mathrm{\AA{}}]$')
+                plt.xlabel(r'$r_{ij} \, [\mathrm{\AA{}}]$')
                 plt.ylabel(r'$\mathrm{Absolute} \; \mathrm{error} \, [\mathrm{eV}/\mathrm{\AA{}}]$')
-                plt.legend(['$dE_{\mathrm{LJ}}/dR_{ij} - dE_{\mathrm{NN}}/dR_{ij}$'], prop={'size':20}, loc=4)
+                plt.legend(['$dE_{\mathrm{LJ}}/dr_{ij} - dE_{\mathrm{NN}}/dr_{ij}$'], prop={'size':20}, loc=4)
                 plt.tight_layout()
-                #plt.savefig('../Oppgaven/Figures/Implementation/LJErrorDerivative.pdf')
+                plt.savefig('../Oppgaven/Figures/Implementation/LJErrorDerivative.pdf')
                 #plt.show()
                 
                 # plot NN derivative in Python and C++ together to check that they are the same
