@@ -318,7 +318,7 @@ def plotSymmetryFunctions(parametersName, plotG2=False, plotG4=False, plotG5=Fal
             
         #ax.legend(legends, prop={'size':18}, loc='center left', bbox_to_anchor=(1, 0.5))
         plt.xlabel(r'$\theta_{jik}$')
-        plt.ylabel(r'$G_i^\theta$')
+        plt.ylabel(r'$G_i^5$')
         plt.axis([0, 180, 0, 3.8])
         plt.tight_layout()
         if saveFlag:
@@ -555,11 +555,11 @@ def analyzeInputData(directory, multiType=False, plotRadialDist=False, plotSymmD
         
 if plotFlag: 
     plotSymmetryFunctions(parametersName, 
-                          plotG2=False, 
+                          #plotG2=True, 
                           plotG4=False,
                           plotG5=False,
                           plotAngular=True,
-                          radialDistName='../../LAMMPS_test/Silicon/Dist/radialDist.txt', 
+                          #radialDistName='../../LAMMPS_test/Silicon/Dist/radialDist.txt')
                           angularDistName='../../LAMMPS_test/Silicon/Dist/angularDist.txt')
     
 if analyzeFlag:
